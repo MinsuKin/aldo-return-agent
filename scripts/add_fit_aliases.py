@@ -5,7 +5,7 @@ Reads fixtures/demo/fit_aliases.json (alias -> real ALDO_CA style) and gives eve
 entry in fit_insights.json["products"]: the ALDO_CA and ALL scope counts and signals are copied from
 the real style, plus "alias_of" (the real style) and a one-line "note". returns_domain.fit matches
 product names exactly, so the demo name of a product (ALDO Men 001) then reaches the real return
-counts of the style behind it (Biglect) without any change to fit.py.
+counts of the style behind it (Toney, the real men's style TONEY) without any change to fit.py.
 
 Only the alias entries change. generated_at, provenance, source (file, sha256, rows_read), filter,
 thresholds and totals (they describe the real data; aliases are not counted) and every real product
@@ -79,7 +79,7 @@ def add_aliases(doc: Mapping[str, Any], aliases: Mapping[str, str]) -> dict[str,
         added[alias] = {
             **{scope: dict(entry[scope]) for scope in SCOPES},
             "alias_of": real,
-            "note": f"Demo alias of the real ALDO_CA style {real}: counts and signals are copied from it.",
+            "note": f"Demo alias of the real style {real}: counts and signals are copied from its OMS fit returns (24 months).",
         }
     return {**doc, "products": _insert_sorted(real_products, added)}
 

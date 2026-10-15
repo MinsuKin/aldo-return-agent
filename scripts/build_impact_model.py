@@ -47,6 +47,7 @@ RETURNS_CSV = ROOT / "dataset" / "OMS Data_Feb24-Jan26_new.csv"
 EXCHANGES_CSV = ROOT / "dataset" / "McGill_Instore_return_exchanges.csv"
 DATA_PROFILE = ROOT / "docs" / "evidence" / "data-profile.json"
 COHORT_PROFILE = ROOT / "docs" / "evidence" / "cohort-profile.json"
+TXN_PROFILE = ROOT / "docs" / "evidence" / "transaction-profile.json"  # scripts/profile_transactions.py (margin lever)
 EVAL_RESULTS = ROOT / "docs" / "eval" / "results.json"
 OUT_DIR = ROOT / "docs" / "impact"
 
@@ -1642,8 +1643,258 @@ def build_slide_sentences(total_lines, fit_lines, fit_share, scenarios, reason_g
     return [{"slide": slide, "tag": tag, "text": text} for slide, tag, text in sentences]
 
 
+
+# ---- Margin lever (transaction file profile; additive) --------------------------------------------
+MARGIN_FORMULA = (
+    "margin_based_value = existing_retained_sale_value x gross_margin_rate_footwear_ALDO_CA\n"
+    "memo_retained_margin = cases x measured_margin_per_fit_returned_unit\n"
+    "break_even_exchanges_per_year = total_requests x agent_cost_per_run / margin_per_retained_exchange\n"
+    "perk_break_even_exchanges_per_use = perk_fee_per_use / margin_per_retained_exchange"
+)
+
+
+def dec(value) -> Decimal:
+    return Decimal(str(value))
+
+
+def load_margin_inputs(path: Path):
+    """Read the measured margin facts from the transaction profile; (inputs, None) or (None, reason)."""
+    if not path.is_file():
+        return None, f"{rel(path)} not found; run scripts/profile_transactions.py"
+    try:
+        profile = json.loads(path.read_text(encoding="utf-8"))
+        scope = profile["scopes"]["ALDO_CA"]
+        groups = scope["footwear_price_group"]["all_footwear"]
+        fit = scope["fit_return_margin"]["all_footwear"]
+        retail = sum(dec(g["sales_retail"]) for g in groups.values())
+        margin = sum(dec(g["sales_gross_margin"]) for g in groups.values())
+        regular, markdown = groups["Regular"], groups["Markdown"]
+        inputs = {
+            "rate_all": margin / retail,
+            "rate_regular": dec(regular["sales_gross_margin"]) / dec(regular["sales_retail"]),
+            "sales_units": sum(g["sales_units"] for g in groups.values()),
+            "sales_units_regular": regular["sales_units"],
+            "margin_per_unit_regular": dec(regular["avg_margin_per_unit_sold"]),
+            "margin_per_unit_markdown": dec(markdown["avg_margin_per_unit_sold"]),
+            "fit_return_lines": fit["fit_return_lines"],
+            "fit_return_units": fit["fit_return_units"],
+            "fit_margin_per_unit": dec(fit["avg_margin_per_returned_unit"]),
+            "fit_retail_per_unit": dec(fit["avg_retail_per_returned_unit"]),
+            "fit_margin_per_unit_regular": dec(fit["by_price_group"]["Regular"]["avg_margin_per_returned_unit"]),
+            "fit_markdown_lines": fit["by_price_group"]["Markdown"]["lines"],
+            "date_min": scope["business_date_min"],
+            "date_max": scope["business_date_max"],
+            "rows_read": profile["rows_read"],
+            "partial_run": bool(profile.get("partial_run")),
+            "sha256": sha256_of(path),
+            "file": rel(path),
+        }
+    except (OSError, ValueError, KeyError, TypeError, ArithmeticError) as exc:
+        return None, f"{rel(path)} could not be used ({type(exc).__name__}); re-run scripts/profile_transactions.py"
+    if inputs["partial_run"]:
+        return None, f"{rel(path)} is a partial run (--max-rows); re-run scripts/profile_transactions.py on the full file"
+    return inputs, None
+
+
+def build_margin(path: Path, scenarios: dict, preference: dict, prevention: dict, cost: dict, total_requests: int,
+                 fit_lines: int, perk_fee_cents: int) -> dict:
+    """Margin version of the retained-sale value: revenue-based (existing, untouched) next to margin-based."""
+    m, reason = load_margin_inputs(path)
+    if m is None:
+        return {"status": "not_available", "reason": reason,
+                "note": "The margin lever needs docs/evidence/transaction-profile.json (scripts/profile_transactions.py "
+                        "on the 3 GB transaction file). All other blocks of this model are unaffected."}
+    rate, per_run = m["rate_all"], cost["cost_per_run_cad"]
+    margin_unit = m["fit_margin_per_unit"]
+    cost_tag = cost_tag_of(cost)
+    names = list(scenarios["columns"])
+    basis = (f"ALDO_CA footwear (men's and ladies' categories), sales lines, all price groups, fiscal 2025 "
+             f"(business dates {m['date_min']} to {m['date_max']}; the file is named 2025), "
+             f"{fmt_int(m['sales_units'])} units sold")
+    pct = lambda d: f"{fmt_dec(d * 100)}%"  # noqa: E731
+
+    measured = {
+        "gross_margin_rate_footwear": metric(
+            "ALDO_CA footwear gross margin rate, all price groups", jnum(rate * 100), "percent", "measured", pct(rate),
+            note=f"Gross margin / retail on sales lines. Basis: {basis}. Returns lines are excluded from the rate."),
+        "gross_margin_rate_footwear_regular_price": metric(
+            "ALDO_CA footwear gross margin rate, Regular price group", jnum(m["rate_regular"] * 100), "percent",
+            "measured", pct(m["rate_regular"]),
+            note=f"Same basis, price_group Regular only ({fmt_int(m['sales_units_regular'])} units)."),
+        "avg_margin_per_unit_regular": metric(
+            "Average gross margin per unit sold, Regular price", to_cents(m["margin_per_unit_regular"]), "CAD_cents",
+            "measured", fmt_cad(to_cents(m["margin_per_unit_regular"])), note="Currency assumed CAD, unconfirmed."),
+        "avg_margin_per_unit_markdown": metric(
+            "Average gross margin per unit sold, Markdown price group", to_cents(m["margin_per_unit_markdown"]),
+            "CAD_cents", "measured", fmt_cad(to_cents(m["margin_per_unit_markdown"]))),
+        "avg_margin_per_fit_returned_unit": metric(
+            "Average gross margin per returned unit, fit returns (Too small, Too big)", to_cents(margin_unit),
+            "CAD_cents", "measured", fmt_cad(to_cents(margin_unit)),
+            note=f"{fmt_int(m['fit_return_lines'])} fit return lines ({fmt_int(m['fit_return_units'])} units) with a "
+                 "text reason in the transaction file (web channel). Margin the sale carried, lost on a refund and "
+                 "retained by an exchange."),
+        "avg_margin_per_fit_returned_unit_regular": metric(
+            "Same, units returned from Regular price sales", to_cents(m["fit_margin_per_unit_regular"]), "CAD_cents",
+            "measured", fmt_cad(to_cents(m["fit_margin_per_unit_regular"]))),
+        "markdown_share_of_fit_return_lines": metric(
+            "Share of fit return lines that were Markdown price", jnum(Decimal(m["fit_markdown_lines"]) * 100
+                                                                        / m["fit_return_lines"]), "percent", "measured",
+            f"{fmt_dec(Decimal(m['fit_markdown_lines']) * 100 / m['fit_return_lines'])}%"),
+    }
+
+    case_revenue = RETAINED_CASE_VALUE_CAD
+    case_margin = case_revenue * rate
+    per_case = {
+        "revenue_based_value_per_retained_case": metric(
+            "Existing value per retained case (unchanged)", to_cents(case_revenue), "CAD_cents", "assumed",
+            fmt_cad(to_cents(case_revenue)), note="Handoff section 15 synthetic unit economics, as in the scenarios."),
+        "margin_based_value_per_retained_case": metric(
+            "Existing value per retained case x measured margin rate", to_cents(case_margin), "CAD_cents", "derived",
+            fmt_cad(to_cents(case_margin)),
+            note="Literal product of the existing value and the measured rate. The CAD 54 is already net of an assumed "
+                 "item cost (40% of price), so applying a margin rate on top counts cost twice: read this as the "
+                 "conservative end."),
+        "measured_margin_per_fit_returned_unit": measured["avg_margin_per_fit_returned_unit"],
+    }
+
+    def rows(label_key, existing_values, cases_values, tag):
+        out = {}
+        for n in names:
+            revenue = existing_values[n]
+            out[n] = {"rev": revenue, "mar": to_cents(Decimal(revenue) / 100 * rate),
+                      "direct": to_cents(dec(cases_values[n]) * margin_unit)}
+        return out
+
+    levers = {
+        "fit_exchange": ("Fit exchange lever", scenarios["outputs"]["exchange_value"]["values"],
+                         scenarios["outputs"]["converted_cases"]["values"], "derived"),
+        "preference_exchange": ("Preference exchange lever", preference["outputs"]["exchange_value"]["values"],
+                                preference["outputs"]["converted_cases"]["values"], "assumed"),
+        "prevention": ("Pre-purchase prevention", prevention["outputs"]["retained_sale_value"]["values"],
+                       prevention["outputs"]["prevented_lines"]["values"], "assumed"),
+    }
+    calc = {n: {} for n in names}
+    outputs = {}
+    for key, (label, existing, cases, tag) in levers.items():
+        r = rows(key, existing, cases, tag)
+        for n in names:
+            calc[n].update({f"{key}_rev": r[n]["rev"], f"{key}_mar": r[n]["mar"], f"{key}_direct": r[n]["direct"]})
+    per, const = scenario_builders(calc, names)
+    for key, (label, existing, cases, tag) in levers.items():
+        outputs[f"{key}_revenue_based"] = per(
+            f"{label}: retained-sale value, revenue-based (existing, unchanged)", "CAD_cents", tag, f"{key}_rev", fmt_cad,
+            note="Copied from the scenario block above; no number changed.")
+        outputs[f"{key}_margin_based"] = per(
+            f"{label}: retained-sale value x margin rate (margin-based)", "CAD_cents", tag, f"{key}_mar", fmt_cad,
+            note="Existing value x ALDO_CA footwear gross margin rate. Conservative reading, see per-case note.")
+        outputs[f"{key}_retained_margin_memo"] = per(
+            f"{label}: memo, cases x measured margin per fit-returned unit", "CAD_cents", tag, f"{key}_direct", fmt_cad,
+            note="Cases of the lever x CAD " + fmt_dec(margin_unit) + " measured average margin of a fit-returned unit. "
+                 "Uses the fit-return unit as a proxy for every lever.")
+
+    agent_total_cents = scenarios["outputs"]["agent_cost_total"]["values"][names[0]]
+    be_exchanges = Decimal(agent_total_cents) / 100 / margin_unit
+    be_exchanges_whole = int(be_exchanges.to_integral_value(rounding="ROUND_CEILING"))
+    perk_per_use = Decimal(perk_fee_cents) / 100
+    retained = to_cents(margin_unit)
+    break_even = {
+        "margin_per_retained_exchange": metric(
+            "Margin earned by one retained exchange (average fit-returned unit)", retained, "CAD_cents", "measured",
+            fmt_cad(retained), note="Measured average margin of a fit-returned footwear unit, all price groups."),
+        "agent_cost_per_run": metric(
+            "Agent cost per run", jnum(per_run, 4), "CAD_per_run", cost_tag, fmt_rate(per_run),
+            note="Same cost per run as the scenarios."),
+        "agent_runs_paid_by_one_exchange": metric(
+            "Agent runs paid for by the margin of one retained exchange", jnum(margin_unit / per_run, 0), "runs",
+            "derived", fmt_dec(margin_unit / per_run, 0), note="Margin per retained exchange / agent cost per run."),
+        "break_even_exchanges_per_year": metric(
+            "Retained exchanges per year that pay the whole agent bill (every return line costs one run)",
+            be_exchanges_whole, "exchanges", "derived", fmt_int(be_exchanges_whole),
+            note=f"Annual agent cost {fmt_cad(agent_total_cents)} / margin per retained exchange, rounded up."),
+        "break_even_conversion_of_fit_lines_pct": metric(
+            "Same, as share of the measured fit lines", jnum(Decimal(be_exchanges_whole) * 100 / fit_lines), "percent",
+            "derived", f"{fmt_dec(Decimal(be_exchanges_whole) * 100 / fit_lines)}%",
+            note=f"Against the {fmt_int(fit_lines)} fit lines; the scenarios assume 10 to 30 percent."),
+        "perk_fee_per_use": metric(
+            "Platinum perk cost per use (return shipping fee waived)", perk_fee_cents, "CAD_cents", "assumed",
+            fmt_cad(perk_fee_cents), note="Same fee as the tier perk block."),
+        "perk_uses_paid_by_one_exchange": metric(
+            "Perk uses paid for by the margin of one retained exchange", jnum(margin_unit / perk_per_use, 1), "uses",
+            "derived", fmt_dec(margin_unit / perk_per_use, 1)),
+        "perk_break_even_exchanges_per_use": metric(
+            "Extra retained exchanges one perk use must cause to pay for itself", jnum(perk_per_use / margin_unit, 3),
+            "exchanges", "derived", fmt_dec(perk_per_use / margin_unit, 3),
+            note="Perk fee per use / margin per retained exchange. Cost bound only; no uplift is claimed."),
+    }
+
+    gap = m["margin_per_unit_regular"] - m["margin_per_unit_markdown"]
+    markdown = {
+        "tag": "derived",
+        "text": (f"ALDO_CA footwear units sold at Regular price earned on average {fmt_cad(to_cents(m['margin_per_unit_regular']))} "
+                 f"of gross margin against {fmt_cad(to_cents(m['margin_per_unit_markdown']))} at Markdown, "
+                 f"a gap of {fmt_cad(to_cents(gap))} per unit. If a returned unit would only be resold at a markdown, "
+                 "an exchange at full price protects about that much more margin. "
+                 f"{fmt_dec(Decimal(m['fit_markdown_lines']) * 100 / m['fit_return_lines'], 0)}% of the fit returns were "
+                 "themselves Markdown-priced sales, where the margin at stake is lower "
+                 f"({fmt_cad(to_cents(dec(m['fit_margin_per_unit_regular'])))} per unit for Regular-price fit returns)."),
+        "limits": "A comparison of sales lines by price group in fiscal 2025. The file does not show what price a "
+                  "returned unit was later resold at, so the gap is a reference size, not an observed resale loss.",
+    }
+    return {
+        "status": "available",
+        "tag": "derived",
+        "framing": "Margin version of the retained-sale value, next to the existing revenue-based numbers (unchanged). "
+                   "The rate and the margin per unit are measured from the 2025 ALDO transaction file; conversion "
+                   "rates and the CAD 54 per case remain the model's assumptions. Currency assumed CAD for ALDO_CA, "
+                   "unconfirmed.",
+        "source": {"file": m["file"], "sha256": m["sha256"], "rows_read": m["rows_read"], "banner": BANNER,
+                   "business_date_min": m["date_min"], "business_date_max": m["date_max"],
+                   "producer": "scripts/profile_transactions.py"},
+        "measured": measured,
+        "per_case": per_case,
+        "columns": names,
+        "scenarios": outputs,
+        "break_even": break_even,
+        "markdown": markdown,
+        "formula": MARGIN_FORMULA,
+        "caveats": [
+            "The transaction file is store and web point-of-sale data, not the e-commerce OMS files behind the rest of "
+            "the model. Fit text reasons exist only on web-channel return lines; in-store return lines carry numeric "
+            "POS reason codes with no legend, so they are not counted as fit. The margin rate describes ALDO_CA "
+            "footwear sales as a whole, not only the units that get returned.",
+            "The existing CAD 54 per case is net of an assumed 40% item cost, so the margin-based rows (value x rate) "
+            "are a conservative reading. The memo rows use the measured margin per fit-returned unit directly.",
+            "Margin is gross margin as recorded in the file (retail minus cost); handling, freight and restocking are "
+            "not in it. Currency assumed CAD, unconfirmed.",
+        ],
+    }
+
+
+def margin_slide_sentences(margin: dict, scenarios: dict) -> list:
+    """At most two margin sentences, appended to the slide sentences; none when the profile is not available."""
+    if margin["status"] != "available":
+        return []
+    ms, be, so = margin["measured"], margin["break_even"], margin["scenarios"]["fit_exchange_margin_based"]
+    names = scenarios["columns"]
+    return [
+        {"slide": "Business impact", "tag": "derived",
+         "text": f"ALDO_CA footwear earned a {ms['gross_margin_rate_footwear']['display']} gross margin in fiscal 2025 "
+                 f"({ms['gross_margin_rate_footwear_regular_price']['display']} on regular-price sales) and a fit-returned "
+                 f"unit carries {be['margin_per_retained_exchange']['display']} of margin, so one retained exchange pays "
+                 f"for about {be['agent_runs_paid_by_one_exchange']['display']} agent runs at "
+                 f"{be['agent_cost_per_run']['display']} per run (derived: margin measured, agent cost "
+                 f"{'measured' if be['agent_cost_per_run']['tag'] == 'derived' else 'a placeholder'})."},
+        {"slide": "Business impact", "tag": so["tag"],
+         "text": f"At the measured margin rate the size-related exchanges retain about "
+                 f"{or_list([fmt_cad_round(so['values'][n]) for n in names])} of gross margin a year (a conservative "
+                 f"reading), and {be['break_even_exchanges_per_year']['display']} retained exchanges a year "
+                 f"({be['break_even_conversion_of_fit_lines_pct']['display']} of size-related lines) would already pay "
+                 f"the whole agent bill ({so['tag']}: conversion rates assumed)."},
+    ]
+
+
 def build_model(returns: dict, exchanges: dict, cost: dict, returns_path: Path, exchanges_path: Path,
-                profile=None) -> dict:
+                profile=None, txn_profile_path: Path = TXN_PROFILE) -> dict:
     days = (WINDOW_END - WINDOW_START).days + 1
     total_lines = returns["total_lines"]
     fit_by_reason = returns["fit_by_reason"]
@@ -1859,10 +2110,14 @@ def build_model(returns: dict, exchanges: dict, cost: dict, returns_path: Path, 
     bundle = build_bundle(returns, total_lines, cost)
     perk = build_perk(read_perk_inputs())
     sensitivity = build_agent_cost_sensitivity(scenarios, cost, profile, total_lines) if cost_measured else None
+    margin = build_margin(txn_profile_path, scenarios, preference, prevention, cost, total_lines, fit_lines,
+                          perk["inputs"]["shipping_fee_per_use"]["values"]["base"])
     scale.update(agent_load_items(daily_mean, daily_p95, daily_max, returns["return_ids"], total_lines, profile))
     append_v2_summary(slide_summary, reason_groups, preference, bundle, cost, profile)
     slide_summary["slide_sentences"] = build_slide_sentences(
         total_lines, fit_lines, fit_share, scenarios, reason_groups, preference, bundle, cost, scale, profile)
+
+    slide_summary["slide_sentences"] += margin_slide_sentences(margin, scenarios)
 
     comp = reason_groups["preference_composition"]
     pref_groups = reason_groups["groups"]["preference"]
@@ -1967,6 +2222,7 @@ def build_model(returns: dict, exchanges: dict, cost: dict, returns_path: Path, 
             rate_block["eval_file_rate"] = float(cost["eval_usd_to_cad"])
             rate_block["matches_eval_file"] = cost["eval_usd_to_cad"] == cost["usd_to_cad"]
         model["usd_to_cad"] = rate_block
+    model["margin"] = margin
     return model
 
 
@@ -2114,6 +2370,52 @@ def md_v2_sections(m: dict) -> list:
     return out
 
 
+def md_margin_section(m: dict) -> list:
+    """Markdown for the margin lever; one status line when the transaction profile is not available."""
+    mg = m["margin"]
+    out = ["## Gross margin lever (transaction file)", ""]
+    if mg["status"] != "available":
+        return out + [f"Status: not_available. {mg['reason']}.", "", mg["note"], ""]
+    src = mg["source"]
+    return out + [
+        mg["framing"],
+        "",
+        f"Source: `{src['file']}` (SHA-256 `{src['sha256']}`), {fmt_int(src['rows_read'])} rows read, banner "
+        f"{src['banner']}, business dates {src['business_date_min']} to {src['business_date_max']}.",
+        "",
+        "Measured margin facts",
+        "",
+        *md_metric_table(mg["measured"]),
+        "",
+        "Value per retained case",
+        "",
+        *md_metric_table(mg["per_case"]),
+        "",
+        "Retained-sale value: revenue-based (existing) next to margin-based",
+        "",
+        *md_scenario_table(mg["scenarios"], mg["columns"]),
+        "",
+        "Break-even",
+        "",
+        *md_metric_table(mg["break_even"]),
+        "",
+        "Markdown",
+        "",
+        mg["markdown"]["text"],
+        "",
+        mg["markdown"]["limits"],
+        "",
+        "Formula:",
+        "",
+        "```text",
+        mg["formula"],
+        "```",
+        "",
+        *[f"- {c}" for c in mg["caveats"]],
+        "",
+    ]
+
+
 def render_markdown(m: dict) -> str:
     sc = m["scenarios"]
     pw = m["prevention_what_if"]
@@ -2223,6 +2525,7 @@ def render_markdown(m: dict) -> str:
         "converted to an exchange.",
         "",
         *md_v2_sections(m),
+        *md_margin_section(m),
         "## 6. Caveats",
         "",
         *[f"- {c}" for c in m["caveats"]],
@@ -2259,6 +2562,8 @@ def main(argv=None) -> int:
     parser.add_argument("--exchanges-csv", type=Path, default=EXCHANGES_CSV)
     parser.add_argument("--eval-results", type=Path, default=EVAL_RESULTS)
     parser.add_argument("--out-dir", type=Path, default=OUT_DIR)
+    parser.add_argument("--transaction-profile", type=Path, default=TXN_PROFILE,
+                        help="aggregates from scripts/profile_transactions.py; margin block says not_available if missing")
     args = parser.parse_args(argv)
 
     for path in (args.returns_csv, args.exchanges_csv):
@@ -2270,7 +2575,8 @@ def main(argv=None) -> int:
     exchanges = scan_exchanges(args.exchanges_csv, returns["store_banners"])
     cost = load_agent_cost(args.eval_results)
     profile = load_eval_profile(args.eval_results)
-    model = build_model(returns, exchanges, cost, args.returns_csv, args.exchanges_csv, profile)
+    model = build_model(returns, exchanges, cost, args.returns_csv, args.exchanges_csv, profile,
+                        txn_profile_path=args.transaction_profile)
 
     status_json = write_if_changed(args.out_dir / "impact-model.json",
                                    json.dumps(model, indent=2, ensure_ascii=False) + "\n")
@@ -2346,6 +2652,20 @@ def main(argv=None) -> int:
           f"{po['break_even_orders_per_10k_customers_max']['display']['high']}")
     if "usd_to_cad" in model:
         print(f"USD to CAD {model['usd_to_cad']['display']}: {model['usd_to_cad']['source']}")
+    mg = model["margin"]
+    if mg["status"] != "available":
+        print(f"Margin lever: not_available ({mg['reason']})")
+    else:
+        mm, be, ms = mg["measured"], mg["break_even"], mg["scenarios"]
+        print(f"Margin lever: footwear gross margin rate {mm['gross_margin_rate_footwear']['display']} "
+              f"(Regular price {mm['gross_margin_rate_footwear_regular_price']['display']}); margin per fit-returned unit "
+              f"{mm['avg_margin_per_fit_returned_unit']['display']}")
+        for key in ("fit_exchange", "preference_exchange", "prevention"):
+            print(f"  {key}: revenue-based " + " / ".join(ms[f"{key}_revenue_based"]["display"][n] for n in mg["columns"])
+                  + "; margin-based " + " / ".join(ms[f"{key}_margin_based"]["display"][n] for n in mg["columns"]))
+        print(f"  break-even: {be['break_even_exchanges_per_year']['display']} retained exchanges a year pay the agent bill "
+              f"({be['break_even_conversion_of_fit_lines_pct']['display']} of fit lines); one exchange pays "
+              f"{be['agent_runs_paid_by_one_exchange']['display']} agent runs or {be['perk_uses_paid_by_one_exchange']['display']} perk uses")
     print(f"impact-model.json {status_json}; impact-model.md {status_md}")
     return 0
 

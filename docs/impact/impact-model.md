@@ -8,6 +8,8 @@ Business impact
 - If 10%, 20% or 30% of those size-related lines became exchanges, annual net value would be about CAD 57,000, CAD 132,000 or CAD 209,000 after agent cost (derived: conversion rates assumed, agent cost measured).
 - Another 36,462 lines (58.8%) carry a change-of-mind or not-as-expected reason, but 91% of them use the combined label 'Changed my mind / Other', which sits on 72.5% of in-store lines against 9.5% of other lines, so this group is an upper bound (measured).
 - Converting 5%, 10% or 15% of them to a colour or style exchange where the alternative is in stock (60% assumed) would add about CAD 43,000, CAD 88,000 or CAD 135,000 a year on top of the size-related exchanges (gross; the agent already runs on every line), or about CAD 8,000 in the base case if only the 3,139 lines with a specific reason count (assumed).
+- ALDO_CA footwear earned a 64.18% gross margin in fiscal 2025 (72.94% on regular-price sales) and a fit-returned unit carries CAD 52.83 of margin, so one retained exchange pays for about 216 agent runs at CAD 0.2449 per run (derived: margin measured, agent cost measured).
+- At the measured margin rate the size-related exchanges retain about CAD 46,000, CAD 92,000 or CAD 138,000 of gross margin a year (a conservative reading), and 288 retained exchanges a year (2.16% of size-related lines) would already pay the whole agent bill (derived: conversion rates assumed).
 
 Scalability
 
@@ -416,6 +418,78 @@ max_perk_cost_per_member = fee_per_use x max_uses_per_year
 perk_cost_per_10k_customers = 10,000 x platinum_share x perk_cost_per_member
 break_even_extra_retained_orders = perk_cost / value_per_retained_order
 ```
+
+## Gross margin lever (transaction file)
+
+Margin version of the retained-sale value, next to the existing revenue-based numbers (unchanged). The rate and the margin per unit are measured from the 2025 ALDO transaction file; conversion rates and the CAD 54 per case remain the model's assumptions. Currency assumed CAD for ALDO_CA, unconfirmed.
+
+Source: `docs/evidence/transaction-profile.json` (SHA-256 `f72662af956d428c056270e1d296d226a59fe0ff75f59fa018dcec663e344b15`), 8,701,520 rows read, banner ALDO_CA, business dates 2025-02-02 to 2026-01-31.
+
+Measured margin facts
+
+| Metric | Value | Tag | Note |
+| --- | ---: | --- | --- |
+| ALDO_CA footwear gross margin rate, all price groups | 64.18% | measured | Gross margin / retail on sales lines. Basis: ALDO_CA footwear (men's and ladies' categories), sales lines, all price groups, fiscal 2025 (business dates 2025-02-02 to 2026-01-31; the file is named 2025), 1,233,675 units sold. Returns lines are excluded from the rate. |
+| ALDO_CA footwear gross margin rate, Regular price group | 72.94% | measured | Same basis, price_group Regular only (693,289 units). |
+| Average gross margin per unit sold, Regular price | CAD 74.53 | measured | Currency assumed CAD, unconfirmed. |
+| Average gross margin per unit sold, Markdown price group | CAD 23.29 | measured |  |
+| Average gross margin per returned unit, fit returns (Too small, Too big) | CAD 52.83 | measured | 3,654 fit return lines (3,662 units) with a text reason in the transaction file (web channel). Margin the sale carried, lost on a refund and retained by an exchange. |
+| Same, units returned from Regular price sales | CAD 70.86 | measured |  |
+| Share of fit return lines that were Markdown price | 34.78% | measured |  |
+
+Value per retained case
+
+| Metric | Value | Tag | Note |
+| --- | ---: | --- | --- |
+| Existing value per retained case (unchanged) | CAD 54.00 | assumed | Handoff section 15 synthetic unit economics, as in the scenarios. |
+| Existing value per retained case x measured margin rate | CAD 34.66 | derived | Literal product of the existing value and the measured rate. The CAD 54 is already net of an assumed item cost (40% of price), so applying a margin rate on top counts cost twice: read this as the conservative end. |
+| Average gross margin per returned unit, fit returns (Too small, Too big) | CAD 52.83 | measured | 3,654 fit return lines (3,662 units) with a text reason in the transaction file (web channel). Margin the sale carried, lost on a refund and retained by an exchange. |
+
+Retained-sale value: revenue-based (existing) next to margin-based
+
+| Item | Low | Base | High | Tag |
+| --- | ---: | ---: | ---: | --- |
+| Fit exchange lever: retained-sale value, revenue-based (existing, unchanged) | CAD 71,911.80 | CAD 143,823.60 | CAD 215,735.40 | derived |
+| Fit exchange lever: retained-sale value x margin rate (margin-based) | CAD 46,150.44 | CAD 92,300.87 | CAD 138,451.31 | derived |
+| Fit exchange lever: memo, cases x measured margin per fit-returned unit | CAD 70,353.71 | CAD 140,707.42 | CAD 211,061.13 | derived |
+| Preference exchange lever: retained-sale value, revenue-based (existing, unchanged) | CAD 42,649.60 | CAD 85,299.20 | CAD 127,948.80 | assumed |
+| Preference exchange lever: retained-sale value x margin rate (margin-based) | CAD 27,371.00 | CAD 54,741.99 | CAD 82,112.99 | assumed |
+| Preference exchange lever: memo, cases x measured margin per fit-returned unit | CAD 57,788.62 | CAD 115,577.25 | CAD 173,365.87 | assumed |
+| Pre-purchase prevention: retained-sale value, revenue-based (existing, unchanged) | CAD 0.00 | CAD 35,955.90 | CAD 71,911.80 | assumed |
+| Pre-purchase prevention: retained-sale value x margin rate (margin-based) | CAD 0.00 | CAD 23,075.22 | CAD 46,150.44 | assumed |
+| Pre-purchase prevention: memo, cases x measured margin per fit-returned unit | CAD 0.00 | CAD 35,176.86 | CAD 70,353.71 | assumed |
+
+Break-even
+
+| Metric | Value | Tag | Note |
+| --- | ---: | --- | --- |
+| Margin earned by one retained exchange (average fit-returned unit) | CAD 52.83 | measured | Measured average margin of a fit-returned footwear unit, all price groups. |
+| Agent cost per run | CAD 0.2449 | derived | Same cost per run as the scenarios. |
+| Agent runs paid for by the margin of one retained exchange | 216 | derived | Margin per retained exchange / agent cost per run. |
+| Retained exchanges per year that pay the whole agent bill (every return line costs one run) | 288 | derived | Annual agent cost CAD 15,183.31 / margin per retained exchange, rounded up. |
+| Same, as share of the measured fit lines | 2.16% | derived | Against the 13,317 fit lines; the scenarios assume 10 to 30 percent. |
+| Platinum perk cost per use (return shipping fee waived) | CAD 5.95 | assumed | Same fee as the tier perk block. |
+| Perk uses paid for by the margin of one retained exchange | 8.9 | derived |  |
+| Extra retained exchanges one perk use must cause to pay for itself | 0.113 | derived | Perk fee per use / margin per retained exchange. Cost bound only; no uplift is claimed. |
+
+Markdown
+
+ALDO_CA footwear units sold at Regular price earned on average CAD 74.53 of gross margin against CAD 23.29 at Markdown, a gap of CAD 51.24 per unit. If a returned unit would only be resold at a markdown, an exchange at full price protects about that much more margin. 35% of the fit returns were themselves Markdown-priced sales, where the margin at stake is lower (CAD 70.86 per unit for Regular-price fit returns).
+
+A comparison of sales lines by price group in fiscal 2025. The file does not show what price a returned unit was later resold at, so the gap is a reference size, not an observed resale loss.
+
+Formula:
+
+```text
+margin_based_value = existing_retained_sale_value x gross_margin_rate_footwear_ALDO_CA
+memo_retained_margin = cases x measured_margin_per_fit_returned_unit
+break_even_exchanges_per_year = total_requests x agent_cost_per_run / margin_per_retained_exchange
+perk_break_even_exchanges_per_use = perk_fee_per_use / margin_per_retained_exchange
+```
+
+- The transaction file is store and web point-of-sale data, not the e-commerce OMS files behind the rest of the model. Fit text reasons exist only on web-channel return lines; in-store return lines carry numeric POS reason codes with no legend, so they are not counted as fit. The margin rate describes ALDO_CA footwear sales as a whole, not only the units that get returned.
+- The existing CAD 54 per case is net of an assumed 40% item cost, so the margin-based rows (value x rate) are a conservative reading. The memo rows use the measured margin per fit-returned unit directly.
+- Margin is gross margin as recorded in the file (retail minus cost); handling, freight and restocking are not in it. Currency assumed CAD, unconfirmed.
 
 ## 6. Caveats
 

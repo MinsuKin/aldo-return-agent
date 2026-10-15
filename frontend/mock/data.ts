@@ -251,7 +251,7 @@ export const FIT: Record<string, { signal: string; too_small: number; too_big: n
   Verity: { signal: "mixed", too_small: 131, too_big: 91 },
   Dorenna: { signal: "runs_large", too_small: 139, too_big: 312 },
   Jellyicious: { signal: "insufficient_data", too_small: 7, too_big: 19 },
-  Biglect: { signal: "runs_large", too_small: 13, too_big: 223 },
+  "ALDO Men 001": { signal: "runs_large", too_small: 10, too_big: 108 },
   Nevada: { signal: "runs_small", too_small: 169, too_big: 48 },
   Uneral: { signal: "runs_large", too_small: 56, too_big: 148 },
   Belide: { signal: "runs_large", too_small: 42, too_big: 159 },
@@ -260,8 +260,8 @@ export const FIT: Record<string, { signal: string; too_small: number; too_big: n
 
 /**
  * The men's style of the John script (addendum 11.3). The product is named "ALDO Men 001" (the fit numbers
- * behind it are those of a real ALDO_CA style, see fixtures/demo/README.md); the UI shows whatever name the
- * server sends.
+ * behind it are the real OMS return counts of a men's style, see fixtures/demo/README.md); the UI shows
+ * whatever name the server sends.
  */
 export const MEN001 = {
   product: "ALDO Men 001",

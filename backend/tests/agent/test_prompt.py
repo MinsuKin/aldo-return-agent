@@ -90,7 +90,7 @@ def test_prompt_names_all_ten_tools_and_nothing_pre_purchase(text: str) -> None:
 
 def test_prompt_has_no_unrendered_placeholders_and_a_word_budget(text: str) -> None:
     assert re.findall(r"\{[a-z_]+\}", text) == []
-    assert len(text.split()) < 2200
+    assert len(text.split()) < 2800  # S19b: the bundle dialogue (SEVERAL ITEMS) added about 700 words
 
 
 def test_max_rounds_is_taken_from_the_argument() -> None:

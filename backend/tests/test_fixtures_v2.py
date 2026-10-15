@@ -197,7 +197,8 @@ def test_the_demo_name_reaches_the_real_numbers_of_a_runs_large_style(bundle):
     readme = (DEMO / "README.md").read_text(encoding="utf-8")
     assert MEN_NAME in readme and real["product_name"] in readme
     assert str(insight["n_fit"]) in readme and str(insight["too_big"]) in readme
-    assert "Ladies-only" in readme  # the data caveat travels with the pick
+    # the data caveat travels with the pick: the OMS extract is ladies' only, the POS file has men's sizes 7 to 14
+    assert "ladies' categories only" in readme and "sizes 7 to 14" in readme and "24 months of OMS returns" in readme
 
 
 def test_the_mens_style_runs_from_8_to_12_in_black_brown_and_tan(bundle):

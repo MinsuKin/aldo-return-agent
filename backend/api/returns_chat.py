@@ -49,9 +49,10 @@ CANCEL_PREFIXES = ("cancel", "back to bot")
 #: Events of a return run that mean "this return is done" (a quote is not: the owner still has to approve).
 HANDBACK_EVENTS = ("transaction_created", "case_created")
 ACTOR_RETURN = "aldo_agent"
-#: How the phone UI words the end of a return (the ``reason`` next to ``outcome`` on ``handback``).
-#: A cancel or an unavailable order has no such word: ``outcome`` alone says it.
-PUBLIC_REASONS = {"transaction_created": "completed", "case_created": "escalated"}
+#: The public ``outcome`` of ``handback`` (the phone UI reads these words): a return that created a
+#: transaction is "completed", one that created a case is "escalated". Any other reason
+#: (``owner_cancelled``, ``order_unavailable``) is its own outcome.
+PUBLIC_OUTCOMES = {"transaction_created": "completed", "case_created": "escalated"}
 RECENT_ORDERS = 6
 MAX_LINES_PER_ORDER = 12
 
@@ -125,8 +126,9 @@ def hand_back(
     """Return the conversation to mode ``bot`` and show ``handback`` on the A2A stream.
 
     True only for the caller that changed the mode, so a late or repeated hand-back (a replayed
-    approval, a double "cancel") emits nothing. ``reason`` is the public ``outcome`` of the event:
-    ``transaction_created``, ``case_created`` or ``owner_cancelled``.
+    approval, a double "cancel") emits nothing. ``reason`` is why the chat comes back
+    (``transaction_created``, ``case_created``, ``owner_cancelled``, ``order_unavailable``); the event's
+    public ``outcome`` is ``completed`` for a transaction, ``escalated`` for a case, else ``reason`` itself.
     """
     repo = repo or _memory().get_repo()
     previous = repo.set_bot_mode(customer_id, pa_conv, expected_order_id=expected_order_id)
@@ -134,14 +136,12 @@ def hand_back(
         return False
     public = {key: value for key, value in (ids or {}).items() if isinstance(value, str) and value}
     order_id = previous.get("returns_order_id")
-    word = PUBLIC_REASONS.get(reason)
     trace.emit_a2a_safe(
         customer_id,
         "handback",
         {
             **({"order_id": order_id} if order_id else {}),
-            "outcome": reason,
-            **({"reason": word} if word else {}),
+            "outcome": PUBLIC_OUTCOMES.get(reason, reason),
             "mode": MODE_BOT,
             **public,
         },

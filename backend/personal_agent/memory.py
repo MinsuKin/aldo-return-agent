@@ -49,6 +49,9 @@ SK_PROFILE = "PROFILE"
 SIZE_PATTERN = r"^\d{1,2}\.\d$"
 MEMORY_OUTCOMES = ("kept", "returned_too_big", "returned_too_small")
 UPDATE_OUTCOMES = ("exchange_created", "exchange_completed_kept")
+#: A bundle return (several lines, one shipment) is ONE write-back with an ``items`` list, no sizes of its own.
+RETURN_OUTCOME = "return_created"
+MAX_RETURN_ITEMS = 10
 RUN_ID_PREFIX = "PRUN-"
 CONV_ID_PREFIX = "PCONV-"
 MEMORY_LABEL = "Synthetic demo memory"
@@ -364,6 +367,44 @@ class AppliedUpdate(BaseModel):
     fit_feedback: Literal["size_ok"] | None = None
 
 
+class ReturnedItem(BaseModel):
+    """One line of a bundle return, as ALDO's write-back carries it and as the owner's memory keeps it."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    style_id: str = Field(pattern=_ID_ANCHORED)
+    product_name: str = Field(min_length=1, max_length=120)
+    color: str = Field(min_length=1, max_length=40)
+    size: str = Field(pattern=SIZE_PATTERN)
+    reason: str = Field(pattern=r"^[A-Z][A-Z_]{2,31}$")
+
+    @field_validator("product_name", "color", mode="after")
+    @classmethod
+    def _clean_text(cls, value: str) -> str:
+        cleaned = normalize_text(value)
+        if not cleaned:
+            raise ValueError("must not be empty")
+        return cleaned
+
+
+class ReturnRecord(BaseModel):
+    """An applied bundle-return write-back: what ALDO told ALDO bot about a return (outcome ``return_created``).
+
+    It is not a size swap, so it is not in ``OwnerMemory.updates`` (the list of exchanges) but in
+    ``OwnerMemory.returns``. A return is never superseded by another update of the same order.
+    """
+
+    update_id: str
+    order_id: str
+    reason: str
+    outcome: str
+    provisional: bool
+    confidence: Literal["provisional", "confirmed"]
+    applied_at: str
+    source: str = "ALDO_CA"
+    items: list[ReturnedItem]
+
+
 class OwnerMemory(BaseModel):
     """What ``GET /api/personal-agent/memory`` returns (contracts.md C.8 ``OwnerMemoryView``)."""
 
@@ -375,6 +416,8 @@ class OwnerMemory(BaseModel):
     label: str = MEMORY_LABEL
     memory: list[MemoryEntry]
     updates: list[AppliedUpdate]
+    #: Bundle returns ALDO reported (domain v2 phase 2). ``list_memory`` leaves the key out while there are none.
+    returns: list[ReturnRecord] = Field(default_factory=list)
 
 
 class MemoryUpdate(BaseModel):
@@ -406,24 +449,65 @@ class MemoryUpdate(BaseModel):
         return cleaned
 
 
-def validate_update(raw: object) -> MemoryUpdate:
-    """Parse a write-back body; raises VALIDATION_ERROR naming the bad fields only (never values)."""
+class BundleReturnUpdate(BaseModel):
+    """Body of the write-back of a BUNDLE return (``outcome`` ``return_created``): one update, an ``items`` list.
+
+    No style, product, colour or size of its own (the items carry them) and no ``fit_feedback``.
+    Unknown keys, at any level, are rejected like in ``MemoryUpdate``.
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    update_id: str = Field(pattern=_ID_ANCHORED)
+    owner_ref: str = Field(pattern=_ID_ANCHORED)
+    order_id: str = Field(pattern=_ID_ANCHORED)
+    reason: str = Field(pattern=r"^[A-Z][A-Z_]{2,31}$")
+    outcome: Literal["return_created"]
+    provisional: StrictBool
+    source: str = Field(min_length=1, max_length=40)
+    ts: str = Field(min_length=10, max_length=40)
+    items: list[ReturnedItem] = Field(min_length=1, max_length=MAX_RETURN_ITEMS)
+
+    @field_validator("source", mode="after")
+    @classmethod
+    def _clean_source(cls, value: str) -> str:
+        cleaned = normalize_text(value)
+        if not cleaned:
+            raise ValueError("must not be empty")
+        return cleaned
+
+
+def validate_update(raw: object) -> MemoryUpdate | BundleReturnUpdate:
+    """Parse a write-back body; raises VALIDATION_ERROR naming the bad fields only (never values).
+
+    A body whose ``outcome`` is ``return_created`` is a bundle return (``BundleReturnUpdate``); every
+    other body is an exchange update (``MemoryUpdate``).
+    """
     if not isinstance(raw, Mapping):
         raise DomainError(ErrorCode.VALIDATION_ERROR, "memory update must be a JSON object")
+    model: type[MemoryUpdate] | type[BundleReturnUpdate] = (
+        BundleReturnUpdate if raw.get("outcome") == RETURN_OUTCOME else MemoryUpdate
+    )
     try:
-        update = MemoryUpdate.model_validate(dict(raw))
+        update = model.model_validate(dict(raw))
     except ValidationError as exc:
         fields = sorted({".".join(str(part) for part in err["loc"]) or "body" for err in exc.errors()})
         raise DomainError(
             ErrorCode.VALIDATION_ERROR, f"invalid memory update: {', '.join(fields)}"
         ) from None
-    expected_provisional = update.outcome == "exchange_created"
-    if update.provisional != expected_provisional:
-        raise DomainError(
-            ErrorCode.VALIDATION_ERROR,
-            "invalid memory update: provisional must be true for exchange_created and false "
-            "for exchange_completed_kept",
-        )
+    if isinstance(update, BundleReturnUpdate):
+        if update.provisional is not True:  # the parcel has not arrived: ALDO cannot know more yet
+            raise DomainError(
+                ErrorCode.VALIDATION_ERROR, "invalid memory update: provisional must be true for return_created"
+            )
+    else:
+        expected_provisional = update.outcome == "exchange_created"
+        if update.provisional != expected_provisional:
+            raise DomainError(
+                ErrorCode.VALIDATION_ERROR,
+                "invalid memory update: provisional must be true for exchange_created and false "
+                "for exchange_completed_kept",
+            )
     clock.parse_iso(update.ts)  # VALIDATION_ERROR when not an ISO-8601 timestamp with an offset
     return update
 
@@ -731,10 +815,15 @@ class MemoryRepo:
         pk = owner_pk(owner_id)
         memory = [MemoryEntry(**_public_memory(item)) for item in self._query(pk, begins_with="MEM#")]
         memory.sort(key=lambda entry: _natural_key(entry.memory_id))
-        applied = [self._applied(item) for item in self._query(pk, begins_with="UPD#")]
+        stored = self._query(pk, begins_with="UPD#")
+        applied = [self._applied(item) for item in stored if item.get("outcome") != RETURN_OUTCOME]
         if not include_superseded:
             applied = [update for update in applied if update[0].status == "active"]
         applied.sort(key=lambda pair: (pair[1], pair[0].update_id))
+        returned = sorted(
+            (self._returned(item) for item in stored if item.get("outcome") == RETURN_OUTCOME),
+            key=lambda pair: (pair[1], pair[0].update_id),
+        )
         return OwnerMemory(
             owner_id=owner["owner_id"],
             display_name=owner["display_name"],
@@ -743,6 +832,7 @@ class MemoryRepo:
             source=owner["source"],
             memory=memory,
             updates=[pair[0] for pair in applied],
+            returns=[pair[0] for pair in returned],
         )
 
     @staticmethod
@@ -768,9 +858,34 @@ class MemoryRepo:
         )
         return update, str(item.get("ts", ""))
 
+    @staticmethod
+    def _returned(item: Mapping[str, Any]) -> tuple[ReturnRecord, str]:
+        """The memory view of a stored bundle-return write-back (its items are a JSON string)."""
+        provisional = bool(item.get("provisional"))
+        raw_items = _json_list(item.get("items_json"))
+        record = ReturnRecord(
+            update_id=item["update_id"],
+            order_id=item.get("order_id", ""),
+            reason=item.get("reason", ""),
+            outcome=item.get("outcome", RETURN_OUTCOME),
+            provisional=provisional,
+            confidence="provisional" if provisional else "confirmed",
+            applied_at=item.get("applied_at", ""),
+            source=item.get("source", "ALDO_CA"),
+            items=[ReturnedItem(**entry) for entry in raw_items],
+        )
+        return record, str(item.get("ts", ""))
+
     def list_memory(self, owner_id: str) -> dict[str, Any]:
-        """``GET /api/personal-agent/memory`` body: ``OwnerMemory`` as a JSON-ready dict."""
-        return self.get_owner_memory(owner_id).model_dump(mode="json")
+        """``GET /api/personal-agent/memory`` body: ``OwnerMemory`` as a JSON-ready dict.
+
+        ``returns`` (bundle returns ALDO reported) is part of the body only once there is one, so the
+        view of every owner without a bundle return is exactly what it was before.
+        """
+        body = self.get_owner_memory(owner_id).model_dump(mode="json")
+        if not body.get("returns"):
+            body.pop("returns", None)
+        return body
 
     def recall_size_memory(self, owner_id: str, retailer: str | None = None) -> dict[str, Any]:
         """What the ``recall_size_memory`` tool returns (private to the owner, never sent to ALDO)."""
@@ -817,6 +932,10 @@ class MemoryRepo:
         otherwise the latest provisional wins. Returns ``{"update_id", "applied", "duplicate",
         "provisional", "update"}``.
 
+        A body with ``outcome`` ``return_created`` is the write-back of a bundle return (an ``items``
+        list, no sizes of its own): kept the same way and as idempotently, listed in ``returns``
+        rather than ``updates``, and outside the supersede rule above.
+
         ``emit_a2a`` (default: env ``PERSONAL_AGENT_EMIT_A2A``, off) additionally writes
         ``memory_updated`` to the owner's A2A stream. It is off because ALDO's outbox emits that event
         exactly once itself (contracts.md F.5); a second emitter would duplicate it.
@@ -825,6 +944,8 @@ class MemoryRepo:
         owner_id = update.owner_ref
         if self.get_owner(owner_id) is None:
             raise DomainError(ErrorCode.NOT_FOUND, "unknown owner for this memory update")
+        if isinstance(update, BundleReturnUpdate):
+            return self._apply_return(update, emit_a2a=emit_a2a)
         pk = owner_pk(owner_id)
         item = {
             "pk": pk,
@@ -890,13 +1011,68 @@ class MemoryRepo:
             "update": update.model_dump(mode="json"),
         }
 
+    def _apply_return(self, update: BundleReturnUpdate, *, emit_a2a: bool | None = None) -> dict[str, Any]:
+        """Keep the write-back of a bundle return, idempotent on ``update_id``.
+
+        The same conditional put as an exchange update makes a replay a no-op (``duplicate: true``).
+        A return is an independent fact about its lines, so it is never superseded by (and never
+        supersedes) another update of the same order.
+        """
+        owner_id = update.owner_ref
+        pk = owner_pk(owner_id)
+        item = {
+            "pk": pk,
+            "sk": _sk_upd(update.update_id),
+            "update_id": update.update_id,
+            "owner_id": owner_id,
+            "order_id": update.order_id,
+            "reason": update.reason,
+            "outcome": update.outcome,
+            "provisional": True,
+            "source": update.source,
+            "ts": clock.iso(clock.parse_iso(update.ts)),
+            "applied_at": clock.iso(clock.now_utc()),
+            "status": "active",
+            "items_json": json.dumps(
+                [entry.model_dump() for entry in update.items], separators=(",", ":"), ensure_ascii=False
+            ),
+        }
+        try:
+            self._put(item, if_absent=True)
+        except ConditionFailed:
+            return self._return_result(self._get(pk, _sk_upd(update.update_id)) or item, applied=False)
+        result = self._return_result(self._get(pk, _sk_upd(update.update_id)) or item, applied=True)
+        if settings.emit_a2a_enabled() if emit_a2a is None else emit_a2a:
+            a2a.emit_a2a(
+                owner_id,
+                "memory_updated",
+                {
+                    "update_id": update.update_id,
+                    "reason": update.reason,
+                    "outcome": update.outcome,
+                    "provisional": True,
+                },
+                actor="personal_agent",
+            )
+        return result
+
+    def _return_result(self, item: Mapping[str, Any], *, applied: bool) -> dict[str, Any]:
+        record, _ts = self._returned(item)
+        return {
+            "update_id": record.update_id,
+            "applied": applied,
+            "duplicate": not applied,
+            "provisional": record.provisional,
+            "update": record.model_dump(mode="json"),
+        }
+
     def _resolve_order_updates(self, owner_id: str, order_id: str) -> None:
         """Mark all but the winning update of one order as superseded (idempotent, order-free)."""
         pk = owner_pk(owner_id)
         items = [
             item
             for item in self._query(pk, begins_with="UPD#")
-            if item.get("order_id") == order_id
+            if item.get("order_id") == order_id and item.get("outcome") != RETURN_OUTCOME
         ]
         if len(items) < 2:
             return
@@ -1400,6 +1576,17 @@ def _json_object(raw: object) -> dict[str, Any] | None:
     except ValueError:
         return None
     return value if isinstance(value, dict) else None
+
+
+def _json_list(raw: object) -> list[dict[str, Any]]:
+    """The list of objects stored as a JSON string; anything else (absent, broken, not a list) is empty."""
+    if not isinstance(raw, str) or not raw.strip():
+        return []
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        return []
+    return [entry for entry in value if isinstance(entry, dict)] if isinstance(value, list) else []
 
 
 def _public_memory(item: Mapping[str, Any]) -> dict[str, Any]:

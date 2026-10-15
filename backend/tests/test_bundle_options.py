@@ -150,7 +150,7 @@ def test_create_quote_refuses_an_option_that_needs_review(bundles):
 
 
 def test_platinum_is_fine_up_to_75000_and_needs_review_above(bundles):
-    big = bundles.find(DAVID, numbers=tuple(range(1, 11)))[2]  # all ten lines: 152990 (the fixtures README says 151990)
+    big = bundles.find(DAVID, numbers=tuple(range(1, 11)))[2]  # all ten lines: 152990
     assert big.bundle["refund_total_cents"] == 152990
     assert big.bundle["decision"] == "needs_review" and big.options[0].decision == "needs_review"
     assert big.options[0].benefit is None  # a bundle nobody can grant is not given the perk either

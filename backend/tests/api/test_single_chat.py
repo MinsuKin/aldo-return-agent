@@ -387,7 +387,7 @@ def test_a_run_that_created_a_transaction_hands_the_chat_back(world, enqueued):
     assert returns_chat.settle_after_run(AVA, aldo_conv, run_id) is True
     assert repo().get_conversation(AVA, conv)["mode"] == "bot"
     (event,) = [e for e in a2a(world) if e["type"] == "handback"]
-    assert event["payload"] == {"order_id": ORDER, "outcome": "transaction_created", "mode": "bot", "transaction_id": "DEMO-RMA-AB12CD"}
+    assert event["payload"] == {"order_id": ORDER, "outcome": "completed", "mode": "bot", "transaction_id": "DEMO-RMA-AB12CD"}
     assert returns_chat.settle_after_run(AVA, aldo_conv, run_id) is False  # a replay changes nothing
     assert [e["type"] for e in a2a(world)].count("handback") == 1
 
@@ -397,7 +397,7 @@ def test_a_run_that_created_a_case_hands_the_chat_back(world, enqueued):
     trace.emit(run_id, "case_created", {"case_id": "DEMO-CASE-1", "reason_code": "FINAL_SALE_DEFECT"})
     assert returns_chat.settle_after_run(AVA, aldo_conv, run_id) is True
     (event,) = [e for e in a2a(world) if e["type"] == "handback"]
-    assert event["payload"]["outcome"] == "case_created" and event["payload"]["case_id"] == "DEMO-CASE-1"
+    assert event["payload"]["outcome"] == "escalated" and event["payload"]["case_id"] == "DEMO-CASE-1"
     assert repo().get_conversation(AVA, conv)["mode"] == "bot"
 
 
@@ -428,6 +428,79 @@ def test_a_late_hand_back_for_another_order_is_ignored(world, enqueued):
     conv, aldo_conv, run_id = returns_chat_with_run(world, enqueued)
     assert returns_chat.hand_back(AVA, conv, reason="transaction_created", expected_order_id="DEMO-OTHER") is False
     assert repo().get_conversation(AVA, conv)["mode"] == "returns"
+
+
+@pytest.mark.parametrize(
+    "reason,outcome",
+    [("transaction_created", "completed"), ("case_created", "escalated"), ("owner_cancelled", "owner_cancelled"), ("order_unavailable", "order_unavailable")],
+)
+def test_the_hand_back_says_how_it_ended_in_the_words_of_the_phone(world, enqueued, reason, outcome):
+    """A transaction is "completed", a case "escalated" (the words the phone UI reads from ``outcome``)."""
+    conv = start_chat(world)
+    hand_off(AVA, conv)
+    assert returns_chat.hand_back(AVA, conv, reason=reason, expected_order_id=ORDER) is True
+    (event,) = [e for e in a2a(world) if e["type"] == "handback"]
+    assert event["actor"] == "aldo_agent" and event["payload"] == {"order_id": ORDER, "outcome": outcome, "mode": "bot"}
+
+
+# ============================================================ every run of the hand-off brings the context
+
+
+def aldo_runs(enqueued):
+    return [p for p in enqueued if p["agent"] == "aldo"]
+
+
+def test_every_owner_message_of_the_hand_off_carries_the_order_and_the_context(world, enqueued):
+    """Each message is its own run and the return workflow keeps the context only in that run's system prompt."""
+    conv = start_chat(world)
+    hand_off(AVA, conv)
+    say(world, conv, "Too tight.")
+    finish(AVA, enqueued[0]["run_id"])
+    say(world, conv, "Half a size up, please.")
+    first, second = aldo_runs(enqueued)
+    assert second["message"] == "Half a size up, please." and first["conv_id"] == second["conv_id"]
+    for payload in (first, second):
+        assert payload["order_id"] == ORDER and payload["selected_order_id"] == ORDER and payload["memory_context"] == CONTEXT
+
+
+def test_the_fields_a_run_of_the_hand_off_conversation_carries(world, enqueued):
+    conv, aldo_conv, run_id = returns_chat_with_run(world, enqueued)
+    assert returns_chat.handoff_fields(AVA, aldo_conv, ORDER) == {"memory_context": CONTEXT, "selected_order_id": ORDER}
+    assert returns_chat.handoff_fields(AVA, aldo_conv) == {"memory_context": CONTEXT}  # no order known: nothing invented
+    assert returns_chat.handoff_fields(AVA, aldo_conv, ORDER)["memory_context"] is not CONTEXT  # a copy, not the stored object
+
+
+def test_the_fields_are_not_given_to_another_owner_a_plain_conversation_or_a_stranger(world, enqueued):
+    conv, aldo_conv, run_id = returns_chat_with_run(world, enqueued)
+    assert returns_chat.handoff_fields(BEN, aldo_conv, ORDER) == {}  # not Ben's conversation
+    assert returns_chat.handoff_fields(AVA, conversations.create_conversation(AVA, ORDER), ORDER) == {}  # not a hand-off
+    assert returns_chat.handoff_fields(AVA, "CONV-MISSING", ORDER) == {}
+    assert returns_chat.handoff_fields(AVA, "", ORDER) == {}
+
+
+def test_the_fields_leave_with_the_mode(world, enqueued):
+    """Once the chat is back with the bot the stored context is gone, and so is the hand-off."""
+    conv, aldo_conv, run_id = returns_chat_with_run(world, enqueued)
+    finish(AVA, run_id)
+    assert say(world, conv, "cancel").status == 202
+    assert repo().get_conversation(AVA, conv)["mode"] == "bot"
+    assert returns_chat.handoff_fields(AVA, aldo_conv, ORDER) == {}
+
+
+def test_a_failing_read_never_stops_a_run_from_starting(world, enqueued, monkeypatch):
+    conv, aldo_conv, run_id = returns_chat_with_run(world, enqueued)
+    finish(AVA, run_id)
+    monkeypatch.setattr(store, "get_item", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("table down")))
+    assert returns_chat.handoff_fields(AVA, aldo_conv, ORDER) == {}  # the context is optional: no context, no failure
+
+
+def test_a_plain_conversation_keeps_the_payload_it_always_had(world, enqueued):
+    """The return workflow's own route is unchanged for a conversation that is not a hand-off."""
+    plain = world.post("/api/conversations", {}, token=session_token(AVA)).json["conv_id"]
+    reply = world.post(f"/api/conversations/{plain}/messages", {"text": "Hello", "order_id": ORDER}, token=session_token(AVA))
+    assert reply.status == 202
+    (payload,) = aldo_runs(enqueued)
+    assert "memory_context" not in payload and "selected_order_id" not in payload and payload["order_id"] == ORDER
 
 
 # ============================================================================ pure helpers

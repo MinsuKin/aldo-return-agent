@@ -52,12 +52,11 @@ function whereLabel(o: OptionView): string {
 
 /** The "what changes" line: a colour swap, a size swap, or the refund. */
 function Summary({ o }: { o: OptionView }) {
-  if (o.lines.length > 1) {
+  // A return names what is going back: one item, or several in one shipment.
+  if (!o.isExchange && o.lines.length >= 1) {
     return (
       <div className="bundle" data-testid="bundle-items">
-        <p className="bundle-count">
-          {o.lines.length} items, one shipment
-        </p>
+        <p className="bundle-count">{o.lines.length > 1 ? `${o.lines.length} items, one shipment` : "1 item"}</p>
         <ol className="bundle-list">
           {o.lines.map((l) => (
             <li key={l.lineId}>
@@ -107,6 +106,14 @@ function Summary({ o }: { o: OptionView }) {
       </div>
     );
   }
+  if (o.productName) {
+    return (
+      <p className="swap-product">
+        {o.productName}
+        {o.color ? `, ${colorWord(o.color)}` : ""}
+      </p>
+    );
+  }
   return null;
 }
 
@@ -133,6 +140,7 @@ function Totals({ o }: { o: OptionView }) {
                 {o.benefit?.savedCents ? (
                   <span className="strike muted">
                     {" "}
+                    <span className="sr-only">instead of </span>
                     <s>{formatCents(o.benefit.savedCents, o.currency)}</s>
                   </span>
                 ) : null}

@@ -20,6 +20,7 @@ from returns_domain import policy, store as real_store
 from returns_domain.errors import DomainError, ErrorCode
 
 CUSTOMER = "DEMO-CUST-AVA"
+DAVID = "DEMO-CUST-DAVID"  # Platinum, rural New Brunswick: owns the ten-line order DEMO-3001
 OTHER_CUSTOMER = "DEMO-CUST-BEN"
 SEEDED_ORDER = "DEMO-1001"
 AGENT_ORDER = "DEMO-A2A-81B20E"  # placed by the customer's personal agent (channel "agent")
@@ -48,6 +49,7 @@ class OrderLineM(BaseModel):
     returned_or_reserved_qty: int
     unit_paid_cents: int
     final_sale: bool | None
+    category: str | None = None  # David's order names what each shoe is (boot, sneaker, ...)
 
 
 class OrderM(BaseModel):
@@ -98,11 +100,21 @@ class OptionM(BaseModel):
     replacement_color: str | None = None
     minutes_away: int | None = None
     benefit: dict[str, Any] | None = None  # phase 2 (a tier perk); the agent passes it through untouched
+    # Bundle returns (domain v2 phase 2): left out of the JSON for single-line options, like the real Option.
+    lines: list[dict[str, Any]] | None = None
+    refund_total_cents: int | None = None
+    net_refund_cents: int | None = None
+    decision: str | None = None
+    rule_ids: list[str] | None = None
+    authority_limit_cents: int | None = None
 
     @model_serializer(mode="wrap")
     def _omit_unknown_optionals(self, handler: Any) -> dict[str, Any]:
         data = handler(self)
-        for name in ("replacement_sku", "replacement_color", "minutes_away", "benefit"):
+        for name in (
+            "replacement_sku", "replacement_color", "minutes_away", "benefit", "lines", "refund_total_cents",
+            "net_refund_cents", "decision", "rule_ids", "authority_limit_cents",
+        ):
             if data.get(name) is None:
                 data.pop(name, None)
         return data
@@ -119,12 +131,15 @@ class CandidateSetM(BaseModel):
     created_at: str = "2026-10-16T16:00:00+00:00"
     preferred_channel: str | None = None
     needs_choice: dict[str, Any] | None = None
+    policy_check_ids: list[str] | None = None
+    bundle: dict[str, Any] | None = None
 
     @model_serializer(mode="wrap")
     def _omit_needs_choice_when_none(self, handler: Any) -> dict[str, Any]:
         data = handler(self)
-        if data.get("needs_choice") is None:
-            data.pop("needs_choice", None)
+        for name in ("needs_choice", "policy_check_ids", "bundle"):
+            if data.get(name) is None:
+                data.pop(name, None)
         return data
 
 
@@ -134,6 +149,16 @@ class QuoteM(BaseModel):
     status: str = "open"
     expires_at: str = "2026-10-16T16:15:00+00:00"
     options: list[OptionM]
+    policy_check_ids: list[str] | None = None
+    lines: list[dict[str, Any]] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_bundle_fields_when_none(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        for name in ("policy_check_ids", "lines"):
+            if data.get(name) is None:
+                data.pop(name, None)
+        return data
 
 
 #: What the real domain puts in a store notice (display_name and tier_label are NOT for the model).
@@ -156,6 +181,14 @@ class ExecutionResultM(BaseModel):
     approval_id: str = "APR-000001"
     memory_update_id: str | None = None
     store_notice: dict[str, Any] | None = None
+    benefit: dict[str, Any] | None = None  # a bundle that used the member perk
+
+    @model_serializer(mode="wrap")
+    def _omit_benefit_when_none(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        if data.get("benefit") is None:
+            data.pop("benefit", None)
+        return data
 
 
 class TransactionViewM(BaseModel):
@@ -181,6 +214,18 @@ class TransactionViewM(BaseModel):
     memory_update_id: str | None = None
     replacement_color: str | None = None
     store_notice: dict[str, Any] | None = None
+    lines: list[dict[str, Any]] | None = None
+    refund_total_cents: int | None = None
+    net_refund_cents: int | None = None
+    benefit: dict[str, Any] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_bundle_fields_when_none(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        for name in ("lines", "refund_total_cents", "net_refund_cents", "benefit"):
+            if data.get(name) is None:
+                data.pop(name, None)
+        return data
 
 
 class CaseM(BaseModel):
@@ -225,7 +270,44 @@ def _line(order_id: str, size: str, *, final_sale: bool = False, unit: int = 129
     )
 
 
+#: David's ten-line order (the shipped fixture DEMO-3001), here owned by the fake customer so the fakes can serve it.
+BUNDLE_ORDER = "DEMO-3001"
+#: number -> (product, colour, category, size, price in cents)
+BUNDLE_LINES: dict[int, tuple[str, str, str, str, int]] = {
+    1: ("Lededanten", "BLACK", "derby", "10.0", 15999),
+    2: ("Aahliyah", "TAN", "boot", "10.5", 17999),
+    3: ("Joselie", "BROWN", "oxford", "10.0", 16999),
+    4: ("Tanerdee", "BLACK", "chelsea boot", "11.0", 19999),
+    5: ("Alanie", "WHITE", "sneaker", "10.0", 10999),
+    6: ("Mazey", "BROWN", "boat shoe", "9.5", 13999),
+    7: ("Caraelia", "BLACK", "monk strap", "10.5", 18999),
+    8: ("Valegyn", "NAVY", "loafer", "10.0", 12999),
+    9: ("Krishelle", "BROWN", "brogue", "11.0", 14999),
+    10: ("Oneameth", "GREY", "sneaker", "10.5", 9999),
+}
+BUNDLE_SCRIPT = (2, 5, 8)  # the tan boot, the white sneaker, the navy loafer: 17999 + 10999 + 12999 = 41997
+
+
+def bundle_check_id(number: int) -> str:
+    return f"PCHK-D{number:07d}"
+
+
+def _bundle_order() -> OrderM:
+    return OrderM(
+        order_id=BUNDLE_ORDER, channel="web", ordered_at="2026-10-09", delivered_at="2026-10-13",
+        lines=[
+            OrderLineM(
+                line_id=f"{BUNDLE_ORDER}-L{n}", sku=f"DEMO-SKU-NEW{n:02d}-{color}-100", product_name=name,
+                style=f"DEMO-STYLE-NEW{n:02d}", size=size, color=color, purchased_qty=1,
+                returned_or_reserved_qty=0, unit_paid_cents=price, final_sale=False, category=category,
+            )
+            for n, (name, color, category, size, price) in BUNDLE_LINES.items()
+        ],
+    )
+
+
 ORDERS: dict[str, tuple[str, OrderM]] = {
+    BUNDLE_ORDER: (DAVID, _bundle_order()),
     AGENT_ORDER: (
         CUSTOMER,
         OrderM(order_id=AGENT_ORDER, channel="agent", ordered_at="2026-10-16", delivered_at="2026-10-16",
@@ -280,8 +362,9 @@ class FakeOrders(_Fake):
                     "already_returned_qty": l.returned_or_reserved_qty,
                     "remaining_qty": Decimal(l.purchased_qty - l.returned_or_reserved_qty),  # as boto3 would
                     "unit_paid_cents": l.unit_paid_cents, "final_sale": l.final_sale,
+                    **({"category": l.category} if l.category else {}),
                 }
-                for l in order.lines
+                for l in sorted(order.lines, key=lambda line: line.line_id)  # the domain sorts the ids as text
             ],
             "source_refs": [f"ORDER#{order.order_id}/META"],
         }
@@ -293,8 +376,9 @@ class FakeOrders(_Fake):
         order = self._owned(customer_id, order_id)
         line = next(l for l in order.lines if l.line_id == line_id)
         result = policy.evaluate(order.model_dump(), line.model_dump(), qty, reason_category, condition)
+        check_id = "PCHK-0000000A" if order_id != BUNDLE_ORDER else bundle_check_id(int(line_id.rsplit("-L", 1)[1]))
         return PolicyCheckM(
-            policy_check_id="PCHK-0000000A", order_id=order_id, line_id=line_id, qty=qty,
+            policy_check_id=check_id, order_id=order_id, line_id=line_id, qty=qty,
             reason_category=reason_category, condition=condition, size_direction=size_direction,
             refund_cents=line.unit_paid_cents * qty, result=result.to_dict(),
             policy_version=result.policy_version,
@@ -408,9 +492,21 @@ class FakeOptions(_Fake):
     extra_options: list[OptionM] = []
     store: FakeStore | None = None
 
-    def find_options(self, customer_id: str, policy_check_id: str, replacement_size: str | None = None,
+    #: Bundle returns: the member perk is applied to the mail option (False: the second bundle of the month).
+    bundle_perk = True
+    #: True: the bundle total is above the tier limit, so every option says needs_review.
+    bundle_review = False
+    #: True: a store is within reach, so the bundle also gets a return_in_store option.
+    bundle_store = False
+
+    def find_options(self, customer_id: str, policy_check_id: str | None = None, replacement_size: str | None = None,
                      deadline_date: str | None = None, preferred_channel: str | None = None,
-                     replacement_color: str | None = None, *, run_id: str | None = None) -> CandidateSetM:
+                     replacement_color: str | None = None, *, run_id: str | None = None,
+                     policy_check_ids: list[str] | None = None) -> CandidateSetM:
+        if policy_check_ids is not None:
+            self._enter("find_options", customer_id, policy_check_id, replacement_size, deadline_date,
+                        preferred_channel, replacement_color, run_id=run_id, policy_check_ids=policy_check_ids)
+            return self._find_bundle(customer_id, list(policy_check_ids), deadline_date, preferred_channel)
         self._enter("find_options", customer_id, policy_check_id, replacement_size, deadline_date,
                     preferred_channel, replacement_color, run_id=run_id)
         needs_choice = None
@@ -450,6 +546,65 @@ class FakeOptions(_Fake):
             }
         return result
 
+    def _find_bundle(self, customer_id: str, check_ids: list[str], deadline_date: str | None,
+                     preferred_channel: str | None) -> CandidateSetM:
+        """Bundle options shaped like ``options._find_bundle_options`` (S17B report, section 5)."""
+        numbers = [int(i[-7:]) for i in check_ids]
+        entries = []
+        for n in numbers:
+            name, color, category, size, price = BUNDLE_LINES[n]
+            entries.append({
+                "line_id": f"{BUNDLE_ORDER}-L{n}", "policy_check_id": bundle_check_id(n),
+                "sku": f"DEMO-SKU-NEW{n:02d}-{color}-100", "product_name": name, "color": color, "size": size,
+                "qty": 1, "unit_paid_cents": price, "refund_cents": price, "category": category,
+            })
+        total = sum(e["refund_cents"] for e in entries)
+        limit = 25000 if self.bundle_review else 75000
+        review = total > limit
+        decision = "needs_review" if review else "eligible"
+        perk = None
+        if self.bundle_perk and not review:
+            perk = {"type": "free_return_shipping", "label": "Platinum free return shipping", "saved_cents": 595,
+                    "used": 1, "allowed": 1, "period": "2026-10"}
+        fee = 0 if perk else 595
+
+        def option(option_id: str, kind: str, name: str, location_id: str, minutes: int | None, fee_cents: int,
+                   eta: str, eta_text: str, benefit: dict | None = None) -> OptionM:
+            return OptionM(
+                option_id=option_id, type=kind, sku=entries[0]["sku"], replacement_size=None, location_id=location_id,
+                location_name=name, qty=len(entries), refund_cents=max(total - fee_cents, 0), fee_cents=fee_cents,
+                eta_date=eta, eta_text=eta_text, meets_deadline=None,
+                conditions=["One return label fee of CAD 5.95 for the whole shipment is deducted from the refund"
+                            if fee_cents else "Platinum free return shipping: no return label fee"],
+                evidence={"n_lines": len(entries), "tier": "platinum"}, source_refs=[f"ORDER#{BUNDLE_ORDER}/LINE#x"],
+                minutes_away=minutes, benefit=benefit, lines=[dict(e) for e in entries], refund_total_cents=total,
+                net_refund_cents=max(total - fee_cents, 0), decision=decision,
+                rule_ids=["authority.refund_limit"] if review else [], authority_limit_cents=limit,
+            )
+
+        options: list[OptionM] = []
+        if self.bundle_store:
+            options.append(option("OPT-1", "return_in_store", "ALDO Demo Store Montreal", "DEMO-STORE-MTL-01", 5, 0,
+                                  "2026-10-16", "Fri Oct 16"))
+        options.append(option(f"OPT-{len(options) + 1}", "return_mail", "ALDO Demo Distribution Centre",
+                              "DEMO-DC-QC", None, fee, "2026-10-26", "Mon Oct 26", perk))
+        bundle = {"order_id": BUNDLE_ORDER, "n_lines": len(entries), "qty": len(entries), "refund_total_cents": total,
+                  "authority_limit_cents": limit, "tier": "platinum" if not review else "silver", "decision": decision}
+        result = CandidateSetM(
+            candidate_set_id="CAND-0000000B", policy_check_id=check_ids[0], options=options,
+            availability={"replacement_size": None, "replacement_sku": None, "atp_by_location": {}, "dc_atp": 0,
+                          "reason_no_exchange": "BUNDLE_RETURN_ONLY"},
+            other_sizes_in_stock=[], inventory_versions={}, deadline_date=deadline_date,
+            preferred_channel=preferred_channel, policy_check_ids=check_ids, bundle=bundle,
+        )
+        self.candidates[result.candidate_set_id] = list(options)
+        if self.store is not None:
+            self.store.items[self.store.cand_key(result.candidate_set_id)] = {
+                "customer_id": customer_id, "options": [o.model_dump() for o in options],
+                "availability": result.availability, "preferred_channel": preferred_channel,
+            }
+        return result
+
     candidates: dict[str, list[OptionM]]
 
     def __init__(self, calls: list, failures: dict) -> None:
@@ -470,22 +625,61 @@ class FakeQuotes(_Fake):
         known = {o.option_id: o for o in offered}
         chosen = [known[i] for i in option_ids]  # KeyError would be a test bug
         digest = hashlib.sha1("|".join([run_id, candidate_set_id, *sorted(option_ids)]).encode()).hexdigest()
+        bundle_lines = next((o.lines for o in chosen if o.lines), None)
+        if bundle_lines and any(o.decision == "needs_review" for o in chosen):  # what quotes.create_quote does
+            raise DomainError(ErrorCode.VALIDATION_ERROR, "A person must review this return; it cannot be quoted.",
+                              details={"decision": "needs_review", "rule_ids": ["authority.refund_limit"]})
+        if bundle_lines:
+            return QuoteM(quote_id="QUO-" + digest[:10].upper(), order_id=BUNDLE_ORDER, options=chosen,
+                          lines=[dict(l) for l in bundle_lines], policy_check_ids=[l["policy_check_id"] for l in bundle_lines])
         return QuoteM(quote_id="QUO-" + digest[:10].upper(), order_id=AGENT_ORDER, options=chosen)
 
 
 class FakeExecution(_Fake):
     #: True: the in-store colour exchange of John, with a store notice (the default is the fit pickup of Ava).
     colour_exchange = False
+    #: True: a mail bundle of David's script (3 lines, fee 0, perk used). ``bundle_fee`` 595 plays the no-perk variant.
+    bundle = False
+    bundle_fee = 0
+
+    def _bundle_lines(self) -> list[dict[str, Any]]:
+        out = []
+        for n in BUNDLE_SCRIPT:
+            name, color, category, size, price = BUNDLE_LINES[n]
+            out.append({"line_id": f"{BUNDLE_ORDER}-L{n}", "sku": f"DEMO-SKU-NEW{n:02d}-{color}-100",
+                        "product_name": name, "color": color, "size": size, "qty": 1, "unit_paid_cents": price,
+                        "refund_cents": price, "category": category})
+        return out
 
     def execute(self, customer_id: str, quote_id: str, option_id: str | None = None, *,
                 run_id: str | None = None) -> ExecutionResultM:
         self._enter("execute", customer_id, quote_id, option_id, run_id=run_id)
+        if self.bundle:
+            perk = ({"type": "free_return_shipping", "label": "Platinum free return shipping", "saved_cents": 595,
+                     "used": 1, "allowed": 1, "period": "2026-10"} if self.bundle_fee == 0 else None)
+            return ExecutionResultM(transaction_id="DEMO-RET-ABC123", option_type="return_mail", quote_id=quote_id,
+                                    memory_update_id="MU-5C0A12", benefit=perk)
         return ExecutionResultM(transaction_id="DEMO-RMA-ABC123", option_type="exchange_store_pickup",
                                 quote_id=quote_id, memory_update_id="MU-5C0A11",
                                 store_notice=dict(STORE_NOTICE) if self.colour_exchange else None)
 
     def get_status(self, customer_id: str, transaction_id: str, *, run_id: str | None = None) -> TransactionViewM:
         self._enter("get_status", customer_id, transaction_id, run_id=run_id)
+        if self.bundle:
+            lines = self._bundle_lines()
+            total = sum(l["refund_cents"] for l in lines)
+            perk = ({"type": "free_return_shipping", "label": "Platinum free return shipping", "saved_cents": 595,
+                     "used": 1, "allowed": 1, "period": "2026-10"} if self.bundle_fee == 0 else None)
+            return TransactionViewM(
+                transaction_id=transaction_id, option_type="return_mail", order_id=BUNDLE_ORDER,
+                line_id=lines[0]["line_id"], qty=len(lines), sku=lines[0]["sku"], location_id="DEMO-DC-QC",
+                location_name="ALDO Demo Distribution Centre", replacement_size=None, refund_cents=total - self.bundle_fee,
+                fee_cents=self.bundle_fee, eta_date="2026-10-26", eta_text="Mon Oct 26", quote_id="QUO-X",
+                memory_update_id="MU-5C0A12", lines=lines, refund_total_cents=total,
+                net_refund_cents=total - self.bundle_fee, benefit=perk,
+                next_step="Mail the 3 items, unworn, in one parcel with the return label. Your refund is expected "
+                          "by Mon Oct 26 after the parcel is received.",
+            )
         if self.colour_exchange:
             return TransactionViewM(
                 transaction_id=transaction_id, option_type="exchange_store_pickup", order_id=AGENT_ORDER,
@@ -585,6 +779,19 @@ class FakeGateway(_Fake):
         return {"delivered": 1, "failed": 0}
 
 
+class FakeBenefits(_Fake):
+    """The ``benefits`` service: how much of the monthly perk is used. Default: a tier without the perk."""
+
+    def __init__(self, calls: list, failures: dict) -> None:
+        super().__init__(calls, failures)
+        self.usage: dict[str, Any] = {"benefit": "free_return_shipping", "tier": "none", "period": "2026-10",
+                                      "used": 0, "allowed": 0}
+
+    def ledger_usage(self, customer_id: str, now: Any = None) -> dict[str, Any]:
+        self._enter("ledger_usage", customer_id)
+        return dict(self.usage)
+
+
 class FakeDomain:
     """All fakes plus the shared call log and failure queues."""
 
@@ -602,6 +809,7 @@ class FakeDomain:
         self.runs = FakeRuns(self.calls, self.failures, self.trace)
         self.conversations = FakeConversations(self.calls, self.failures)
         self.gateway = FakeGateway(self.calls, self.failures)
+        self.benefits = FakeBenefits(self.calls, self.failures)
         self.services = self.services_without()
 
     def services_without(self, *skip: str) -> Services:
@@ -610,6 +818,7 @@ class FakeDomain:
             "orders": self.orders, "options": self.options, "quotes": self.quotes,
             "execution": self.execution, "cases": self.cases, "trace": self.trace, "runs": self.runs,
             "conversations": self.conversations, "gateway": self.gateway, "store": self.store,
+            "benefits": self.benefits,
         }
         for name in skip:
             parts.pop(name)

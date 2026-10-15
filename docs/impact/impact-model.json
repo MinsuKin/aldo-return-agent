@@ -102,6 +102,16 @@
         "slide": "Scalability",
         "tag": "assumed",
         "text": "On the busiest day (638 lines) the agent would process about 35.5 million tokens, roughly 49,000 tokens per minute over a 12-hour window, with about 0.4 runs in flight on average in the busiest hour (15% of the day, assumed); check account quotas, request an increase before launch (assumed)."
+      },
+      {
+        "slide": "Business impact",
+        "tag": "derived",
+        "text": "ALDO_CA footwear earned a 64.18% gross margin in fiscal 2025 (72.94% on regular-price sales) and a fit-returned unit carries CAD 52.83 of margin, so one retained exchange pays for about 216 agent runs at CAD 0.2449 per run (derived: margin measured, agent cost measured)."
+      },
+      {
+        "slide": "Business impact",
+        "tag": "derived",
+        "text": "At the measured margin rate the size-related exchanges retain about CAD 46,000, CAD 92,000 or CAD 138,000 of gross margin a year (a conservative reading), and 288 retained exchanges a year (2.16% of size-related lines) would already pay the whole agent bill (derived: conversion rates assumed)."
       }
     ]
   },
@@ -2471,5 +2481,327 @@
     "source": "backend/returns_domain/config.py (USD_TO_CAD default)",
     "eval_file_rate": 1.38,
     "matches_eval_file": true
+  },
+  "margin": {
+    "status": "available",
+    "tag": "derived",
+    "framing": "Margin version of the retained-sale value, next to the existing revenue-based numbers (unchanged). The rate and the margin per unit are measured from the 2025 ALDO transaction file; conversion rates and the CAD 54 per case remain the model's assumptions. Currency assumed CAD for ALDO_CA, unconfirmed.",
+    "source": {
+      "file": "docs/evidence/transaction-profile.json",
+      "sha256": "f72662af956d428c056270e1d296d226a59fe0ff75f59fa018dcec663e344b15",
+      "rows_read": 8701520,
+      "banner": "ALDO_CA",
+      "business_date_min": "2025-02-02",
+      "business_date_max": "2026-01-31",
+      "producer": "scripts/profile_transactions.py"
+    },
+    "measured": {
+      "gross_margin_rate_footwear": {
+        "label": "ALDO_CA footwear gross margin rate, all price groups",
+        "value": 64.18,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "64.18%",
+        "note": "Gross margin / retail on sales lines. Basis: ALDO_CA footwear (men's and ladies' categories), sales lines, all price groups, fiscal 2025 (business dates 2025-02-02 to 2026-01-31; the file is named 2025), 1,233,675 units sold. Returns lines are excluded from the rate."
+      },
+      "gross_margin_rate_footwear_regular_price": {
+        "label": "ALDO_CA footwear gross margin rate, Regular price group",
+        "value": 72.94,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "72.94%",
+        "note": "Same basis, price_group Regular only (693,289 units)."
+      },
+      "avg_margin_per_unit_regular": {
+        "label": "Average gross margin per unit sold, Regular price",
+        "value": 7453,
+        "unit": "CAD_cents",
+        "tag": "measured",
+        "display": "CAD 74.53",
+        "note": "Currency assumed CAD, unconfirmed."
+      },
+      "avg_margin_per_unit_markdown": {
+        "label": "Average gross margin per unit sold, Markdown price group",
+        "value": 2329,
+        "unit": "CAD_cents",
+        "tag": "measured",
+        "display": "CAD 23.29"
+      },
+      "avg_margin_per_fit_returned_unit": {
+        "label": "Average gross margin per returned unit, fit returns (Too small, Too big)",
+        "value": 5283,
+        "unit": "CAD_cents",
+        "tag": "measured",
+        "display": "CAD 52.83",
+        "note": "3,654 fit return lines (3,662 units) with a text reason in the transaction file (web channel). Margin the sale carried, lost on a refund and retained by an exchange."
+      },
+      "avg_margin_per_fit_returned_unit_regular": {
+        "label": "Same, units returned from Regular price sales",
+        "value": 7086,
+        "unit": "CAD_cents",
+        "tag": "measured",
+        "display": "CAD 70.86"
+      },
+      "markdown_share_of_fit_return_lines": {
+        "label": "Share of fit return lines that were Markdown price",
+        "value": 34.78,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "34.78%"
+      }
+    },
+    "per_case": {
+      "revenue_based_value_per_retained_case": {
+        "label": "Existing value per retained case (unchanged)",
+        "value": 5400,
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "display": "CAD 54.00",
+        "note": "Handoff section 15 synthetic unit economics, as in the scenarios."
+      },
+      "margin_based_value_per_retained_case": {
+        "label": "Existing value per retained case x measured margin rate",
+        "value": 3466,
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "display": "CAD 34.66",
+        "note": "Literal product of the existing value and the measured rate. The CAD 54 is already net of an assumed item cost (40% of price), so applying a margin rate on top counts cost twice: read this as the conservative end."
+      },
+      "measured_margin_per_fit_returned_unit": {
+        "label": "Average gross margin per returned unit, fit returns (Too small, Too big)",
+        "value": 5283,
+        "unit": "CAD_cents",
+        "tag": "measured",
+        "display": "CAD 52.83",
+        "note": "3,654 fit return lines (3,662 units) with a text reason in the transaction file (web channel). Margin the sale carried, lost on a refund and retained by an exchange."
+      }
+    },
+    "columns": [
+      "low",
+      "base",
+      "high"
+    ],
+    "scenarios": {
+      "fit_exchange_revenue_based": {
+        "label": "Fit exchange lever: retained-sale value, revenue-based (existing, unchanged)",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "low": 7191180,
+          "base": 14382360,
+          "high": 21573540
+        },
+        "display": {
+          "low": "CAD 71,911.80",
+          "base": "CAD 143,823.60",
+          "high": "CAD 215,735.40"
+        },
+        "note": "Copied from the scenario block above; no number changed."
+      },
+      "fit_exchange_margin_based": {
+        "label": "Fit exchange lever: retained-sale value x margin rate (margin-based)",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "low": 4615044,
+          "base": 9230087,
+          "high": 13845131
+        },
+        "display": {
+          "low": "CAD 46,150.44",
+          "base": "CAD 92,300.87",
+          "high": "CAD 138,451.31"
+        },
+        "note": "Existing value x ALDO_CA footwear gross margin rate. Conservative reading, see per-case note."
+      },
+      "fit_exchange_retained_margin_memo": {
+        "label": "Fit exchange lever: memo, cases x measured margin per fit-returned unit",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "low": 7035371,
+          "base": 14070742,
+          "high": 21106113
+        },
+        "display": {
+          "low": "CAD 70,353.71",
+          "base": "CAD 140,707.42",
+          "high": "CAD 211,061.13"
+        },
+        "note": "Cases of the lever x CAD 52.83 measured average margin of a fit-returned unit. Uses the fit-return unit as a proxy for every lever."
+      },
+      "preference_exchange_revenue_based": {
+        "label": "Preference exchange lever: retained-sale value, revenue-based (existing, unchanged)",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 4264960,
+          "base": 8529920,
+          "high": 12794880
+        },
+        "display": {
+          "low": "CAD 42,649.60",
+          "base": "CAD 85,299.20",
+          "high": "CAD 127,948.80"
+        },
+        "note": "Copied from the scenario block above; no number changed."
+      },
+      "preference_exchange_margin_based": {
+        "label": "Preference exchange lever: retained-sale value x margin rate (margin-based)",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 2737100,
+          "base": 5474199,
+          "high": 8211299
+        },
+        "display": {
+          "low": "CAD 27,371.00",
+          "base": "CAD 54,741.99",
+          "high": "CAD 82,112.99"
+        },
+        "note": "Existing value x ALDO_CA footwear gross margin rate. Conservative reading, see per-case note."
+      },
+      "preference_exchange_retained_margin_memo": {
+        "label": "Preference exchange lever: memo, cases x measured margin per fit-returned unit",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 5778862,
+          "base": 11557725,
+          "high": 17336587
+        },
+        "display": {
+          "low": "CAD 57,788.62",
+          "base": "CAD 115,577.25",
+          "high": "CAD 173,365.87"
+        },
+        "note": "Cases of the lever x CAD 52.83 measured average margin of a fit-returned unit. Uses the fit-return unit as a proxy for every lever."
+      },
+      "prevention_revenue_based": {
+        "label": "Pre-purchase prevention: retained-sale value, revenue-based (existing, unchanged)",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 0,
+          "base": 3595590,
+          "high": 7191180
+        },
+        "display": {
+          "low": "CAD 0.00",
+          "base": "CAD 35,955.90",
+          "high": "CAD 71,911.80"
+        },
+        "note": "Copied from the scenario block above; no number changed."
+      },
+      "prevention_margin_based": {
+        "label": "Pre-purchase prevention: retained-sale value x margin rate (margin-based)",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 0,
+          "base": 2307522,
+          "high": 4615044
+        },
+        "display": {
+          "low": "CAD 0.00",
+          "base": "CAD 23,075.22",
+          "high": "CAD 46,150.44"
+        },
+        "note": "Existing value x ALDO_CA footwear gross margin rate. Conservative reading, see per-case note."
+      },
+      "prevention_retained_margin_memo": {
+        "label": "Pre-purchase prevention: memo, cases x measured margin per fit-returned unit",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 0,
+          "base": 3517686,
+          "high": 7035371
+        },
+        "display": {
+          "low": "CAD 0.00",
+          "base": "CAD 35,176.86",
+          "high": "CAD 70,353.71"
+        },
+        "note": "Cases of the lever x CAD 52.83 measured average margin of a fit-returned unit. Uses the fit-return unit as a proxy for every lever."
+      }
+    },
+    "break_even": {
+      "margin_per_retained_exchange": {
+        "label": "Margin earned by one retained exchange (average fit-returned unit)",
+        "value": 5283,
+        "unit": "CAD_cents",
+        "tag": "measured",
+        "display": "CAD 52.83",
+        "note": "Measured average margin of a fit-returned footwear unit, all price groups."
+      },
+      "agent_cost_per_run": {
+        "label": "Agent cost per run",
+        "value": 0.2449,
+        "unit": "CAD_per_run",
+        "tag": "derived",
+        "display": "CAD 0.2449",
+        "note": "Same cost per run as the scenarios."
+      },
+      "agent_runs_paid_by_one_exchange": {
+        "label": "Agent runs paid for by the margin of one retained exchange",
+        "value": 216.0,
+        "unit": "runs",
+        "tag": "derived",
+        "display": "216",
+        "note": "Margin per retained exchange / agent cost per run."
+      },
+      "break_even_exchanges_per_year": {
+        "label": "Retained exchanges per year that pay the whole agent bill (every return line costs one run)",
+        "value": 288,
+        "unit": "exchanges",
+        "tag": "derived",
+        "display": "288",
+        "note": "Annual agent cost CAD 15,183.31 / margin per retained exchange, rounded up."
+      },
+      "break_even_conversion_of_fit_lines_pct": {
+        "label": "Same, as share of the measured fit lines",
+        "value": 2.16,
+        "unit": "percent",
+        "tag": "derived",
+        "display": "2.16%",
+        "note": "Against the 13,317 fit lines; the scenarios assume 10 to 30 percent."
+      },
+      "perk_fee_per_use": {
+        "label": "Platinum perk cost per use (return shipping fee waived)",
+        "value": 595,
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "display": "CAD 5.95",
+        "note": "Same fee as the tier perk block."
+      },
+      "perk_uses_paid_by_one_exchange": {
+        "label": "Perk uses paid for by the margin of one retained exchange",
+        "value": 8.9,
+        "unit": "uses",
+        "tag": "derived",
+        "display": "8.9"
+      },
+      "perk_break_even_exchanges_per_use": {
+        "label": "Extra retained exchanges one perk use must cause to pay for itself",
+        "value": 0.113,
+        "unit": "exchanges",
+        "tag": "derived",
+        "display": "0.113",
+        "note": "Perk fee per use / margin per retained exchange. Cost bound only; no uplift is claimed."
+      }
+    },
+    "markdown": {
+      "tag": "derived",
+      "text": "ALDO_CA footwear units sold at Regular price earned on average CAD 74.53 of gross margin against CAD 23.29 at Markdown, a gap of CAD 51.24 per unit. If a returned unit would only be resold at a markdown, an exchange at full price protects about that much more margin. 35% of the fit returns were themselves Markdown-priced sales, where the margin at stake is lower (CAD 70.86 per unit for Regular-price fit returns).",
+      "limits": "A comparison of sales lines by price group in fiscal 2025. The file does not show what price a returned unit was later resold at, so the gap is a reference size, not an observed resale loss."
+    },
+    "formula": "margin_based_value = existing_retained_sale_value x gross_margin_rate_footwear_ALDO_CA\nmemo_retained_margin = cases x measured_margin_per_fit_returned_unit\nbreak_even_exchanges_per_year = total_requests x agent_cost_per_run / margin_per_retained_exchange\nperk_break_even_exchanges_per_use = perk_fee_per_use / margin_per_retained_exchange",
+    "caveats": [
+      "The transaction file is store and web point-of-sale data, not the e-commerce OMS files behind the rest of the model. Fit text reasons exist only on web-channel return lines; in-store return lines carry numeric POS reason codes with no legend, so they are not counted as fit. The margin rate describes ALDO_CA footwear sales as a whole, not only the units that get returned.",
+      "The existing CAD 54 per case is net of an assumed 40% item cost, so the margin-based rows (value x rate) are a conservative reading. The memo rows use the measured margin per fit-returned unit directly.",
+      "Margin is gross margin as recorded in the file (retail minus cost); handling, freight and restocking are not in it. Currency assumed CAD, unconfirmed."
+    ]
   }
 }

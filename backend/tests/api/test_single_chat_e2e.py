@@ -10,6 +10,7 @@ the transaction, the write-back and the way back to the bot. Moto holds both tab
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from typing import Any, Callable
 
 import pytest
@@ -148,7 +149,8 @@ def stock(sku: str, location: str) -> int:
 # ====================================================================================== the story
 
 
-def test_john_buys_returns_the_colour_and_ends_back_with_the_bot(stack: Stack, enqueued):
+def john_until_the_quote(stack: Stack) -> SimpleNamespace:
+    """Acts 1 and 2 of the story, up to the return workflow's quote. Returns what the next steps need."""
     # ---- act 1: ALDO bot proposes, the owner clicks, the order exists, the delivery notice comes
     conv = stack.api("POST", PREFIX, {}).json["conv_id"]
     assert stack.mode(conv) == {"conv_id": conv, "mode": "bot", "returns_order_id": None}
@@ -169,7 +171,17 @@ def test_john_buys_returns_the_colour_and_ends_back_with_the_bot(stack: Stack, e
     assert placed.status == 200
     order_id = placed.json["order_id"]
     assert order_id.startswith("DEMO-A2A-") and stock("DEMO-SKU-MEN001-BLACK-095", "DEMO-STORE-LAVAL-01") == 0
+    assert placed.json["next_step"] == "Order placed. Pick up size 9.5 at ALDO Demo Store Laval from Sat Oct 17."  # shown as it is
     assert stack.api("POST", "/api/demo/simulate-delivery", {"order_id": order_id}).status == 200
+    # what the phone UI reads from the middle timeline
+    confirmed = next(e for e in stack.a2a() if e["type"] == "size_confirmed")
+    assert {"order_id", "size", "location_name", "eta_date", "approved_by"} <= set(confirmed["payload"])
+    assert (confirmed["payload"]["size"], confirmed["payload"]["approved_by"]) == ("9.5", "owner_click")
+    delivered = next(e for e in stack.a2a() if e["type"] == "delivered")
+    assert delivered["actor"] == "system" and delivered["payload"]["order_id"] == order_id
+    assert {"order_id", "product_name", "size"} <= set(delivered["payload"])
+    reviews = next(e for e in stack.a2a() if e["type"] == "reviews_shared")
+    assert reviews["actor"] == "aldo_gateway" and {"n_reviews", "n_flagged"} <= set(reviews["payload"])
 
     # ---- act 2: "I want to return these." -> hand-off, the mode is returns, nobody else is named
     handed = stack.say(conv, RETURN, policy=hand_off_policy(order_id))
@@ -196,14 +208,32 @@ def test_john_buys_returns_the_colour_and_ends_back_with_the_bot(stack: Stack, e
         "aldo_items": [{"order_id": order_id, "product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5", "status": "delivered"}],
         "source": "ALDO bot memory",
     }
+    from agent import owner_context  # the Return workflow's own validator keeps every field (it drops only the constant `source`)
+
+    assert owner_context.sanitize(payload["memory_context"]) == {k: v for k, v in payload["memory_context"].items() if k != "source"}
     run_events = stack.run_events(routed["reply"]["run_id"])
     quote_id = next(e for e in run_events if e["type"] == "quote_created")["payload"]["quote_id"]
     assert "Brown is in stock" in next(e for e in run_events if e["type"] == "assistant_message")["payload"]["text"]
     assert stack.mode(conv)["mode"] == "returns"  # a quote is not the end: the owner still has to approve
 
+    # the quote says which conversation it belongs to: the requote route is addressed with that id, not the chat's
+    quote = stack.api("GET", f"/api/quotes/{quote_id}").json
+    assert quote["conv_id"] == payload["conv_id"] and quote["order_id"] == order_id
+    assert stack.api("POST", f"/api/conversations/{conv}/requote", {"quote_id": quote_id}).status == 404
+    assert stack.api("POST", f"/api/conversations/{quote['conv_id']}/requote", {"quote_id": quote_id}).status == 422  # found; only an expired quote is re-quoted
+    return SimpleNamespace(conv=conv, order_id=order_id, payload=payload, quote_id=quote_id)
+
+
+def test_john_buys_returns_the_colour_and_ends_back_with_the_bot(stack: Stack, enqueued):
+    story = john_until_the_quote(stack)
+    conv, order_id, payload, quote_id = story.conv, story.order_id, story.payload, story.quote_id
+
     # ---- the owner clicks Confirm exchange: one transaction, the store is told, back to the bot
     approved = stack.approve(quote_id)
     assert approved["payload"]["kind"] == "approval" and approved["payload"]["conv_id"] == payload["conv_id"]
+    for run in (approved["payload"], stack.return_runs[1]):  # the approval is a run of the same hand-off: the same order and context
+        assert run["kind"] == "approval" and run["order_id"] == order_id and run["selected_order_id"] == order_id
+        assert run["memory_context"] == payload["memory_context"]
     assert approved["result"]["status"] == "completed"
     approval_events = stack.run_events(approved["reply"]["run_id"])
     assert "transaction_created" in [e["type"] for e in approval_events]
@@ -216,7 +246,7 @@ def test_john_buys_returns_the_colour_and_ends_back_with_the_bot(stack: Stack, e
         assert types.index(earlier) < types.index(later), (earlier, later, types)
     assert types.count("handback") == 1 and types.count("transaction_created") == 1 and "store_notified" in types
     handback = next(e for e in stack.a2a() if e["type"] == "handback")
-    assert handback["actor"] == "aldo_agent" and handback["payload"]["outcome"] == "transaction_created"
+    assert handback["actor"] == "aldo_agent" and handback["payload"]["outcome"] == "completed"
     assert handback["payload"]["order_id"] == order_id and handback["payload"]["mode"] == "bot"
 
     # ---- ALDO wrote back: the size fit (a colour exchange), and the bot remembers it
@@ -227,6 +257,24 @@ def test_john_buys_returns_the_colour_and_ends_back_with_the_bot(stack: Stack, e
     after = stack.say(conv, "Thanks!", policy=lambda messages, call: ("text", "You're welcome. Anything else I can help with?"))
     assert after["reply"]["agent"] == "personal" and after["reply"]["mode"] == "bot"
     assert len(stack.return_runs) == 2  # the return workflow ran twice (quote, approval) and not again
+
+
+def test_a_requote_in_the_hand_off_brings_the_order_and_the_context_again(fixed_now, stack: Stack, enqueued):
+    """Each owner message, the approval and a requote are separate runs: every one of them carries both.
+
+    ``fixed_now`` comes first so the stack's session token is signed on the frozen clock too."""
+    story = john_until_the_quote(stack)
+    fixed_now.advance(seconds=16 * 60)  # the quote expires before the owner clicks
+    quote = stack.api("GET", f"/api/quotes/{story.quote_id}").json
+    assert quote["status"] == "expired"
+
+    requote = stack.api("POST", f"/api/conversations/{quote['conv_id']}/requote", {"quote_id": story.quote_id})
+
+    assert requote.status == 202, requote.text
+    run = enqueued[-1]
+    assert run["run_id"] == requote.json["run_id"] and run["kind"] == "requote" and run["quote_id"] == story.quote_id
+    assert run["order_id"] == story.order_id and run["selected_order_id"] == story.order_id
+    assert run["memory_context"] == story.payload["memory_context"]
 
 
 def test_nothing_is_ordered_or_returned_without_the_owners_clicks(stack: Stack, enqueued):

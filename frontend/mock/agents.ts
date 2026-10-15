@@ -69,7 +69,7 @@ function understand(message: string): Intent {
   return { mentioned, defect, mind, fit, direction: big && !small ? "too_big" : small ? "too_small" : "unknown", worn, deadline };
 }
 
-// ---- ALDO returns agent -------------------------------------------------------------------
+// ---- ALDO bot, return workflow (legacy fit-exchange engine) ------------------------------------
 
 interface AldoParams {
   customerId: string;

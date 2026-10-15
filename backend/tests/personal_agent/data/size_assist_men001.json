@@ -7,8 +7,8 @@
   "currency": "CAD",
   "fit_signal": {
     "signal": "runs_large",
-    "too_small_share": 0.0551,
-    "n_fit": 236,
+    "too_small_share": 0.0847,
+    "n_fit": 118,
     "scope": "ALDO_CA",
     "provenance": "derived"
   },
@@ -309,6 +309,6 @@
       ]
     }
   ],
-  "question": "This style runs large (94% of fit-related returns were 'too big', n=236). Which size and option should I reserve for your owner?",
+  "question": "This style runs large (92% of fit-related returns were 'too big', n=118). Which size and option should I reserve for your owner?",
   "expires_at": "2026-10-16T16:15:00+00:00"
 }

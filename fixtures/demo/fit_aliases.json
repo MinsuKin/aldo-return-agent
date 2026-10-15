@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "aliases": {
-    "ALDO Men 001": "Biglect"
+    "ALDO Men 001": "Toney"
   },
   "note": "Demo aliases for fixtures/derived/fit_insights.json (alias -> real ALDO_CA style). scripts/add_fit_aliases.py adds one entry per alias that copies the real return counts of that style.",
   "source": "synthetic"

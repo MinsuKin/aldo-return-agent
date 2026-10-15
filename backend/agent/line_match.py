@@ -85,9 +85,11 @@ def _match_one(phrase: str, lines: Sequence[Mapping[str, Any]]) -> dict[str, Any
         return _verdict(result, hits)
 
     tokens = [t for t in _words(text) if t not in STOP_WORDS]
-    colours = {_norm(line.get("color", "")) for line in pool} - {""}
-    categories = {w for line in pool for w in _words(line.get("category"))}
-    names = {w for line in pool for w in _words(line.get("product_name"))}
+    # The vocabulary is the WHOLE order: a word for a line that is already returned must match nothing, not be
+    # dropped as noise (otherwise "the tan boot" would silently become "a boot").
+    colours = {_norm(line.get("color", "")) for line in lines} - {""}
+    categories = {w for line in lines for w in _words(line.get("category"))}
+    names = {w for line in lines for w in _words(line.get("product_name"))}
 
     colour_tokens = [t for t in tokens if t in colours]
     rest = [t for t in tokens if t not in colour_tokens]

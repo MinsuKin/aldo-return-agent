@@ -130,28 +130,41 @@ Additive files next to the base ones (PIVOT_ADDENDUM 11.3). The base files and t
 
 Merged totals (what `fixtures.seed` and `reset` write): customers 5, orders 11, order lines 20, products 56, locations 4, inventory 170, so 266 table items (98 base + 168 v2). Reviews are read from the file at run time with `fixtures.load_reviews(style_id)`; they are not table items.
 
-### The men's style ALDO Men 001, picked from data
+### The men's style ALDO Men 001, based on the real men's style TONEY
 
-ALDO Men 001 is a demo alias: its fit numbers are the real return counts of the ALDO_CA style Biglect (236 fit-related returns, 94.5% of them "too big"), copied under the key `ALDO Men 001` into `fit_insights.json` (with `alias_of` and a one-line `note`) by `scripts/add_fit_aliases.py` from `fit_aliases.json`, so the exact-name fit lookup finds them without any change to `fit.py`. The supplied orders extract is Ladies-only for ALDO_CA (every footwear category is an `L ...` category and the largest size is 12), so "men's" is a demo premise and not a data fact.
+ALDO Men 001 is a demo product. Its fit signal is the real OMS return signal of the men's style TONEY (category M Dress Boots; the key in `fit_insights.json` is `Toney`): 24 months of OMS returns (Feb 2024 to Jan 2026). ALDO_CA: 118 fit-related returns, 10 "too small" and 108 "too big" (91.5% "too big"), too_small_share 0.0847, 334 return lines in total, `runs_large`. All banners: 24 / 213, n_fit 237, share 0.1013, 571 return lines, `runs_large`. The counts are copied under the key `ALDO Men 001` into `fit_insights.json` (with `alias_of: "Toney"` and a one-line `note`) by `scripts/add_fit_aliases.py` from `fit_aliases.json`, so the exact-name fit lookup finds them without any change to `fit.py`. The real entries `Toney` and `Biglect` stay in the file unchanged.
 
-Method. `dataset/All OMS orders_Feb 2024 to Feb 2026.csv` (stdlib `csv`, ALDO_CA rows only: 253,000) has a `Size` and a `category name` but no product name. A name is attached through the SKU: `orderitem_product_name` of the ALDO_CA return lines in `dataset/OMS Data_Feb24-Jan26_new.csv` gives sku -> name, and the orders' `Style` code then widens each name to every order line of the same code (4 codes map to two names and are skipped). For each of the 56 ALDO_CA styles with `n_fit >= 100` in `fit_insights.json` (25 `runs_large`, 18 `runs_small`, 13 `mixed`) the share of order lines with `Size` 9 or above was computed. 36 of the 56 have order lines; the other 20 (for example Stessy2.0) have none, so their sizes are unknown. Nothing written here contains a customer or order identifier.
+What the data says about "men's". The supplied e-commerce extract (OMS) has ladies' categories only: every footwear category is an `L ...` category, there is no `M ...` category and the largest size is 12. The ALDO POS transaction file (the new dataset, `Transaction_Detail_ALDO_CA_US_2025.csv`, business dates 2025-02-02 to 2026-01-31, profile in `docs/evidence/transaction-profile.json`, method in `report-transaction-file.md`) does contain men's footwear in sizes 7 to 14. TONEY in that file: 1,960 units sold in ALDO_CA in that year, 82.1% of the units in size 9 and above (units by size 7: 44, 7.5: 80, 8: 226, 9: 245, 9.5: 222, 10: 281, 10.5: 245, 11: 301, 12: 191, 13: 92, 14: 33). So the product is a demo product, but the style behind its fit signal is a real men's style that sells in men's sizes.
 
-Finding. NO style qualifies as "mostly 9 and above". The highest share is 34.8% (Kaydienh, a `mixed` signal). ALDO_CA as a whole is 26.5% (62,777 of 236,648 numeric-size lines) and the median of the 36 styles is 26.4%. Every footwear category of the ALDO_CA order lines is a Ladies category (`L Cas Shoes`, `L Cas Boots`, `L Cas Sandals`; the others are accessories and care products such as `L Acc Items`, insoles and cleaners): the extract has no men's catalogue (no `M ...` category, largest size 12 on 14 lines). So "men's" is a DEMO PREMISE, not a data fact. What the data does support is the fit direction of a real style and its purchased size mix. If asked on stage: "ALDO Men 001 is our demo SKU label for a real ALDO_CA style whose measured fit signal is 'runs large'; the supplied extract contains no men's range."
+Caveats to say out loud. (1) The fit counts come from the OMS side, joined to the POS file by style name. The POS file's own web fit text for TONEY is only 0 small / 9 big in that year, and the POS file has no in-store fit-reason text at all (store reasons are numeric codes without a legend). So say "24 months of OMS returns", not "2025 in-store". (2) The POS file has no sizes 8.5, 11.5, 12.5 or 13.5, while the fixtures use 8.0 to 12.0 in half steps. The 9.5 versus 10 story is supported; an 8.5 or 11.5 story is not. (3) John's expected behaviour is unchanged: typical size 10.0, the style runs large, so 9.5.
 
-Candidates (`n_fit >= 100`, ranked by the share of order lines with size 9 or above; ALDO_CA scope):
+If asked on stage: "ALDO Men 001 is our demo product label. Its fit signal is the real return signal of a real ALDO men's style, TONEY: 118 fit returns in 24 months of e-commerce data, 91.5% of them 'too big'."
+
+Men's candidates from the POS transaction file (men's footwear styles with at least 500 units sold in ALDO_CA, joined by lower-cased style name to the OMS ALDO_CA counts in `fit_insights.json`; signal by the `fit.py` thresholds, `n_fit >= 30` and too_small share <= 0.35 for `runs_large`):
+
+| Style | Category in the POS file | Units sold (ALDO_CA, FY2025) | Units size 9+ | OMS ALDO_CA n_fit (too small / too big) | Too big share | Signal | OMS ALL n_fit |
+| --- | --- | ---: | ---: | --- | ---: | --- | ---: |
+| **TONEY** (the pick, shown as ALDO Men 001) | M Dress Boots | 1,960 | 82.1% | 118 (10 / 108) | 91.5% | runs_large | 237 |
+| FINESPEC | men's footwear | 14,821 | 82.7% | 158 (50 / 108) | 68.4% | runs_large | 621 |
+| KIANOU | men's footwear | 2,623 | 87.0% | 92 (11 / 81) | 88.0% | runs_large | 396 |
+| DRYMOS | men's footwear | 10,535 | 83.8% | 145 (94 / 51) | 35.2% | mixed | 444 |
+
+Why TONEY. It is the closest match to the earlier ladies' pick Biglect (91.5% versus 94.5% "too big", `runs_large`), it clears `n_fit >= 100`, and it is a real men's style (M Dress Boots). FINESPEC is the fall-back if volume matters more than the strongest signal (best-selling men's style, `runs_large`). KIANOU has the clearest size-9+ share but `n_fit` 92 is under 100. DRYMOS is `mixed` and does not tell a "runs large" story. The story is the mirror of the Stessy hero: Stessy2.0 says size up (79.9% "too small"), this style says size down (91.5% "too big"). Dorenna and Clementinne are already base-fixture styles (`DEMO-1008`, `DEMO-1009`), so they were not reused.
+
+Earlier pick (replaced). Before the POS file was available the supplied OMS extract was the only source, and ALDO Men 001 was built on the ladies' style Biglect (ALDO_CA 13 / 223, `runs_large`). Method of that pass, kept for reference: `dataset/All OMS orders_Feb 2024 to Feb 2026.csv` (stdlib `csv`, ALDO_CA rows only: 253,000) has a `Size` and a `category name` but no product name. A name is attached through the SKU: `orderitem_product_name` of the ALDO_CA return lines in `dataset/OMS Data_Feb24-Jan26_new.csv` gives sku -> name, and the orders' `Style` code then widens each name to every order line of the same code (4 codes map to two names and are skipped). For each of the 56 ALDO_CA styles with `n_fit >= 100` (25 `runs_large`, 18 `runs_small`, 13 `mixed`) the share of order lines with `Size` 9 or above was computed. 36 of the 56 have order lines; the other 20 (for example Stessy2.0) have none. No ladies' style qualified as "mostly 9 and above" (highest share 34.8%, ALDO_CA overall 26.5%, median 26.4%). Nothing written here contains a customer or order identifier.
+
+Ladies' candidates of that pass (`n_fit >= 100`, ranked by the share of order lines with size 9 or above; ALDO_CA scope):
 
 | Style | Sized order lines | Lines size >= 9 | Share >= 9 | too small / too big | n_fit | too_small share | Signal | Family |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
 | Kaydienh | 1,124 | 391 | 34.8% | 55 / 51 | 106 | 0.519 | mixed | L Cas Boots |
-| **Biglect** (the pick, shown as ALDO Men 001) | 1,438 | 466 | 32.4% | 13 / 223 | 236 | 0.055 | runs_large | L Cas Shoes |
+| Biglect (earlier pick, replaced by TONEY) | 1,438 | 466 | 32.4% | 13 / 223 | 236 | 0.055 | runs_large | L Cas Shoes |
 | Dorenna | 5,815 | 1,783 | 30.7% | 139 / 312 | 451 | 0.308 | runs_large | L Cas Sandals |
 | Wicoenia | 2,833 | 824 | 29.1% | 137 / 50 | 187 | 0.733 | runs_small | L Cas Boots |
 | Bigplan | 793 | 230 | 29.0% | 24 / 98 | 122 | 0.197 | runs_large | L Cas Shoes |
 | Joselie | 1,545 | 441 | 28.5% | 28 / 75 | 103 | 0.272 | runs_large | L Cas Shoes |
 | Harriot | 1,835 | 521 | 28.4% | 92 / 40 | 132 | 0.697 | runs_small | L Cas Shoes |
 | Aneka | 2,964 | 835 | 28.2% | 50 / 139 | 189 | 0.265 | runs_large | L Cas Sandals |
-
-Pick: **ALDO Men 001**, the demo name of the real style **Biglect** (SKU token `MEN001`; `product_name` `ALDO Men 001`, which `fit_insights.json` holds as an alias entry of the key `Biglect`). Biglect has the highest share of size 9+ lines among the `runs_large` styles (32.4%, 466 of 1,438; sizes seen 6 to 10) and the clearest signal of all 56 styles with `n_fit >= 100`: the lowest too_small share. Real numbers, ALDO_CA (the alias copies them): too_small 13, too_big 223, n_fit 236, too_small_share 0.0551 (94.5% of fit-related returns say "too big"), 483 return lines in total, `runs_large`. All banners: 17 / 244, n_fit 261, share 0.0651, 522 return lines, `runs_large`. Dorenna and Clementinne are already base-fixture styles (`DEMO-1008`, `DEMO-1009`), so they were not reused. The story is the mirror of the Stessy hero: Stessy2.0 says size up (79.9% "too small"), this style says size down (94.5% "too big").
 
 ### Personas
 
@@ -205,7 +218,7 @@ Customer `DEMO-CUST-DAVID`, `ordered_at` 2026-10-09 (a week before DEMO_NOW), `d
 | L9 | Krishelle (80, runs_large) | L Cas Shoes | brogue | BROWN | 11.0 | 14999 | |
 | L10 | Oneameth (146, mixed) | L Cas Shoes | sneaker | GREY | 10.5 | 9999 | optional second return: "the grey sneaker" |
 
-L2 + L5 + L8 = 41997 cents: above the CAD 250.00 silver limit (so a silver customer gets `needs_review` on that bundle) and below the CAD 750.00 platinum limit. Every single line is below 25000. The order totals 151990 cents.
+L2 + L5 + L8 = 41997 cents: above the CAD 250.00 silver limit (so a silver customer gets `needs_review` on that bundle) and below the CAD 750.00 platinum limit. Every single line is below 25000. The order totals 152990 cents.
 
 ### Reviews (`reviews.json`)
 
@@ -232,7 +245,7 @@ Shape `{schema_version, reviews: [{review_id, style_id, rating, title, text, lan
 
 
 ### Bundles and benefits (domain v2 phase 2)
-- David's bundle: `find_options(policy_check_ids=[...])` takes up to 10 lines of one order (one policy check per line). His stores are all 430+ minutes away, so the only option is `return_mail` (a `return_in_store` bundle option needs a store within 120 minutes, so John gets one, David never does). L2 + L5 + L8 = 41997 cents; L10 alone is 9999. All ten lines add up to 152990 cents (not 151990 as written above), which is over the platinum limit of 75000: a bundle of all ten is `needs_review`.
+- David's bundle: `find_options(policy_check_ids=[...])` takes up to 10 lines of one order (one policy check per line). His stores are all 430+ minutes away, so the only option is `return_mail` (a `return_in_store` bundle option needs a store within 120 minutes, so John gets one, David never does). L2 + L5 + L8 = 41997 cents; L10 alone is 9999. All ten lines add up to 152990 cents, which is over the platinum limit of 75000: a bundle of all ten is `needs_review`.
 - The platinum perk (`policy.json` `tiers.platinum.benefits.free_return_shipping`) waives the CAD 5.95 return label fee once per calendar month, only on `return_mail`. The use count is the runtime item `BENEFIT#{customer_id}#{yyyy-mm}` (month of the DEMO clock on the America/Toronto calendar), which a demo reset deletes, so every demo run starts with the perk available. The second bundle of the month pays CAD 5.95 and the ledger stays at 1.
 - The tier authority limit (25000 none/silver, 75000 platinum) is checked on the bundle TOTAL: above it every option has `decision: needs_review` and cannot be quoted. The same L2 + L5 + L8 for a silver member is therefore `needs_review`.
 - `category` (boot, sneaker, loafer ...) is now part of `orders.order_context` and the order views, so "the tan boot, the white sneaker and the navy loafer" resolves by colour and category.

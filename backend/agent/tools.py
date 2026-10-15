@@ -540,7 +540,7 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
     ) -> dict:
         """Run the deterministic return policy for one order line. Price, dates and the final-sale flag come from the database and nothing the customer writes can change the result.
 
-        Returns policy_check_id, decision (eligible, ineligible, needs_information or needs_review), rule_ids, missing_fields, allowed_option_types, policy_version and the gross refund. Required before find_resolution_options. Call it again with new facts if the customer corrects them.
+        Returns policy_check_id, decision (eligible, ineligible, needs_information or needs_review), rule_ids, missing_fields, allowed_option_types, policy_version and the gross refund. Required before find_resolution_options. Call it again with new facts if the customer corrects them. For several items returned together, call it once per item (one policy_check_id each) and pass all the ids to find_resolution_options as policy_check_ids.
 
         Args:
             order_id: The order id exactly as the tools return it.
@@ -709,6 +709,12 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                 data["needs_choice"] = _color_choices(
                     found["needs_choice"], owner_context.preferred_colors(ctx.memory_context)
                 )
+            if policy_check_ids is not None:  # a bundle: summary with money text, and the perk when it is used up
+                if isinstance(found.get("bundle"), Mapping):
+                    data["bundle"] = ranking.add_money_text(found["bundle"])
+                perk = _perk_status(ctx, offered)
+                if perk is not None:
+                    data["member_perk"] = perk
             refs = _unique(
                 [ref for option in offered for ref in option.get("source_refs", [])]
             ) or [f"CAND#{candidate_set_id}/META"]
@@ -720,6 +726,9 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
             }
             if availability.get("replacement_color"):
                 evidence["replacement_color"] = availability["replacement_color"]
+            if policy_check_ids is not None and isinstance(found.get("bundle"), Mapping):
+                evidence["n_lines"] = found["bundle"].get("n_lines")
+                evidence["decision"] = found["bundle"].get("decision")
             return Out(data, refs=refs, evidence=evidence)
 
         return _run_tool(ctx, "find_resolution_options", args, call, retry=True)
@@ -732,7 +741,7 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
 
         For a colour exchange the owner must have named a colour first (find_resolution_options with replacement_color); without it only preferred_channel return is accepted.
 
-        Returns quote_id, expires_at (about 15 minutes) and the option ids in the order shown. After this, tell the owner to review the option card and confirm it there, then stop.
+        Returns quote_id, expires_at (about 15 minutes) and the option ids in the order shown. For a bundle it also returns bundle: the lines and, per option, the one shipping fee, the refund total, the amount after the fee and the benefit when there is one. A bundle marked needs_review is refused (VALIDATION_ERROR with details.decision needs_review): escalate it instead. After this, tell the owner to review the option card and confirm it there, then stop.
 
         Args:
             candidate_set_id: The candidate_set_id returned by find_resolution_options.
@@ -778,6 +787,9 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                 "option_ids": ordered,
                 "status": quote.get("status", "open"),
             }
+            bundle = _bundle_quote_summary(quote)
+            if bundle is not None:  # a multi-line return: the lines, one fee, totals and the perk of each option
+                data["bundle"] = bundle
             return Out(
                 data,
                 refs=[f"QUOTE#{data['quote_id']}/META"],
@@ -809,6 +821,7 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                 ),
             )
             result = _public_store_notice(result)  # store name, minutes away and summary reach the model
+            result = _bundle_view(result)  # a bundle that used the perk: saved_text next to the cents
             return Out(
                 result,
                 refs=[f"TXN#{result.get('transaction_id')}/META", f"QUOTE#{use_quote}/META"],
@@ -840,8 +853,10 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                 ctx,
                 ctx.services.execution.get_status(ctx.customer_id, transaction_id, run_id=ctx.run_id),
             )
-            data = _public_store_notice(
-                _with_money(view, (("refund_cents", "refund_text"), ("fee_cents", "fee_text")))
+            data = _bundle_view(
+                _public_store_notice(
+                    _with_money(view, (("refund_cents", "refund_text"), ("fee_cents", "fee_text")))
+                )
             )
             return Out(
                 data,

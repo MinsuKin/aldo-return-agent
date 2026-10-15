@@ -29,7 +29,7 @@ import {
 
 const RETURN_RE = /\b(return|returning|returned|exchange|swap|refund|send (?:it|them|these) back|money back)\b|too (?:small|big|tight|large|loose)|doesn.t fit|half size|\btight\b/;
 const BUY_RE = /\b(buy|order|get me|purchase|need|want)\b/;
-const MEN001_RE = /men ?001|black leather shoes?|\bbiglect\b/;
+const MEN001_RE = /men ?001|black leather shoes?/;
 const STESSY_RE = /stessy|heel/;
 
 const startRun = (s: Script, p: TurnParams, kind = "personal"): void => {

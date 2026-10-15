@@ -117,7 +117,7 @@ def test_a_return_that_ends_in_a_case_is_handed_back_by_the_worker(world, enqueu
     assert repo().get_conversation(AVA, conv)["mode"] == "bot"
     (handback,) = [e for e in a2a(world) if e["type"] == "handback"]
     assert handback["actor"] == "aldo_agent"
-    assert handback["payload"]["outcome"] == "case_created" and handback["payload"]["case_id"] == "DEMO-CASE-7"
+    assert handback["payload"]["outcome"] == "escalated" and handback["payload"]["case_id"] == "DEMO-CASE-7"
 
 
 def test_a_timeout_after_the_exchange_was_made_still_hands_the_chat_back(world, enqueued, monkeypatch):
@@ -137,7 +137,7 @@ def test_a_timeout_after_the_exchange_was_made_still_hands_the_chat_back(world, 
     assert runs.get_run(AVA, payload["run_id"])["status"] == "error"  # the worker closed the run
     assert repo().get_conversation(AVA, conv)["mode"] == "bot"
     (handback,) = [e for e in a2a(world) if e["type"] == "handback"]
-    assert handback["payload"]["outcome"] == "transaction_created"
+    assert handback["payload"]["outcome"] == "completed"
     assert handback["payload"]["transaction_id"] == "DEMO-RMA-AB12CD"
 
 

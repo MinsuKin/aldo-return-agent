@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ADMIN_SECRET, IS_MOCK, latestSizeRequestId, mockPost, onMock, resetDemo, signInAs } from "./helpers";
+import { ADMIN_SECRET, IS_MOCK, MOCK_URL, latestSizeRequestId, mockPost, onMock, resetDemo, signInAs } from "./helpers";
 
 // Functional specs for the phone UI: one chat with ALDO bot on a phone (left) and the live A2A trace (right).
 // They run against the mock API by default (scripted John and David as in addendum 11.2) and, with
@@ -94,7 +94,7 @@ test.describe("John (Silver): the stage demo", () => {
       await expect(card).toContainText("ALDO Men 001");
       await expect(card).toContainText("9.5");
       await expect(card).toContainText("CAD 149.99");
-      await expect(card).toContainText("Runs large: 94.5% of fit-related returns were too big (n=236)");
+      await expect(card).toContainText("Runs large: 91.5% of fit-related returns were too big (n=118)");
       await expect(page.getByTestId("reviews-evidence")).toHaveText("Read 16 reviews, 1 flagged and excluded");
       await expect(page.getByTestId("purchase-rationale")).toContainText("runs large");
       await expect(page.getByTestId("bubble-bot").last()).toContainText("I haven't ordered anything yet");
@@ -199,6 +199,10 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(txn.getByTestId("store-notice")).toContainText("5 min away");
     await expect(page.getByTestId("bubble-bot").last()).toContainText("notified the store");
     await expect(page.getByTestId("workflow-pill")).toContainText("Purchase");
+    // The return workflow's public milestones sit in the trace next to the A2A events.
+    await expect(trace(page).getByText("Policy decision: eligible")).toBeVisible();
+    await expect(trace(page)).toContainText("Rules: window.ok");
+    await expect(trace(page)).toContainText("Owner confirmed the chosen option");
     for (const type of ["transaction_created", "store_notified", "handback"]) await expect(traceEvent(page, type).first()).toBeVisible();
     await expect(traceEvent(page, "store_notified").first().getByTestId("actor-chip")).toHaveText("ALDO Store Desk");
     await expect(traceEvent(page, "handback").first()).toContainText("Back to the purchase workflow");
@@ -356,6 +360,39 @@ test.describe("recoveries and navigation", () => {
     await expect(page.getByTestId("persona-picker")).toBeVisible();
     await page.getByTestId("persona-DEMO-CUST-DAVID").click();
     await expect(page.getByTestId("chat-sub")).toContainText("Platinum member");
+  });
+});
+
+test.describe("routes of the single-chat contract (addendum 11.5)", () => {
+  test("personas carry tier fields, a message answers with agent and mode, reviews need a delegated token", async ({ request }) => {
+    test.skip(!IS_MOCK, "uses mock-only controls");
+    await resetDemo(request, "default");
+    const personas = (await (await request.get("/api/demo/personas")).json()) as { personas: Record<string, string>[] };
+    expect(personas.personas.find((p) => p.customer_id === "DEMO-CUST-JOHN")).toMatchObject({ tier: "silver", tier_label: "Silver member", location_label: "Downtown Montreal" });
+    expect(personas.personas.find((p) => p.customer_id === "DEMO-CUST-DAVID")).toMatchObject({ tier: "platinum", tier_label: "Platinum member" });
+
+    const session = (await (await request.post("/api/demo/sessions", { data: { customer_id: "DEMO-CUST-JOHN" } })).json()) as { token: string };
+    const auth = { Authorization: `Bearer ${session.token}` };
+    const conv = (await (await request.post("/api/personal-agent/conversations", { headers: auth, data: {} })).json()) as { conv_id: string };
+    const info = await (await request.get(`/api/personal-agent/conversations/${conv.conv_id}`, { headers: auth })).json();
+    expect(info).toMatchObject({ conv_id: conv.conv_id, mode: "bot", returns_order_id: null });
+    const sent = await request.post(`/api/personal-agent/conversations/${conv.conv_id}/messages`, { headers: auth, data: { text: "Hello" } });
+    expect(sent.status()).toBe(202);
+    expect(await sent.json()).toMatchObject({ agent: "personal", mode: "bot", run_id: expect.stringMatching(/^PRUN-/) });
+
+    // The reviews route takes a delegated token only; flagged reviews are marked, never removed from the response.
+    const refused = await request.post("/api/gateway/reviews", { headers: auth, data: { product_query: "Men 001" } });
+    expect(refused.status()).toBe(403);
+    const delegated = (await (await request.post(`${MOCK_URL}/__mock/delegated-token`, { data: { customer_id: "DEMO-CUST-JOHN" } })).json()) as { token: string };
+    const reviews = await request.post("/api/gateway/reviews", { headers: { Authorization: `Bearer ${delegated.token}` }, data: { product_query: "Men 001" } });
+    expect(reviews.status()).toBe(200);
+    const body = (await reviews.json()) as { n_reviews: number; provenance: string; reviews: { review_id: string; flags: string[] }[] };
+    expect(body.n_reviews).toBe(16);
+    expect(body.provenance).toBe("synthetic");
+    expect(body.reviews.filter((r) => r.flags.includes("instruction_like_text")).map((r) => r.review_id)).toEqual(["REV-INJECT-1"]);
+    // A delegated token is refused on every other route.
+    const other = await request.get("/api/orders", { headers: { Authorization: `Bearer ${delegated.token}` } });
+    expect(other.status()).toBe(403);
   });
 });
 
