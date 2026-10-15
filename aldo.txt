@@ -10,3 +10,99 @@ goal for ALDO
 - it's not in the dataset yet maybe but would be the best if we can check the customer size reviews (true to size, slightly bigger, etc.) and make sure customer aware what size they are getting and hopefully fitting correctly
 - using AR/VR tech, we need to deal with privacy for fit check, and we don't want that, so it would be the best if we can show the customer different feet image (short, long, thin, thick), or body shapes and let them select to make sure it reduces wrong size order.
 - maybe we can keep the record of previous orders and customer size info to make sure that they are getting the right size.
+
+
+My recommendation is to keep the returns core you've already specced and add one "fit check" step before checkout, linked to the returns flow by a saved size profile for each customer. Most of ALDO's goals already map onto pieces in the spec: exchange-first options, fit insight, store inventory and deterministic policy. Only the project skeleton is built so far, so a pivot mostly means editing the spec, not redoing code.
+
+I ran a quick read-only count over the provided CSVs to see which goals the data supports. These figures are for ALDO_CA, derived from the data, with CAD assumed:
+
+Channels and fees: 74.5% of completed return lines already come back in store, and in-store returns were never charged a fee. Web and Happy Returns mail are 14.5% of lines, but 53–56% of those are size returns, and about a third of them paid a 4.95 or 5.95 fee. Total fee revenue across the two-year file is only about 37k.
+Multi-size orders (same order, same style, two or more sizes): about 3% of orders. Those lines come back at twice the normal rate (40% vs 20%). Of these orders, 27% kept exactly one pair, 26% returned everything and 46% returned nothing.
+Repeat size returners: 7.4% of customers with a size return had one on two or more orders. They account for 15% of size-return orders.
+Not in the data: size reviews, loyalty status, width or foot-shape attributes, and customer IDs on the orders file.
+Treat these as rough indicators. "Style" may group colours, and the orders file is a 1M-row extract.
+
+Which of ALDO's goals are feasible
+ALDO goal	Data support	Effort	Verdict
+Exchange instead of return	Already central to the spec; in-store exchange file	Planned	Keep
+Returns in store	Strong: the channel and fee split above, plus 16k purchases made in store right after a web return was processed (exchange file)	Re-rank options; store stock checks already planned	Make it a headline
+Waive fees for loyal customers	Fees are real; loyalty would be invented demo data	One policy rule plus a field on the demo customer	Add
+Right fit when buying online	Real per-product fit signal (Req 5)	New cart screen	Add, kept small
+Size reviews	Not provided; "runs small / runs large" from return reasons is a real substitute	Reuse fit insight	Use the substitute and label it
+Remember the customer's size	Partial (repeat returners); demo data would be invented	Profile record plus 2 tools	Add
+Prevent buying several sizes, without hurting the customer experience	Real but small	Detecting it is easy	A demo moment, not the headline
+Foot-shape picker instead of AR	No data linking foot shape to size	UI is cheap; the shape-to-size mapping would be made up	Stretch goal
+Pivot ideas
+1. Fit Loop (recommended)
+One agent works at two moments and shares a fit profile. The thesis is to prevent the size return at checkout. If it happens anyway, the agent makes it a free in-store exchange and remembers the result so the next order fits.
+
+At checkout: the agent sees a 7.5 and an 8 of the same style in the cart. It pulls the style's fit signal, the customer's kept and returned sizes, and their foot shape if they gave one, then recommends one size and shows why. The customer can:
+
+keep one size with a free-exchange "fit promise" (fee waived for loyal members),
+reserve both sizes to try on at a nearby store,
+or keep both.
+Once they choose, the agent updates the cart or makes the reservation.
+
+After delivery: your current flow, re-ranked to ALDO's order: store exchange, then shipped exchange, store return, and mail return (with a fee unless waived).
+
+Learning: each outcome is saved to the profile, for example "8.5 in this style."
+
+Benefits to ALDO:
+
+It prevents size returns before they happen.
+It replaces "ship two, return one" with "ship one, exchange if needed."
+It pulls the remaining size returns into stores, where there's no shipping and a chance to sell more.
+The fee becomes a nudge toward the store rather than a penalty.
+It's also your strongest agentic story. The brief's own definition says agents should "learn from outcomes," and a rules engine can't close that loop.
+Concerns: scope with about a day left, two screens instead of one, and pre-purchase impact can only be estimated, not measured from past data.
+
+2. Store-first exchange agent (lowest risk)
+Keep the spec but change what the agent optimizes for:
+
+rank the store exchange first,
+add a capped fee waiver for loyal customers,
+save the size that worked after an exchange.
+Pre-purchase becomes a roadmap slide.
+
+Benefits: smallest change, and the channel and fee data back every claim. Concerns: it skips ALDO's first ask, which is preventing the return in the first place, and judges may see it as the same workflow re-weighted.
+
+3. Fit Concierge (pre-purchase only)
+Drop the return transaction and build a product and cart advisor: foot-shape picker, fit signal, size memory, a check for multi-size orders, and try-on reservations.
+
+Benefits: it answers ALDO's top goal most directly, demos visually, and has a strong privacy story with no camera. Concerns:
+
+It's the biggest rewrite.
+The agent takes the fewest real actions.
+Nearly all the impact numbers would be assumptions.
+It's the easiest to dismiss under the rubric's own question: would "an analytics model" do the same?
+Concerns for any pivot
+Scope: to fit Fit Loop in, cut these from P0:
+
+scenario I,
+the concurrent half of scenario E (keep the repeat-request protection),
+the Impact tab (put it on a slide).
+Leave all P1 items out, and build the foot-shape picker only once both moments work end to end.
+
+Proving it's agentic: show things a form can't do. For example, read "they pinch at the toes" as a width problem rather than length, weigh stock against store distance and a deadline, then act, check the result and update the profile.
+
+Multi-size orders: 46% of them return nothing, so many probably aren't size-hedging at all (two people, two colours, gifts). The agent should suggest and ask, never block.
+
+Fairness: loyalty waivers mean treating customers differently. Keep the waiver rule-based, capped and enforced on the server. Non-members still get free in-store returns. Never label anyone a "serial returner."
+
+Privacy: size history and foot shape are personal data even without images. Make the profile opt-in, editable and deletable, and keep customer IDs out of what the model sees. A privacy-forward pitch also makes the public GitHub repo with ALDO data (handoff section 0) a bigger risk if it's still public.
+
+Data bias: size returns are 53% of web returns but 19% of in-store ones, which probably reflects how reasons get recorded at the counter. The fit signal also only sees people who returned, so keep the minimum of 30 returns per product and show sample sizes.
+
+Continuity: the jury saw your Phase 1 gateway pitch. Present the pivot as what you learned from ALDO; the gateway stays as the way outside assistants reach the same agent.
+
+Questions to ask ALDO while you're there:
+
+Why are about two-thirds of web and mail returns fee-free today? Loyalty, exchanges?
+Do they have fit-review or width data they can share?
+Does "Style" include colour?
+Once you pick a direction, I can start a workflow that rewrites the requirements, design and tasks with these cuts, and adds scripts that reproduce the numbers above.
+
+Est. Credits Used: 16.79
+Elapsed time: 10m 30s
+
+
