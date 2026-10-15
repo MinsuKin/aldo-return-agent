@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "dataModelVersion": 1,
+  "id": "sess_c82daae7-5baa-4de3-902d-ca5e9aa63f51",
+  "title": "Pivot to ALDO Fit Gateway (steering)",
+  "agentMode": "vibe",
+  "workspacePaths": [
+    "/Users/minsu/Desktop/aldo-return-agent"
+  ],
+  "rootPaths": [
+    "/Users/minsu/Desktop/aldo-return-agent"
+  ],
+  "createdAt": "2026-10-15T16:36:35.358Z",
+  "lastModifiedAt": "2026-10-15T21:56:23.822Z",
+  "modelId": "claude-sonnet-5.5",
+  "autopilot": true,
+  "effortLevel": "high",
+  "contextSnapshotModelDisplay": {
+    "modelId": "claude-sonnet-5.5",
+    "display": "Claude Sonnet 5.5"
+  },
+  "semanticReviewEnabled": true,
+  "disableAutoCompaction": false,
+  "ftaEnabled": false,
+  "workflowsEnabled": true,
+  "specPlanEnabled": false,
+  "specWorkflow": "quick",
+  "specSkipClarificationEnabled": true,
+  "memoryConfig": {
+    "mode": "disabled",
+    "reflection": false
+  },
+  "memoryConfigSource": "legacy",
+  "description": "Pivot steering done. Launched Wave 2 (persistence+services, gateway, ALDO agent, API+worker, eval script) plus personal-agent, A2A spike and pivot data validation. Running: domain-core, infra, frontend, impact. Done: data-fixtures, contracts/plan, spike. Next: Checkpoint 1 (pytest all), base deploy + seed, agent smoke + runtime deploy, API deploy, CP2, UI deploy, eval.",
+  "status": "idle",
+  "_meta": {
+    "kiro": {
+      "policyPreset": [
+        "edit-workspace"
+      ],
+      "shellType": "zsh",
+      "settings": {
+        "workflows": {
+          "enabled": true
+        },
+        "goal": {
+          "enabled": true
+        }
+      }
+    }
+  }
+}
