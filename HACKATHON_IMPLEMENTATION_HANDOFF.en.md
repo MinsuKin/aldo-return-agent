@@ -6,13 +6,65 @@ Date: 2026-10-15 · Team: CMD Commerce · AWS Team: Team 10 · Time zone: Americ
 
 The repository currently contains only data and the documents and profiling script created during this work. There is no app, API, or AWS deployment yet. In this document, **verified** means a fact directly confirmed in source material or files; **proposal** means a design for this implementation; and **demo assumption** means a synthetic value for business information that has not been provided. Do not present proposals or assumptions as actual ALDO policy.
 
+## 0. Judge review and plan adjustments (2026-10-15)
+
+Reviewed from the seat of an AWS judge against the **final** rubric (Business impact 30, Agentic innovation 25, Technical execution 15, Scalability 15, Presentation 15) and the AWS briefing note that "how well you use AWS is an important factor in your score." **This section supersedes any conflicting guidance in sections 1–19.**
+
+### Projected score of the original plan, if executed as written
+
+| Criterion | Weight | Score /10 | Why it loses points |
+| --- | ---: | ---: | --- |
+| Business impact & thesis | 30% | 6 | Rigorous about assumptions, but the only economics are one synthetic CAD 100 case. No sized opportunity, no low/base/high funnel built from the real data. Only one value lever (refund → exchange). |
+| Agentic innovation | 25% | 5 | The happy path is linear: look up order → check policy → check stock → offer options. A judge will ask "would a rules engine do the same?" and the answer is mostly yes. Only one adaptive branch (stockout). No use of the data to reason, no post-action verification shown, no merchandise routing. |
+| Technical execution | 15% | 6 | Excellent invariants, but 7 endpoints, 9 scenarios, quote hashing, `outcome_unknown` recovery and concurrency tests are not finishable by Oct 16 14:00. High risk of a half-built demo. |
+| Scalability & feasibility | 15% | 5 | AWS is P1/optional; P0 is local SQLite + one Bedrock call. AWS judges will read that as "a laptop demo". No volume, latency or cost-per-resolution numbers. |
+| Presentation | 15% | 6 | Reasonable flow, but responsible AI (a required topic) is squeezed into a shared minute, there is no explicit "why not a rules engine" moment, and no stated fallback if the live demo fails. |
+| **Weighted** | | **5.6** | |
+
+### Adjustments (target ≈ 8/10)
+
+**A. Business impact: size the opportunity from real data, add two more levers.**
+1. Build an opportunity funnel from the provided CSVs (ALDO_CA, `RETURN_COMPLETED`, a fixed 12-month window): fit-related return lines → refund value at stake (sum and median of `Refund amount`, labeled currency-unconfirmed) → low/base/high exchange-conversion assumptions (e.g. 10/20/30%) → incremental value per converted case (section 15 model) → minus agent run cost measured from Bedrock token usage. Every number tagged `measured`, `derived` or `assumed`.
+2. Lever 2, **avoid the second return**: compute a per-style fit signal from real return reasons (share of `Too small` vs `Too big` per style). The agent uses it to recommend the right replacement size, which reduces exchange-of-exchange.
+3. Lever 3, **route the returned unit**: after the exchange is created, the agent picks the disposition location (store vs DC) using synthetic stock/demand, which supports full-price resale (gross-margin protection) rather than markdown.
+4. Use the in-store exchange file as behavioral evidence: CONFIRMED in-store exchanges (45,778 rows) show customers exchange when it is easy; online has no equivalent guided path in the data.
+
+**B. Agentic innovation: make the agent do things a decision tree cannot.**
+1. Messy, multi-constraint intent: "They're too small and I need them for a wedding Saturday, I can't get to a store before Friday." The agent must extract size direction, deadline and channel constraint and trade them off.
+2. Data-grounded reasoning tool `get_fit_insight(style)` backed by real aggregates (lever 2).
+3. Adaptive replanning across locations: replacement size out of stock at the DC → search nearby store ATP → offer ship-from-store or in-store pickup exchange → only then fall back to return options.
+4. Act, then verify: after execution the agent reads back the transaction and inventory reservation and reports what actually happened.
+5. Escalation with a drafted case: for final-sale + defect or over-limit amounts, the agent opens a review case with a structured summary and evidence; an **Associate console** screen shows the case and lets a human approve or deny. This makes "where humans remain" visible instead of described.
+6. Keep the team's Phase 1 differentiator: expose the same ALDO tools through **AgentCore Gateway (MCP)** with scoped access, so an external customer assistant can call them. Show it for 20 seconds if it works (P1). Do not claim it unless demonstrated.
+
+**C. Technical execution: cut scope to what will be shown and tested.**
+- Keep scenarios A (exchange), B (stockout replan), C/D (final sale → refuse; defect → escalate), E (double-click / duplicate execute), H (other customer's order + "ignore policy"). Drop G (timeout recovery) and F (concurrent race) to stretch; keep the idempotency + conditional-write invariant that makes them safe.
+- Collapse quote/approval/execute into: agent creates a quote (server-side, immutable) → UI shows option cards → customer clicks Approve → `POST /approvals` (server verifies session + quote hash + expiry and executes atomically with an idempotency key). The agent never holds an approval token.
+- Ship a small scenario eval script that runs scenarios against the deployed agent and checks DynamoDB state, not chat text. Put the pass rate on a slide.
+
+**D. Scalability & AWS usage: AWS-native from hour one.** No SQLite stage; use DynamoDB from the start so there is no migration.
+- Strands agent on **Bedrock AgentCore Runtime**; model **Claude Sonnet 5.5** via `us.anthropic.claude-sonnet-5-5` (verified tool_use round trip in this account, ~0.8 s), Haiku 5.5 as the fast fallback (also verified).
+- Domain services (policy, quote, execution, inventory, escalation) in one Python package deployed as **Lambda** behind **API Gateway** for the UI, and reused as the tool implementation for the agent.
+- **DynamoDB** single-table with conditional/transactional writes for idempotency and inventory reservation.
+- **AgentCore Observability / CloudWatch** for traces, latency and token counts; **Bedrock Guardrails** (prompt-attack filter) on customer input.
+- Frontend on **S3 + CloudFront** (or Amplify Hosting). IaC with **CDK (Python)**.
+- Scale story with numbers: observed return volume per day from the data, peak multiplier, measured latency per resolution, and Bedrock cost per resolution from real token counts.
+
+**E. Presentation: 8 minutes, demo-first, with a recorded fallback.** See the revised run-of-show in section 16.
+
+### Issues found in the repository (fix before anything else)
+
+1. **The provided ALDO datasets and organizer documents are on a public GitHub repo.** `git ls-files` shows `dataset/*.csv`, `Notes.docx`, `docs/sources/*` and `docs/evidence/*` committed and pushed to `github.com/MinsuKin/aldo-return-agent`, which the GitHub API reports as `public`. The data includes anonymized customer identifiers. Section 19 previously claimed `.gitignore` excludes these folders; it does not. This is a Responsible AI/privacy point a judge can raise, and may conflict with data-use terms. Make the repo private or remove the files from history before the presentation.
+2. `new.txt` holds live AWS session credentials. It is gitignored and was never committed. Keep it out of Git, and delete it once the event ends.
+3. The Korean handoff (`HACKATHON_IMPLEMENTATION_HANDOFF.md`) does not include this section.
+
 ## 1. What to do first
 
 1. Read this document and the [source review record](docs/SOURCE_REVIEW.md). Source materials are in `docs/sources/`, data is in `dataset/`, and the full-row profile is in `docs/evidence/data-profile.json`.
 2. Fix the first scenario as a **size exchange for shoes purchased online in ALDO_CA, in CAD**. The customer UI should use English by default. Other banners, countries, and currencies are future extensions.
 3. Create 10 synthetic orders with the `DEMO-` prefix, plus product, store, inventory, logistics, and policy fixtures. Do not use completed returns from the source data as new execution targets.
 4. Complete the Python policy, quote, approval, and execution services first. Then connect the Bedrock + Strands agent and web UI. Build stock depletion, duplicate requests, and tool failures alongside the happy path.
-5. Run the first working version locally and make only the Bedrock call real. Deploy the same service code to AWS after the integration works.
+5. ~~Run the first working version locally and make only the Bedrock call real.~~ **Superseded (section 0.D):** build AWS-native from the start (DynamoDB, Lambda + API Gateway, AgentCore Runtime). Local runs use the same code against the real AWS resources.
 6. Before the presentation, save real execution screenshots and a short recording, fixed fixtures, the architecture, and verification results. **The hackathon ends October 16 at 14:00. Back up everything from AWS before October 16 at 21:00.**
 
 ### First completion criteria
@@ -301,9 +353,13 @@ Install Python 3.10 or later, `strands-agents`, `boto3`, FastAPI, and test packa
 
 ### Priorities
 
-- P0: Local web app + Python backend + real Bedrock + policy/execution database. Make the end-to-end path work on day one.
-- P1: API Gateway/Lambda tools, DynamoDB execution state, AgentCore Runtime, needed content Guardrails, and CloudWatch traces. Present only the deployment scope that actually works.
-- P2: External-assistant MCP/A2A, real Cognito/OAuth delegation, cross-session memory, multiple countries and brands. Start after P0/P1 are stable.
+**Verified 2026-10-15:** `sts get-caller-identity` returns `WSParticipantRole/Participant` in account `010928197565`. Converse tool_use round trips succeeded for `us.anthropic.claude-sonnet-5-5`, `us.anthropic.claude-haiku-5-5` and `global.amazon.nova-2-lite-v1:0`. The AgentCore control API is reachable (0 runtimes).
+
+Priorities (revised, section 0):
+
+- P0: DynamoDB + Lambda/API Gateway domain services + Strands agent on AgentCore Runtime (Sonnet 5.5) + web UI on S3/CloudFront. Scenarios A, B, C/D, E, H. Associate console for escalations. Fit-insight tool from real aggregates.
+- P1: AgentCore Gateway (MCP) exposure of the tools, Bedrock Guardrails on input, AgentCore Observability dashboard, disposition routing, Cognito sign-in.
+- P2: A2A, cross-session memory, multiple countries/brands, timeout recovery and race scenarios F/G.
 
 The Sites tool showed no ALDO project in the available owned-sites list, and this repo has no hosting binding. No site was created during document preparation. If Sites is used in follow-up implementation, read the Sites skill and decide whether to create a site and how to connect its backend. To demonstrate AWS use for the competition, the actual AWS path for Bedrock/execution tools must be visible. Do not imply that frontend hosting alone replaces an AWS agent implementation.
 
@@ -362,7 +418,19 @@ Based on the team slides: Vassili — Product/Experience, Jaden — Full-stack/I
 | Confirmed: October 16, afternoon | 8-minute presentation + one question. Exact team order will be announced on site |
 | Before October 16, 21:00 | Export AWS code, configuration, required data, and logs to the laptop. Use the end time in the email as authoritative |
 
-Proposed 8-minute structure: problem and data evidence 1 minute, product/agentic architecture 1 minute, live happy-path + adaptive demo 3 minutes, policy/approval/deduplication 1 minute, business impact 1 minute, AWS architecture/scale/responsibility 1 minute.
+Revised 8-minute run-of-show (section 0.E). Each of the five required topics gets its own slot:
+
+| Time | Topic | Content |
+| --- | --- | --- |
+| 0:00–1:00 | Problem | 34% of all return lines (23% in ALDO_CA) are size-driven; refund value at stake; why current return flows default to refund |
+| 1:00–1:45 | Thesis + agentic approach | What the agent knows, decides, can do, and where humans stay. One slide: "why a rules engine can't do this" |
+| 1:45–4:30 | Live demo | Messy wedding request → fit insight → DC stockout → store ATP replan → approve → execute → verify → route returned unit. Then a final-sale defect escalating to the Associate console |
+| 4:30–5:15 | AWS architecture + scale | AgentCore Runtime, Lambda, DynamoDB conditional writes, Observability trace; measured latency and cost per resolution |
+| 5:15–6:15 | Business impact | Low/base/high funnel from the real data, every number tagged measured/derived/assumed |
+| 6:15–7:30 | Responsible AI | Fairness, privacy (no PII to the model), explainability (evidence trace), financial authority (server-enforced limits), human oversight, eval pass rate |
+| 7:30–8:00 | Close | Pilot proposal and the KPIs it would measure |
+
+Keep a recorded run of the full demo ready to play if the live run stalls for more than 10 seconds.
 
 ## 17. Questions to confirm on site
 
@@ -395,4 +463,4 @@ This work completed the investigation and design only. The team's PPTX and Outlo
 
 For the full source/evidence list, source conflicts, and unverified technical items, refer to [SOURCE_REVIEW.md](docs/SOURCE_REVIEW.md). `scripts/profile_data.py` can run with Python where pandas is installed and regenerates `docs/evidence/data-profile.json`. It does not modify source data.
 
-This repo's `.gitignore` excludes `dataset/`, `docs/sources/`, `docs/evidence/`, `.env*`, and local databases. No team-only invite codes or AWS credentials were recorded in this document. Before pushing to the public repository, confirm which materials may be made public and share synthetic fixtures as the primary demo data.
+**Corrected 2026-10-15:** this repo's `.gitignore` excludes `.env*`, local databases, `new.txt` and the single large OMS returns CSV only. It does **not** exclude `dataset/`, `docs/sources/` or `docs/evidence/`, and those files are already committed and pushed to the public GitHub repo (see section 0, repository issues). No team-only invite codes or AWS credentials were recorded in this document. Share synthetic fixtures as the primary demo data.

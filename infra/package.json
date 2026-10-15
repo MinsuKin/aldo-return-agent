@@ -1,0 +1,8 @@
+{
+  "name": "returns-gateway-infra",
+  "private": true,
+  "version": "0.1.0",
+  "devDependencies": {
+    "aws-cdk": "2.1145.0"
+  }
+}

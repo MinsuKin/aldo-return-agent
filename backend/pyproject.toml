@@ -1,0 +1,26 @@
+[project]
+name = "returns-gateway-backend"
+version = "0.1.0"
+description = "Agentic Returns Gateway backend (prototype)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "boto3==1.43.114",
+  "pydantic==2.14.1",
+  "aws-lambda-powertools==3.36.0",
+  "strands-agents==1.61.0",
+  "bedrock-agentcore==1.24.1",
+]
+
+[dependency-groups]
+dev = [
+  "pytest==9.1.1",
+  "moto[dynamodb,secretsmanager]==5.2.4",
+  "bedrock-agentcore-starter-toolkit==0.3.14",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.uv]
+package = false

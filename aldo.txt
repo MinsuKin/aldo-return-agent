@@ -1,0 +1,12 @@
+goal for ALDO
+
+- reduce return as much as possible since it's costly
+- exchange is better than return
+- return fee is usually not freely
+- want to make sure that the fit is right when buying from online, so customer does not have to return.
+- prefer to get return in the store, since no shipping fee, and can sell more to customers
+- some people buy multiple pairs with different sizes and return all but one. it's costly, want to prevent if it's possible but don't want to lower customer Experience
+- if it's loyal customer, we wouldn't mind taking care of return fee cuz they buy a lot
+- it's not in the dataset yet maybe but would be the best if we can check the customer size reviews (true to size, slightly bigger, etc.) and make sure customer aware what size they are getting and hopefully fitting correctly
+- using AR/VR tech, we need to deal with privacy for fit check, and we don't want that, so it would be the best if we can show the customer different feet image (short, long, thin, thick), or body shapes and let them select to make sure it reduces wrong size order.
+- maybe we can keep the record of previous orders and customer size info to make sure that they are getting the right size.
