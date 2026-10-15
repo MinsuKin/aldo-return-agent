@@ -1322,4 +1322,91 @@ def scenario_p2(ctx: Ctx, rec: Recorder) -> None:
     """Same with the DC out of stock: the proposal and the order are Montreal store pickup."""
     bot_purchase(ctx, rec, "dc_stockout", want_montreal_pickup=True)
 
+
+# ------------------------------------------------------------------------------- scenario P3
+
+
+def gateway_assist(ctx: Ctx, rec: Recorder, token: str, label: str) -> dict:
+    body = {"intent": "size_assist", "product_query": ctx.facts.hero_query, "color": "BLACK",
+            "size_system": "US_W", "deadline_date": DEADLINE_DATE, "channel_pref": None}
+    resp = ctx.api.post("/api/gateway/size-assist", body, token=token)
+    good = resp.ok and isinstance(resp.body, Mapping) and bool(resp.body.get("size_request_id")) and bool(resp.body.get("sizes"))
+    if not rec.check(f"{label}_size_assist_ok", good, resp.brief()):
+        raise ScenarioAbort(f"size-assist failed: {resp.brief()}")
+    return dict(resp.body)
+
+
+def offers(assist: Mapping[str, Any]) -> list[tuple[str, dict]]:
+    return [(str(entry["size"]), dict(opt)) for entry in assist.get("sizes", []) for opt in entry.get("options", [])]
+
+
+def find_offer(assist: Mapping[str, Any], *, size: str | None = None, type_: str | None = None,
+               location_id: str | None = None, not_size: str | None = None) -> tuple[str, dict] | None:
+    for s, opt in offers(assist):
+        if ((size is None or s == size) and (type_ is None or opt.get("type") == type_)
+                and (location_id is None or opt.get("location_id") == location_id) and (not_size is None or s != not_size)):
+            return s, opt
+    return None
+
+
+def propose(ctx: Ctx, token: str, request_id: str, option_id: str, size: str, *, confidence: str = "medium") -> ApiResponse:
+    body = {"size_request_id": request_id, "option_id": option_id, "chosen_size": size,
+            "rationale_public": "eval probe: fit signal and deadline", "confidence": confidence}
+    return ctx.api.post("/api/gateway/size-decision", body, token=token)
+
+
+def confirm(ctx: Ctx, token: str, request_id: str, option_id: str | None) -> ApiResponse:
+    return ctx.api.post(f"/api/purchases/{request_id}/confirm", {"option_id": option_id} if option_id else {}, token=token)
+
+
+def probe(ctx: Ctx, rec: Recorder, name: str, resp: ApiResponse, status: int, code: str, before: Snapshot,
+          *, audited: bool = False) -> Snapshot:
+    """One rejected call: the specified error AND nothing written (audit events are allowed, and required if `audited`)."""
+    rec.check(f"{name}_error", resp.status == status and resp.error_code == code, f"expected HTTP {status} {code}, got {resp.brief()}")
+    after = ctx.tables.snapshot(pa=True)
+    same, detail = snapshots_equal(before, after)
+    rec.check(f"{name}_wrote_nothing", same, detail)
+    if audited:
+        fresh = [a for k, a in after.audit().items() if k not in before.audit()]
+        rec.check(f"{name}_audited", any(a.get("action") in ("access_denied", "decision_denied") for a in fresh),
+                  f"new audit actions: {[a.get('action') for a in fresh]}")
+    return after
+
+
+def _unoffered_option_id(assist: Mapping[str, Any]) -> str:
+    taken = {opt.get("option_id") for _s, opt in offers(assist)}
+    return next(f"SO-{n}" for n in (99, 98, 97, 96) if f"SO-{n}" not in taken)
+
+
+def scenario_p3(ctx: Ctx, rec: Recorder) -> None:
+    """Untrusted gateway input: every rejected call returns the specified error and writes nothing."""
+    base = reset_and_baseline(ctx, rec, "default", pa=True)
+    ava_session, ben_session = ctx.api.session(AVA), ctx.api.session(BEN)
+    ava_deleg, ben_deleg, capped = ctx.mint_delegated(AVA), ctx.mint_delegated(BEN), ctx.mint_delegated(AVA, 5000)
+    assist = gateway_assist(ctx, rec, ava_deleg, "p3")
+    rid = str(assist["size_request_id"])
+    pick = find_offer(assist, size="8.0", type_="store_pickup", location_id=MTL_STORE) or find_offer(assist, type_="store_pickup", location_id=MTL_STORE)
+    other = find_offer(assist, not_size=pick[0]) if pick else None
+    if not rec.check("p3_offers_available", pick is not None and other is not None, f"{len(offers(assist))} offered options"):
+        return
+    size, opt = pick
+    opt_id = str(opt["option_id"])
+    cur = ctx.tables.snapshot(pa=True)
+    # --- wrong token kinds
+    cur = probe(ctx, rec, "p3_session_token_at_size_assist", ctx.api.post("/api/gateway/size-assist", {"intent": "size_assist", "product_query": ctx.facts.hero_query}, token=ava_session), 403, "NOT_AUTHORIZED", cur)
+    cur = probe(ctx, rec, "p3_session_token_at_size_decision", propose(ctx, ava_session, rid, opt_id, size), 403, "NOT_AUTHORIZED", cur)
+    cur = probe(ctx, rec, "p3_delegated_token_at_purchase_confirm", confirm(ctx, ava_deleg, rid, opt_id), 403, "NOT_AUTHORIZED", cur)
+    cur = probe(ctx, rec, "p3_delegated_token_at_orders", ctx.api.get("/api/orders", token=ava_deleg), 403, "NOT_AUTHORIZED", cur)
+    # --- no proposal yet
+    cur = probe(ctx, rec, "p3_confirm_before_any_proposal", confirm(ctx, ava_session, rid, opt_id), 409, "APPROVAL_REQUIRED", cur)
+    # --- untrusted choices at proposal time
+    cur = probe(ctx, rec, "p3_option_not_offered", propose(ctx, ava_deleg, rid, _unoffered_option_id(assist), size), 422, "INVALID_SIZE_CHOICE", cur, audited=True)
+    cur = probe(ctx, rec, "p3_size_not_matching_option", propose(ctx, ava_deleg, rid, opt_id, other[0]), 422, "INVALID_SIZE_CHOICE", cur, audited=True)
+    cur = probe(ctx, rec, "p3_size_not_offered_at_all", propose(ctx, ava_deleg, rid, opt_id, "12.0"), 422, "INVALID_SIZE_CHOICE", cur, audited=True)
+    cur = probe(ctx, rec, "p3_over_limit_delegation", propose(ctx, capped, rid, opt_id, size), 403, "DELEGATION_LIMIT_EXCEEDED", cur, audited=True)
+    cur = probe(ctx, rec, "p3_other_customers_request_proposal", propose(ctx, ben_deleg, rid, opt_id, size), 403, "NOT_AUTHORIZED", cur, audited=True)
+    ctx_state = (base, assist, rid, size, opt_id, other, ava_session, ben_session, ava_deleg, cur)
+    _p3_proposal_and_click(ctx, rec, *ctx_state)
+    _p3_expiry_cases(ctx, rec, ava_session, ava_deleg)
+
 # <<APPEND>>

@@ -58,11 +58,26 @@ def test_real_bedrock_model_carries_no_sampling_config() -> None:
 
 
 def test_no_structured_output_or_forced_tool_choice_in_the_agent_code() -> None:
+    """Strands forces toolChoice any for structured output, which Sonnet and Opus 5.5 reject."""
+    import ast
     import inspect
 
-    source = inspect.getsource(runner) + inspect.getsource(agent_tools)
-    assert "structured_output" not in source
-    assert "toolChoice" not in source and "tool_choice" not in source
+    from agent import hooks, prompt
+
+    used: set[str] = set()
+    for module in (runner, agent_tools, hooks, prompt):
+        for node in ast.walk(ast.parse(inspect.getsource(module))):
+            if isinstance(node, ast.keyword) and node.arg:
+                used.add(node.arg)
+            elif isinstance(node, ast.Attribute):
+                used.add(node.attr)
+            elif isinstance(node, ast.Name):
+                used.add(node.id)
+    forbidden = {
+        "structured_output", "structured_output_model", "tool_choice", "toolChoice",
+        "temperature", "top_p", "top_k", "topP",
+    }
+    assert used & forbidden == set()
 
 
 # ------------------------------------------------------------------ agent wiring (G-11)
