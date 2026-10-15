@@ -51,7 +51,19 @@ def enqueued() -> list[dict]:
 
 
 @pytest.fixture
-def app(ddb, monkeypatch, enqueued):
+def personal_table(ddb, monkeypatch):
+    """The ALDO bot's own table (empty, in the same moto session) and a fresh repository."""
+    from personal_agent import memory
+
+    monkeypatch.delenv("PERSONAL_AGENT_TABLE_NAME", raising=False)
+    memory.set_repo(None)
+    memory.get_repo().create_table()
+    yield memory
+    memory.set_repo(None)
+
+
+@pytest.fixture
+def app(ddb, personal_table, monkeypatch, enqueued):
     # ``ddb`` (and so ``aws_env``) runs first; the admin key is set after it clears the env.
     monkeypatch.setenv("DEMO_ADMIN_KEY", ADMIN_KEY)
     monkeypatch.setenv("GATEWAY_TRANSPORT", "http")  # no in-process write-back wiring in route tests
