@@ -1154,4 +1154,84 @@ def scenario_e(ctx: Ctx, rec: Recorder) -> None:
     rec.eq("one_approval_received_event", len(approval_events), 1)
     rec.check("no_duplicate_writeback_outbox", len(end.outbox()) <= len(end.txns()), f"{len(end.outbox())} outbox items, {len(end.txns())} transactions")
 
+
+# ------------------------------------------------------ purchase helpers (proposal, click, A2A)
+
+
+def new_sizereqs(base: Snapshot, snap: Snapshot, customer_id: str, status: str | None = None) -> dict[str, dict]:
+    return {k: v for k, v in snap.sizereqs().items()
+            if k not in base.sizereqs() and v.get("customer_id") == customer_id and (status is None or v.get("status") == status)}
+
+
+def a2a_for_request(snap: Snapshot, customer_id: str, request_id: str, order_id: str | None = None) -> list[dict]:
+    out = []
+    for event in snap.a2a_events(customer_id):
+        payload = event.get("payload") or {}
+        if payload.get("size_request_id") == request_id or (
+                order_id and event.get("type") == "size_confirmed" and payload.get("order_id") == order_id):
+            out.append(event)
+    return out
+
+
+def collapse_repeats(types: Sequence[str], repeatable: str = "size_recommended") -> list[str]:
+    out: list[str] = []
+    for t in types:
+        if not (out and out[-1] == t == repeatable):
+            out.append(t)
+    return out
+
+
+def check_a2a_sequence(rec: Recorder, events: Sequence[Mapping[str, Any]], expected: Sequence[str], prefix: str) -> None:
+    types = collapse_repeats([e.get("type") for e in events])
+    rec.check(f"{prefix}a2a_events_in_order", types == list(expected), f"expected {list(expected)}, got {types}")
+    wrong = [(e.get("type"), e.get("actor")) for e in events if A2A_PURCHASE_ACTORS.get(e.get("type")) != e.get("actor")]
+    rec.check(f"{prefix}a2a_actors_correct", not wrong, f"unexpected actors: {wrong[:3]}")
+    seqs = [int(str(e["sk"])[len("EVT#"):]) for e in events]
+    rec.check(f"{prefix}a2a_events_ordered_by_seq", seqs == sorted(seqs), f"seqs {seqs}")
+
+
+def check_a2a_privacy(rec: Recorder, snap: Snapshot, facts: FixtureFacts, customer_id: str, prefix: str) -> None:
+    """C3: the middle stream carries public fields only (no retailer names, ids of the owner, tokens)."""
+    text = json.dumps([e.get("payload") for e in snap.a2a_events(customer_id)], default=str)
+    banned = facts.leak_terms(customer_id) + ["owner_ref", "customer_id", "DEMO-CUST-", "Bearer ", "X-ALDO-Signature"]
+    leaked = [term for term in banned if term.lower() in text.lower()]
+    rec.check(f"{prefix}a2a_stream_is_public_only", not leaked, f"leaked terms: {leaked}")
+
+
+def check_proposal(rec: Recorder, base: Snapshot, snap: Snapshot, ctx: Ctx, *, customer_id: str,
+                   want_montreal_pickup: bool) -> tuple[str, dict] | None:
+    """After the ALDO bot run: a PROPOSAL exists, no order, ATP unchanged, A2A events up to size_recommended."""
+    proposed = new_sizereqs(base, snap, customer_id, "proposed")
+    rec.eq("exactly_one_proposed_request", len(proposed), 1)
+    rec.eq("no_order_before_owner_click", len(snap.agent_orders()) - len(base.agent_orders()), 0)
+    rec.check("atp_unchanged_before_owner_click", not inv_deltas(base, snap), f"atp deltas: {fmt_deltas(inv_deltas(base, snap))}")
+    rec.eq("no_return_artifacts_from_purchase", (len(snap.txns()), len(snap.quotes()), len(snap.cases())),
+           (len(base.txns()), len(base.quotes()), len(base.cases())))
+    if len(proposed) != 1:
+        return None
+    rid, sr = next(iter(proposed.items()))
+    offered = sr.get("offered") or {}
+    pid, psize = sr.get("proposed_option_id"), sr.get("proposed_size")
+    inventory = base.inv()
+    rec.check("offered_set_is_in_stock_and_matches_inventory",
+              bool(offered) and all(int(o.get("atp", 0)) >= 1 and
+                                    int(inventory.get((o.get("sku"), o.get("location_id")), {}).get("atp", -1)) == int(o.get("atp", 0))
+                                    for o in offered.values()), f"{len(offered)} offered options")
+    rec.check("proposal_is_in_offered_set", pid in offered and dig(offered, f"{pid}.size") == psize,
+              f"option={pid} size={psize} offered sizes={sorted({o.get('size') for o in offered.values()})}")
+    rec.check("proposal_price_matches_catalog", sr.get("price_cents") == ctx.facts.hero_price_cents, f"price_cents={sr.get('price_cents')}")
+    chosen = offered.get(pid) or {}
+    if want_montreal_pickup:
+        rec.check("proposed_option_is_montreal_store_pickup", (chosen.get("type"), chosen.get("location_id")) == ("store_pickup", MTL_STORE),
+                  f"proposed {chosen.get('type')} at {chosen.get('location_id')}")
+    typical = ctx.facts.typical_sizes.get(customer_id)
+    rec.observe("proposed_size", psize)
+    rec.observe("proposed_option", f"{chosen.get('type')}@{chosen.get('location_id')}")
+    rec.observe("proposed_option_meets_saturday", bool(chosen.get("eta_date")) and str(chosen.get("eta_date")) <= DEADLINE_DATE)
+    if typical and psize:
+        rec.observe("proposed_size_vs_typical", "up" if float(psize) > float(typical) else "down" if float(psize) < float(typical) else "same")
+    check_a2a_sequence(rec, a2a_for_request(snap, customer_id, rid), A2A_PURCHASE_TYPES[:4], "before_click_")
+    rec.check("no_size_confirmed_before_click", not [e for e in snap.a2a_events(customer_id) if e.get("type") == "size_confirmed"], "size_confirmed already emitted")
+    return rid, sr
+
 # <<APPEND>>
