@@ -973,7 +973,7 @@ def decide_size(claims: auth.TokenClaims, request: Mapping[str, Any]) -> SizePro
                     "confidence": body.confidence,
                     "proposed_at": proposed_at,
                 },
-                condition="(#status = :open OR #status = :proposed)",
+                condition="#status = :open OR #status = :proposed",
                 values={":open": STATUS_OPEN, ":proposed": STATUS_PROPOSED},
             )
         except store.ConditionFailed:
