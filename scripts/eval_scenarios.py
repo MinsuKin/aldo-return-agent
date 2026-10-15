@@ -1285,10 +1285,13 @@ def check_purchase_confirmed(rec: Recorder, base: Snapshot, final: Snapshot, ctx
               f"fulfillment={dig(order, 'fulfillment.location_id')} chosen={chosen.get('location_id')}")
     events = a2a_for_request(final, customer_id, rid, oid)
     check_a2a_sequence(rec, events, A2A_PURCHASE_TYPES, "after_click_")
+    rec.check("request_records_the_owner_click", decided.get("approved_by") == "owner_click", f"approved_by={decided.get('approved_by')}")
     confirmed = [e for e in events if e.get("type") == "size_confirmed"]
-    rec.check("size_confirmed_once_by_owner_click", len(confirmed) == 1 and dig(confirmed[0], "payload.approved_by") == "owner_click"
-              and dig(confirmed[0], "payload.order_id") == oid,
-              f"{len(confirmed)} events, approved_by={dig(confirmed[0], 'payload.approved_by') if confirmed else None}")
+    rec.check("size_confirmed_event_once_for_the_order", len(confirmed) == 1 and dig(confirmed[0], "payload.order_id") == oid,
+              f"{len(confirmed)} size_confirmed events")
+    in_event = dig(confirmed[0], "payload.approved_by") if confirmed else None
+    rec.check("size_confirmed_event_does_not_contradict_the_owner_click", in_event in (None, "owner_click"), f"event approved_by={in_event}")
+    rec.observe("size_confirmed_event_carries_approved_by", in_event is not None)
     check_a2a_privacy(rec, final, ctx.facts, customer_id, "after_click_")
     return oid or None
 
@@ -1409,4 +1412,570 @@ def scenario_p3(ctx: Ctx, rec: Recorder) -> None:
     _p3_proposal_and_click(ctx, rec, *ctx_state)
     _p3_expiry_cases(ctx, rec, ava_session, ava_deleg)
 
-# <<APPEND>>
+
+def _p3_proposal_and_click(ctx: Ctx, rec: Recorder, base: Snapshot, assist: Mapping[str, Any], rid: str, size: str,
+                           opt_id: str, other: tuple[str, dict], ava_session: str, ben_session: str,
+                           ava_deleg: str, cur: Snapshot) -> None:
+    """Positive controls: a valid proposal records only a proposal; the owner click places exactly one order."""
+    resp = propose(ctx, ava_deleg, rid, opt_id, size)
+    body = resp.body if isinstance(resp.body, Mapping) else {}
+    rec.check("p3_valid_proposal_recorded", resp.status == 200 and body.get("status") == "proposed"
+              and body.get("awaiting") == "owner_confirmation", resp.brief())
+    proposed = ctx.tables.snapshot(pa=True)
+    sr = proposed.sizereqs().get(rid) or {}
+    rec.check("p3_proposal_stored_on_request", (sr.get("status"), sr.get("proposed_option_id"), sr.get("proposed_size")) == ("proposed", opt_id, size),
+              f"status={sr.get('status')} option={sr.get('proposed_option_id')} size={sr.get('proposed_size')}")
+    rec.eq("p3_proposal_created_no_order", len(proposed.agent_orders()) - len(base.agent_orders()), 0)
+    rec.check("p3_proposal_left_atp_alone", not inv_deltas(base, proposed), f"atp deltas: {fmt_deltas(inv_deltas(base, proposed))}")
+    cur = probe(ctx, rec, "p3_other_customers_confirm", confirm(ctx, ben_session, rid, opt_id), 403, "NOT_AUTHORIZED", proposed, audited=True)
+    cur = probe(ctx, rec, "p3_confirm_with_a_different_option", confirm(ctx, ava_session, rid, str(other[1]["option_id"])), 409, "IDEMPOTENCY_CONFLICT", cur)
+    click = confirm(ctx, ava_session, rid, opt_id)
+    final = ctx.tables.snapshot(pa=True)
+    oid = check_purchase_confirmed(rec, base, final, ctx, customer_id=AVA, rid=rid, sr=sr, resp=click)
+    again = confirm(ctx, ava_session, rid, opt_id)
+    twice = again.body if isinstance(again.body, Mapping) else {}
+    rec.check("p3_double_confirm_returns_same_order", again.status == 200 and twice.get("replayed") is True and twice.get("order_id") == oid, again.brief())
+    after_twice = ctx.tables.snapshot(pa=True)
+    same, detail = snapshots_equal(final, after_twice)
+    rec.check("p3_double_confirm_wrote_nothing", same, detail)
+    probe(ctx, rec, "p3_different_option_after_confirm", confirm(ctx, ava_session, rid, str(other[1]["option_id"])), 409, "IDEMPOTENCY_CONFLICT", after_twice)
+
+
+def _p3_expiry_cases(ctx: Ctx, rec: Recorder, ava_session: str, ava_deleg: str) -> None:
+    """Stale requests (expires_at moved into the past by the eval): rejected, nothing written."""
+    assist = gateway_assist(ctx, rec, ava_deleg, "p3_stale")
+    rid = str(assist["size_request_id"])
+    pick = find_offer(assist, type_="store_pickup", location_id=MTL_STORE) or find_offer(assist)
+    if not rec.check("p3_stale_offer_available", pick is not None, "no offer to propose"):
+        return
+    size, opt = pick
+    ctx.tables.backdate_expiry(rid)
+    before = ctx.tables.snapshot(pa=True)
+    probe(ctx, rec, "p3_stale_request_proposal", propose(ctx, ava_deleg, rid, str(opt["option_id"]), size), 409, "REQUEST_EXPIRED", before)
+    assist2 = gateway_assist(ctx, rec, ava_deleg, "p3_expired_confirm")
+    rid2 = str(assist2["size_request_id"])
+    pick2 = find_offer(assist2, type_="store_pickup", location_id=MTL_STORE) or find_offer(assist2)
+    if not rec.check("p3_expired_confirm_offer_available", pick2 is not None, "no offer to propose"):
+        return
+    size2, opt2 = pick2
+    made = propose(ctx, ava_deleg, rid2, str(opt2["option_id"]), size2)
+    rec.check("p3_expired_confirm_proposal_recorded", made.status == 200, made.brief())
+    ctx.tables.backdate_expiry(rid2)
+    before2 = ctx.tables.snapshot(pa=True)
+    probe(ctx, rec, "p3_expired_request_confirm", confirm(ctx, ava_session, rid2, str(opt2["option_id"])), 409, "REQUEST_EXPIRED", before2)
+
+
+# ------------------------------------------------------------------------------- scenario P4
+
+
+def _p4_buy_without_model(ctx: Ctx, rec: Recorder, session: str, deleg: str) -> str:
+    """Deterministic purchase through the gateway (proposal by delegated token, click by session token)."""
+    assist = gateway_assist(ctx, rec, deleg, "p4_setup")
+    pick = find_offer(assist, size="8.0", type_="store_pickup", location_id=MTL_STORE)
+    if not rec.check("p4_setup_offer_available", pick is not None, "size 8.0 store pickup in Montreal not offered"):
+        raise ScenarioAbort("no 8.0 Montreal pickup offer")
+    rid, (size, opt) = str(assist["size_request_id"]), pick
+    prop = propose(ctx, deleg, rid, str(opt["option_id"]), size)
+    rec.check("p4_setup_proposal_recorded", prop.status == 200, prop.brief())
+    click = confirm(ctx, session, rid, str(opt["option_id"]))
+    body = click.body if isinstance(click.body, Mapping) else {}
+    if not rec.check("p4_setup_order_placed_by_owner_click", click.status == 200 and bool(body.get("order_id")), click.brief()):
+        raise ScenarioAbort("could not place the setup order")
+    return str(body["order_id"])
+
+
+def _writeback_landed(ctx: Ctx, session: str, update_id: str) -> Callable[[], bool]:
+    def landed() -> bool:
+        ctx.api.get("/api/personal-agent/memory", token=session)  # the read flushes the outbox
+        snap = ctx.tables.snapshot(pa=True)
+        outbox = snap.outbox().get(update_id) or {}
+        said = [e for e in snap.a2a_events(AVA) if e.get("type") == "memory_updated"]
+        return update_id in snap.pa_updates(AVA) and outbox.get("status") == "delivered" and bool(said)
+    return landed
+
+
+def scenario_p4(ctx: Ctx, rec: Recorder) -> None:
+    """Write-back: the exchange creates ONE provisional memory update; replays create no duplicate."""
+    reset_and_baseline(ctx, rec, "default", pa=True)
+    session, deleg = ctx.api.session(AVA), ctx.mint_delegated(AVA)
+    order_id = _p4_buy_without_model(ctx, rec, session, deleg)
+    delivered = ctx.api.post("/api/demo/simulate-delivery", {"order_id": order_id}, token=session)
+    pre = ctx.tables.snapshot(pa=True)
+    rec.check("p4_delivery_simulated", delivered.ok and (pre.agent_orders().get(order_id) or {}).get("delivered_at") == DEMO_DATE, delivered.brief())
+    flow = exchange_flow(
+        ctx, rec, base=pre, token=session, customer_id=AVA, order_id=order_id, line_id=f"{order_id}-L1",
+        text=msg_swap_half_size(order_id, "8.0", "8.5"), pa=True,
+        choose=lambda opts: pick_option(opts, type_="exchange_store_pickup", location_id=MTL_STORE) or pick_option(opts, type_="exchange_store_pickup"),
+    )
+    if flow is None or flow.after is None:
+        return
+    fresh = {k: v for k, v in flow.after.outbox().items() if k not in pre.outbox()}
+    rec.eq("p4_one_outbox_item_from_the_exchange", len(fresh), 1)
+    if len(fresh) != 1:
+        return
+    update_id, item = next(iter(fresh.items()))
+    update = dict(dig(item, "payload", "update", default={}))
+    new_size = flow.option.get("replacement_size")
+    rec.check("p4_update_is_provisional_exchange_created",
+              (update.get("owner_ref"), update.get("order_id"), update.get("original_size"), update.get("new_size"), update.get("reason"),
+               update.get("outcome"), update.get("provisional")) == (AVA, order_id, "8.0", new_size, "TOO_SMALL", "exchange_created", True),
+              f"update: {({k: update.get(k) for k in ('original_size', 'new_size', 'reason', 'outcome', 'provisional')})}")
+    landed = ctx.wait_until(_writeback_landed(ctx, session, update_id), timeout_s=ctx.writeback_timeout_s)
+    rec.check("p4_writeback_landed_in_personal_agent_table", landed, f"not applied within {ctx.writeback_timeout_s:.0f}s")
+    final = ctx.tables.snapshot(pa=True)
+    _p4_check_landed(rec, ctx, final, update_id, update, flow, session)
+
+
+def _p4_check_landed(rec: Recorder, ctx: Ctx, final: Snapshot, update_id: str, update: Mapping[str, Any],
+                     flow: Flow, session: str) -> None:
+    stored = final.pa_updates(AVA)
+    row = stored.get(update_id) or {}
+    rec.eq("p4_exactly_one_update_in_personal_agent_table", len(stored), 1)
+    rec.check("p4_stored_update_is_provisional",
+              (row.get("original_size"), row.get("new_size"), row.get("outcome"), row.get("provisional"))
+              == (update.get("original_size"), update.get("new_size"), "exchange_created", True),
+              f"stored: {({k: row.get(k) for k in ('original_size', 'new_size', 'outcome', 'provisional')})}")
+    rec.check("p4_stored_update_is_active", row.get("status", "active") == "active", f"status={row.get('status')}")
+    rec.check("p4_outbox_marked_delivered", (final.outbox().get(update_id) or {}).get("status") == "delivered",
+              f"status={(final.outbox().get(update_id) or {}).get('status')}")
+    said = [e for e in final.a2a_events(AVA) if e.get("type") == "memory_updated"]
+    rec.check("p4_memory_updated_event_once_by_the_bot", len(said) == 1 and said[0].get("actor") == "personal_agent"
+              and dig(said[0], "payload.update_id") == update_id, f"{len(said)} memory_updated events")
+    mirrored = [e for e in final.a2a_events(AVA) if e.get("type") == "transaction_created"]
+    rec.eq("p4_transaction_mirrored_once_on_a2a_stream", len(mirrored), 1)
+    check_a2a_privacy(rec, final, ctx.facts, AVA, "p4_")
+    view = ctx.api.get("/api/personal-agent/memory", token=session)
+    updates = (view.body or {}).get("updates", []) if view.ok and isinstance(view.body, Mapping) else []
+    rec.check("p4_memory_api_shows_the_update_once", [u.get("update_id") for u in updates] == [update_id], f"{view.brief()} updates={len(updates)}")
+    shown = updates[0] if len(updates) == 1 else {}
+    rec.check("p4_memory_api_marks_it_provisional_with_lower_confidence", shown.get("provisional") is True and shown.get("confidence") == "provisional",
+              f"provisional={shown.get('provisional')} confidence={shown.get('confidence')}")
+    # --- replays: same signed update again, a forged signature, a repeated approve
+    body = json.dumps(update, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    dup = ctx.api.request("POST", "/api/personal-agent/memory-updates", raw_body=body,
+                          headers={"X-ALDO-Signature": ctx.sign_writeback(body), "Content-Type": "application/json"})
+    reply = dup.body if isinstance(dup.body, Mapping) else {}
+    rec.check("p4_replayed_update_reported_as_duplicate", dup.status == 200 and reply.get("duplicate") is True and reply.get("applied") is False, dup.brief())
+    forged = ctx.api.request("POST", "/api/personal-agent/memory-updates", raw_body=body,
+                             headers={"X-ALDO-Signature": "0" * 64, "Content-Type": "application/json"})
+    rec.check("p4_forged_signature_rejected", forged.status == 401 and forged.error_code == "NOT_AUTHENTICATED", forged.brief())
+    again = approve_quote(ctx, rec, flow.token, flow.quote_id, flow.option, label="p4_replay")
+    rec.check("p4_approve_replay_is_a_replay", _same_approval(again, flow.approval), again.brief())
+    end = ctx.tables.snapshot(pa=True)
+    rec.eq("p4_still_one_update_after_replays", len(end.pa_updates(AVA)), 1)
+    rec.eq("p4_still_one_memory_updated_event", len([e for e in end.a2a_events(AVA) if e.get("type") == "memory_updated"]), 1)
+    rec.eq("p4_still_one_outbox_item_and_transaction", (len(end.outbox()), len(end.txns())), (1, 1))
+
+
+SCENARIOS: dict[str, "ScenarioSpec"] = {}
+
+
+@dataclass(frozen=True)
+class ScenarioSpec:
+    sid: str
+    title: str
+    variant: str
+    fn: Callable[[Ctx, Recorder], None]
+    returns_agent: bool  # counts toward the mean cost per ALDO returns-agent run
+    uses_llm: bool = True
+
+
+def _register(*specs: ScenarioSpec) -> None:
+    for spec in specs:
+        SCENARIOS[spec.sid] = spec
+
+
+_register(
+    ScenarioSpec("A", "Exchange shipped from the DC (default stock)", "default", scenario_a, True),
+    ScenarioSpec("B", "DC stockout: Montreal store pickup before Saturday", "dc_stockout", scenario_b, True),
+    ScenarioSpec("C", "Final sale, change of mind: ineligible, nothing committed", "default", scenario_c, True),
+    ScenarioSpec("D", "Final sale, defect: needs review, exactly one case", "default", scenario_d, True),
+    ScenarioSpec("E", "Double approve and execute replay: one transaction", "default", scenario_e, True),
+    ScenarioSpec("H", "Other customer's order plus 'ignore policy': denied, audited, unchanged", "default", scenario_h, True),
+    ScenarioSpec("P1", "ALDO bot proposes a purchase, owner click places the order (default stock)", "default", scenario_p1, False),
+    ScenarioSpec("P2", "Same with DC stockout: Montreal store pickup", "dc_stockout", scenario_p2, False),
+    ScenarioSpec("P3", "Untrusted gateway input and wrong tokens: specified error, nothing written", "default", scenario_p3, False, uses_llm=False),
+    ScenarioSpec("P4", "Exchange write-back lands once in the personal-agent table, replay is idempotent", "default", scenario_p4, True),
+)
+SCENARIO_ORDER = tuple(SCENARIOS)
+
+
+# ---------------------------------------------------------------- pricing and statistics
+
+
+@dataclass(frozen=True)
+class Pricing:
+    """Token prices in USD per million tokens. ASSUMED (returns_domain.config), not billed amounts."""
+
+    primary_model: str
+    fallback_model: str
+    primary_in: Decimal
+    primary_out: Decimal
+    fallback_in: Decimal
+    fallback_out: Decimal
+    usd_to_cad: Decimal
+
+    @classmethod
+    def from_config(cls) -> "Pricing":
+        from returns_domain import config
+
+        s = config.get_settings()
+        return cls(s.bedrock_model_id, s.bedrock_fallback_model_id, s.price_primary.input_per_mtok,
+                   s.price_primary.output_per_mtok, s.price_fallback.input_per_mtok,
+                   s.price_fallback.output_per_mtok, s.usd_to_cad)
+
+    def rates(self, model_id: str | None) -> tuple[Decimal, Decimal]:
+        if model_id and model_id == self.fallback_model and model_id != self.primary_model:
+            return self.fallback_in, self.fallback_out
+        return self.primary_in, self.primary_out
+
+    def cost_usd(self, model_id: str | None, input_tokens: int, output_tokens: int) -> Decimal:
+        rate_in, rate_out = self.rates(model_id)
+        return (Decimal(input_tokens) * rate_in + Decimal(output_tokens) * rate_out) / Decimal(1_000_000)
+
+    def to_dict(self) -> dict:
+        return {
+            "basis": "assumed", "unit": "USD per million tokens",
+            "primary": {"model_id": self.primary_model, "input_per_mtok": float(self.primary_in), "output_per_mtok": float(self.primary_out)},
+            "fallback": {"model_id": self.fallback_model, "input_per_mtok": float(self.fallback_in), "output_per_mtok": float(self.fallback_out)},
+            "usd_to_cad": float(self.usd_to_cad), "usd_to_cad_basis": "assumed",
+        }
+
+
+def percentile(values: Sequence[float], q: float) -> float | None:
+    """Nearest-rank percentile (q in 0..100); with N=3, p95 is the slowest run."""
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[max(1, math.ceil(q / 100.0 * len(ordered))) - 1]
+
+
+def mean(values: Sequence[float]) -> float | None:
+    return sum(values) / len(values) if values else None
+
+
+def _r(value: float | None, digits: int = 1) -> float | None:
+    return None if value is None else round(value, digits)
+
+
+def run_summary(rec: Recorder, spec: "ScenarioSpec", pricing: Pricing) -> dict:
+    cost = sum((pricing.cost_usd(r.get("model_id"), r["input_tokens"], r["output_tokens"]) for r in rec.llm_runs), Decimal(0))
+    return {
+        "scenario": spec.sid, "title": spec.title, "variant": spec.variant, "returns_agent": spec.returns_agent,
+        "run": rec.run_index, "passed": rec.passed, "error": rec.error, "latency_ms": round(rec.latency_ms, 1),
+        "agent_reported_latency_ms": sum(r["agent_latency_ms"] for r in rec.llm_runs),
+        "input_tokens": sum(r["input_tokens"] for r in rec.llm_runs),
+        "output_tokens": sum(r["output_tokens"] for r in rec.llm_runs),
+        "tokens_reported": all(r["tokens_reported"] for r in rec.llm_runs),
+        "cost_usd": float(round(cost, 6)), "cost_cad": float(round(cost * pricing.usd_to_cad, 6)),
+        "llm_runs": rec.llm_runs, "checks_passed": len(rec.checks) - len(rec.failed_checks),
+        "checks_failed": len(rec.failed_checks), "passed_checks": [c.name for c in rec.checks if c.ok],
+        "failed_checks": [{"name": c.name, "detail": c.detail} for c in rec.failed_checks], "observed": rec.observed,
+    }
+
+
+def summarize_scenario(runs: Sequence[dict]) -> dict:
+    lat = [r["latency_ms"] for r in runs]
+    toks_in, toks_out = [r["input_tokens"] for r in runs], [r["output_tokens"] for r in runs]
+    failing = Counter(c["name"] for r in runs for c in r["failed_checks"])
+    first = runs[0]
+    return {
+        "title": first["title"], "variant": first["variant"], "returns_agent": first["returns_agent"],
+        "runs": len(runs), "passed": sum(1 for r in runs if r["passed"]), "failed": sum(1 for r in runs if not r["passed"]),
+        "pass_rate": round(sum(1 for r in runs if r["passed"]) / len(runs), 4),
+        "latency_ms": {"p50": _r(percentile(lat, 50)), "p95": _r(percentile(lat, 95)), "mean": _r(mean(lat)), "min": _r(min(lat)), "max": _r(max(lat))},
+        "agent_reported_latency_ms": {"mean": _r(mean([r["agent_reported_latency_ms"] for r in runs]))},
+        "tokens": {"mean_input": _r(mean(toks_in)), "mean_output": _r(mean(toks_out)), "mean_total": _r(mean([a + b for a, b in zip(toks_in, toks_out)]))},
+        "cost_usd": {"mean_per_run": _r(mean([r["cost_usd"] for r in runs]), 6), "total": _r(sum(r["cost_usd"] for r in runs), 6)},
+        "cost_cad": {"mean_per_run": _r(mean([r["cost_cad"] for r in runs]), 6), "total": _r(sum(r["cost_cad"] for r in runs), 6)},
+        "llm_runs_per_run": _r(mean([len(r["llm_runs"]) for r in runs]), 2),
+        "failing_checks": dict(failing.most_common()), "runs_detail": list(runs),
+    }
+
+
+# ------------------------------------------------------------------------------- reporting
+
+COST_BASIS = ("est_cost_per_run_usd = mean estimated cost (USD, ASSUMED token prices) of one eval run of the ALDO "
+              "returns-agent scenarios (A, B, C, D, E, H, P4) that called the model; ALDO bot purchase runs (P1, P2) "
+              "are reported per scenario only.")
+LATENCY_NOTE = ("Latency = wall-clock time of the agent turns and API calls of one run (reset, DynamoDB reads and "
+                "assertions excluded). Percentiles use nearest rank over the runs, so with N=3 p95 is the slowest run.")
+SCOPE_NOTES = [
+    "Scenario I (day 30/31 boundary) and the concurrent-execute half of E are cut by the pivot; day 30/31 stays a policy unit test.",
+    "Assertions read DynamoDB (tables aldo-returns-demo and aldo-personal-agent-demo); chat text is never asserted.",
+    "The ALDO bot (personal agent) has no item condition to state in its purchase message; every message to the ALDO returns agent does.",
+]
+
+
+def build_results(runs: Sequence[dict], *, mode: str, target: str, pricing: Pricing, runs_per_scenario: int) -> dict:
+    grouped: dict[str, list[dict]] = {}
+    for run in runs:
+        grouped.setdefault(run["scenario"], []).append(run)
+    scenarios = {sid: summarize_scenario(grouped[sid]) for sid in SCENARIO_ORDER if sid in grouped}
+    models = Counter(m["model_id"] for r in runs for m in r["llm_runs"] if m.get("model_id"))
+    costed = [r["cost_usd"] for r in runs if r["returns_agent"] and r["llm_runs"] and r["input_tokens"] + r["output_tokens"] > 0]
+    passed = sum(1 for r in runs if r["passed"])
+    results: dict[str, Any] = {
+        "schema_version": SCHEMA_VERSION, "generated_at": utc_iso(), "mode": mode, "simulated": mode == "dry-run",
+        "cost_basis": COST_BASIS, "latency_note": LATENCY_NOTE,
+    }
+    if costed and sum(costed) > 0:
+        results["est_cost_per_run_usd"] = round(sum(costed) / len(costed), 6)  # the one field build_impact_model.py reads
+    results.update({
+        "target": {"base_url": target, "region": REGION, "tables": [ALDO_TABLE, PA_TABLE]},
+        "runs_per_scenario": runs_per_scenario,
+        "summary": {
+            "runs": len(runs), "passed": passed, "failed": len(runs) - passed,
+            "pass_rate": round(passed / len(runs), 4) if runs else None,
+            "llm_runs": sum(len(r["llm_runs"]) for r in runs),
+            "fallback_model_runs": sum(1 for r in runs for m in r["llm_runs"] if m.get("fallback_used")),
+            "input_tokens": sum(r["input_tokens"] for r in runs), "output_tokens": sum(r["output_tokens"] for r in runs),
+            "models_seen": dict(models), "tokens_missing_in_some_runs": any(not r["tokens_reported"] for r in runs),
+            "returns_agent_runs_costed": len(costed),
+        },
+        "pricing": pricing.to_dict(), "scenarios": scenarios, "scope_notes": SCOPE_NOTES,
+        "failures": [{"scenario": r["scenario"], "run": r["run"], "error": r["error"], "failed_checks": r["failed_checks"]}
+                     for r in runs if not r["passed"]],
+    })
+    return results
+
+
+def _sec(ms: float | None) -> str:
+    return "-" if ms is None else f"{ms / 1000.0:.1f}"
+
+
+def render_markdown(results: Mapping[str, Any]) -> str:
+    s, p = results["summary"], results["pricing"]
+    mode = "DRY RUN (in-memory simulator, nothing here is a measurement)" if results["simulated"] else "live"
+    lines = [
+        "# Scenario eval results", "",
+        f"- Mode: {mode}", f"- Generated: {results['generated_at']}",
+        f"- Target: {results['target']['base_url']} (region {results['target']['region']}; tables {', '.join(results['target']['tables'])})",
+        f"- Runs per scenario: {results['runs_per_scenario']} (admin reset before every run)",
+        f"- Overall: {s['passed']}/{s['runs']} runs passed ({(s['pass_rate'] or 0) * 100:.1f}%)",
+        f"- Models seen: {', '.join(f'{m} x{n}' for m, n in s['models_seen'].items()) or 'none'}; fallback-model runs: {s['fallback_model_runs']}",
+        "", "## Pass rate, latency, tokens and cost per scenario", "",
+        "| Scenario | Variant | Runs | Passed | Pass rate | p50 s | p95 s | Mean tokens in / out | Mean cost USD (assumed) | Mean cost CAD (assumed) |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: |",
+    ]
+    for sid, sc in results["scenarios"].items():
+        lines.append(
+            f"| {sid} {sc['title'].replace('|', '/')} | {sc['variant']} | {sc['runs']} | {sc['passed']} | {sc['pass_rate'] * 100:.0f}% "
+            f"| {_sec(sc['latency_ms']['p50'])} | {_sec(sc['latency_ms']['p95'])} "
+            f"| {sc['tokens']['mean_input']:.0f} / {sc['tokens']['mean_output']:.0f} "
+            f"| {sc['cost_usd']['mean_per_run']:.4f} | {sc['cost_cad']['mean_per_run']:.4f} |")
+    est = results.get("est_cost_per_run_usd")
+    lines += ["", f"Estimated cost per ALDO returns-agent run (impact model input): {'USD %.4f' % est if est else 'not available'}. {results['cost_basis']}",
+              "", f"Prices are ASSUMED, not billed: primary {p['primary']['model_id']} USD {p['primary']['input_per_mtok']} in / "
+              f"{p['primary']['output_per_mtok']} out per million tokens; fallback {p['fallback']['model_id']} USD "
+              f"{p['fallback']['input_per_mtok']} / {p['fallback']['output_per_mtok']}; USD to CAD {p['usd_to_cad']} (assumed).",
+              "", results["latency_note"], ""]
+    if s["tokens_missing_in_some_runs"]:
+        lines += ["Some runs did not report token counts in run_completed; their cost is understated.", ""]
+    lines += ["## Failures (reported as they happened)", ""]
+    if not results["failures"]:
+        lines.append("None.")
+    for f in results["failures"]:
+        lines.append(f"- {f['scenario']} run {f['run']}" + (f": error `{short(f['error'], 200)}`" if f["error"] else ""))
+        for c in f["failed_checks"][:8]:
+            lines.append(f"  - `{c['name']}`: {short(c['detail'], 200)}")
+    lines += ["", "## Scope notes", ""] + [f"- {n}" for n in results["scope_notes"]]
+    return "\n".join(lines) + "\n"
+
+
+def write_results(out_dir: Path, results: Mapping[str, Any]) -> tuple[Path, Path]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths = (out_dir / "results.json", out_dir / "results.md")
+    for path, text in zip(paths, (json.dumps(results, indent=2, sort_keys=False) + "\n", render_markdown(results))):
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(text, encoding="utf-8")
+        tmp.replace(path)
+    return paths
+
+
+# ----------------------------------------------------------------------------- suite runner
+
+
+def run_suite(ctx: Ctx, scenario_ids: Sequence[str], runs: int, pricing: Pricing,
+              out: Callable[[str], None] = print) -> list[dict]:
+    """Scenarios run one after another (the reset is global). A crash is a failed run, never a skipped one."""
+    summaries: list[dict] = []
+    for sid in scenario_ids:
+        spec = SCENARIOS[sid]
+        for index in range(1, runs + 1):
+            rec = Recorder(sid, index, spec.variant)
+            try:
+                spec.fn(ctx, rec)
+            except ScenarioAbort as exc:
+                rec.error = f"aborted: {short(exc, 200)}"
+            except Exception as exc:  # noqa: BLE001 - every failure is data for the report
+                rec.error = f"{type(exc).__name__}: {short(exc, 200)}"
+            row = run_summary(rec, spec, pricing)
+            summaries.append(row)
+            out(f"[{sid} {index}/{runs}] {'PASS' if row['passed'] else 'FAIL'} {row['latency_ms'] / 1000:.1f}s "
+                f"tokens {row['input_tokens'] + row['output_tokens']} cost USD {row['cost_usd']:.4f} "
+                f"checks {row['checks_passed']}/{row['checks_passed'] + row['checks_failed']}")
+            if row["error"]:
+                out(f"    error: {row['error']}")
+            for failed in row["failed_checks"][:6]:
+                out(f"    FAILED {failed['name']}: {failed['detail']}")
+    return summaries
+
+
+# --------------------------------------------------------------------- live / dry-run wiring
+
+
+def ensure_secret_source(region: str) -> None:
+    """returns_domain.config reads DEMO_TOKEN_KEY or SECRETS_ARN. Without either, find the stack's one secret."""
+    if os.environ.get("DEMO_TOKEN_KEY") or os.environ.get("SECRETS_ARN"):
+        return
+    stack = os.environ.get("STACK_NAME", "AldoReturnsDemo")
+    try:
+        found = boto3.client("cloudformation", region_name=region).describe_stack_resources(StackName=stack)["StackResources"]
+    except Exception as exc:  # noqa: BLE001
+        raise EvalConfigError(f"set SECRETS_ARN (could not list resources of stack {stack}: {type(exc).__name__})") from None
+    arns = [r["PhysicalResourceId"] for r in found if r["ResourceType"] == "AWS::SecretsManager::Secret"]
+    if len(arns) != 1:
+        raise EvalConfigError(f"set SECRETS_ARN (stack {stack} has {len(arns)} secrets)")
+    os.environ["SECRETS_ARN"] = arns[0]
+
+
+def build_live_ctx(base_url: str | None, *, run_timeout: float, poll: float) -> Ctx:
+    if not base_url or not base_url.startswith(("http://", "https://")):
+        raise EvalConfigError("pass --base-url https://<cloudfront domain> (or set DEMO_BASE_URL)")
+    os.environ.setdefault("TABLE_NAME", ALDO_TABLE)
+    os.environ.setdefault("AWS_REGION", REGION)
+    os.environ.setdefault("AWS_DEFAULT_REGION", REGION)
+    ensure_secret_source(REGION)
+    from returns_domain import auth, config
+
+    try:  # fail fast, and never print the values
+        config.get_token_key(), config.get_admin_key(), config.get_writeback_key()
+    except Exception as exc:  # noqa: BLE001
+        raise EvalConfigError(f"could not read the signing secrets ({type(exc).__name__}); check SECRETS_ARN and credentials") from None
+
+    def mint(customer_id: str, max_amount_cents: int | None = None) -> str:
+        return auth.sign_token(customer_id, scope=auth.SCOPE_DELEGATED_GATEWAY, actor="personal_agent",
+                               max_amount_cents=max_amount_cents).token
+
+    def sign(body: bytes) -> str:
+        return hmac.new(config.get_writeback_key(), body, hashlib.sha256).hexdigest()
+
+    def domain_execute(customer_id: str, quote_id: str, option_id: str | None) -> Mapping[str, Any]:
+        from returns_domain import execution  # direct domain call against the real table (design 11)
+
+        result = execution.execute(customer_id, quote_id, option_id)
+        return {"transaction_id": result.transaction_id, "replayed": result.replayed}
+
+    return Ctx(api=ApiClient(base_url), tables=Tables.connect(), facts=load_fixture_facts(), admin_key=config.get_admin_key,
+               mint_delegated=mint, sign_writeback=sign, domain_execute=domain_execute,
+               run_timeout_s=run_timeout, poll_s=poll)
+
+
+def build_dry_ctx(faults: frozenset[str] = frozenset()) -> tuple[Ctx, Any]:
+    """In-memory simulator on moto tables (tests/eval/fake_system.py). Call inside mock_aws()."""
+    from returns_domain import auth
+    from tests.eval.fake_system import FakeSystem, create_tables
+
+    resource = boto3.resource("dynamodb", region_name=REGION)
+    create_tables(resource)
+    tables, clock, facts = Tables(resource), FakeClock(), load_fixture_facts()
+    system = FakeSystem(tables, facts=facts, faults=faults)
+
+    def mint(customer_id: str, max_amount_cents: int | None = None) -> str:
+        return auth.sign_token(customer_id, scope=auth.SCOPE_DELEGATED_GATEWAY, actor="personal_agent",
+                               max_amount_cents=max_amount_cents, key=system.token_key).token
+
+    ctx = Ctx(api=ApiClient("https://dry-run.invalid", transport=system.transport, sleep=clock.sleep), tables=tables,
+              facts=facts, admin_key=lambda: system.admin_key, mint_delegated=mint,
+              sign_writeback=lambda body: hmac.new(system.writeback_key, body, hashlib.sha256).hexdigest(),
+              domain_execute=system.domain_execute, sleep=clock.sleep, monotonic=clock.monotonic,
+              run_timeout_s=60.0, poll_s=1.0, writeback_timeout_s=30.0, simulated=True)
+    return ctx, system
+
+
+@contextlib.contextmanager
+def dry_run_environment() -> Iterator[None]:
+    """Dummy credentials and a pinned region so nothing can reach a real account."""
+    keys = ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_DEFAULT_REGION", "AWS_REGION", "AWS_PROFILE", "SECRETS_ARN")
+    saved = {k: os.environ.get(k) for k in keys}
+    os.environ.update({"AWS_ACCESS_KEY_ID": "testing", "AWS_SECRET_ACCESS_KEY": "testing", "AWS_SESSION_TOKEN": "testing",
+                       "AWS_DEFAULT_REGION": REGION, "AWS_REGION": REGION})
+    os.environ.pop("AWS_PROFILE", None)
+    os.environ.pop("SECRETS_ARN", None)
+    try:
+        yield
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+# ------------------------------------------------------------------------------------ CLI
+
+
+def parse_scenarios(text: str) -> list[str]:
+    wanted = [t.strip().upper() for t in re.split(r"[,\s]+", text or "all") if t.strip()]
+    if not wanted or "ALL" in wanted:
+        return list(SCENARIO_ORDER)
+    if "I" in wanted:
+        raise EvalConfigError("scenario I is cut by the pivot (day 30/31 stays a policy unit test)")
+    unknown = [t for t in wanted if t not in SCENARIOS]
+    if unknown:
+        raise EvalConfigError(f"unknown scenarios {unknown}; choose from {', '.join(SCENARIO_ORDER)}")
+    return [sid for sid in SCENARIO_ORDER if sid in wanted]
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Scenario eval against the deployed ALDO Fit Gateway (see module docstring).")
+    parser.add_argument("--runs", type=int, default=3, help="runs per scenario, reset before each (default 3)")
+    parser.add_argument("--scenarios", default="all", help=f"comma list of {', '.join(SCENARIO_ORDER)} (default all)")
+    parser.add_argument("--base-url", default=os.environ.get("DEMO_BASE_URL"), help="CloudFront URL (default $DEMO_BASE_URL)")
+    parser.add_argument("--dry-run", action="store_true", help="moto + in-memory simulator, no network; writes nothing unless --out-dir")
+    parser.add_argument("--out-dir", type=Path, default=None, help=f"where results.json/results.md go (live default {DEFAULT_OUT_DIR})")
+    parser.add_argument("--run-timeout", type=float, default=360.0, help="seconds to wait for one agent run (default 360)")
+    parser.add_argument("--poll-interval", type=float, default=1.0, help="seconds between event polls (default 1)")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None, out: Callable[[str], None] = print) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        if args.runs < 1:
+            raise EvalConfigError("--runs must be at least 1")
+        ids = parse_scenarios(args.scenarios)
+        pricing = Pricing.from_config()
+        if args.dry_run:
+            from moto import mock_aws
+
+            with dry_run_environment(), mock_aws():
+                ctx, _system = build_dry_ctx()
+                out(f"DRY RUN: moto tables and an in-memory simulator; scenarios {', '.join(ids)}, {args.runs} run(s) each")
+                rows = run_suite(ctx, ids, args.runs, pricing, out)
+            results = build_results(rows, mode="dry-run", target="dry-run (in-memory simulator, no network)",
+                                    pricing=pricing, runs_per_scenario=args.runs)
+            out_dir = args.out_dir
+        else:
+            ctx = build_live_ctx(args.base_url, run_timeout=args.run_timeout, poll=args.poll_interval)
+            out(f"LIVE: {ctx.api.base_url}; scenarios {', '.join(ids)}, {args.runs} run(s) each")
+            rows = run_suite(ctx, ids, args.runs, pricing, out)
+            results = build_results(rows, mode="live", target=ctx.api.base_url, pricing=pricing, runs_per_scenario=args.runs)
+            out_dir = args.out_dir or DEFAULT_OUT_DIR
+    except EvalConfigError as exc:
+        out(f"error: {exc}")
+        return 2
+    if out_dir is not None:
+        json_path, md_path = write_results(out_dir, results)
+        out(f"wrote {json_path} and {md_path}")
+    s = results["summary"]
+    out(f"SUMMARY: {s['passed']}/{s['runs']} runs passed; llm runs {s['llm_runs']}; tokens {s['input_tokens']} in / {s['output_tokens']} out"
+        + (f"; est cost per returns-agent run USD {results['est_cost_per_run_usd']:.4f} (assumed prices)" if "est_cost_per_run_usd" in results else ""))
+    for sid, sc in results["scenarios"].items():
+        out(f"  {sid:<3} {sc['passed']}/{sc['runs']} passed  p50 {_sec(sc['latency_ms']['p50'])}s  p95 {_sec(sc['latency_ms']['p95'])}s  {sc['title']}")
+    return 0 if s["failed"] == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

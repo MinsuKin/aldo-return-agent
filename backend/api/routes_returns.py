@@ -19,7 +19,6 @@ from . import providers
 from .http import SESSION, Api, Reply, Request, logger
 from .models import ApproveBody, ConversationBody, MessageBody, RequoteBody
 
-audit = providers.lazy("audit")
 cases = providers.lazy("cases")
 conversations = providers.lazy("conversations")
 execution = providers.lazy("execution")
@@ -257,8 +256,9 @@ def _release_lease(conv_id: str, run_id: str) -> None:
 def _abandon_unstarted_run(run_id: str, conv_id: str) -> None:
     """The worker never got the run: close it as an error so the lease is released.
 
-    ``finish_run`` only leaves ``running``, so the run is claimed first. If a worker already
-    owns it (an ambiguous enqueue failure) ``claim_run`` is False and the run is left alone.
+    The run is claimed first. If a worker already owns it (an ambiguous enqueue failure, for
+    example a timeout after Lambda accepted the call) ``claim_run`` is False and the run is left
+    alone, so a run that is really executing is never closed underneath its agent.
     """
     try:
         if runs.claim_run(run_id):
@@ -330,7 +330,8 @@ def _launch_approval_run(api: Api, customer_id: str, quote: Any, approval: Any) 
     run_id = _field(approval, "run_id")
     if not runs.try_acquire_lease(conv_id, run_id):
         raise DomainError(ErrorCode.RUN_IN_PROGRESS, RUN_BUSY_MESSAGE)
-    runs.create_run(customer_id, conv_id, run_id, "approval")
+    if not runs.create_run(customer_id, conv_id, run_id, "approval"):
+        return  # a concurrent request created the run first; it emits the event and enqueues
     trace.emit(
         run_id,
         "approval_received",
@@ -338,16 +339,6 @@ def _launch_approval_run(api: Api, customer_id: str, quote: Any, approval: Any) 
             "approval_id": _field(approval, "approval_id"),
             "quote_id": _field(approval, "quote_id"),
             "option_id": _field(approval, "option_id"),
-        },
-    )
-    audit.write_audit(
-        customer_id,
-        "approve",
-        "allowed",
-        {
-            "quote_id": _field(approval, "quote_id"),
-            "option_id": _field(approval, "option_id"),
-            "run_id": run_id,
         },
     )
     _enqueue(api, _approval_payload(customer_id, quote, approval))

@@ -166,7 +166,7 @@ export function CaseRow({ c }: { c: CaseView }) {
         {c.caseId}
       </th>
       <td>{c.reasonCode || "n/a"}</td>
-      <td className="mono">{c.orderId ?? "n/a"}</td>
+      <td className="mono nowrap">{c.orderId ?? "n/a"}</td>
       <td>{c.status}</td>
       <td>{formatDateTime(c.createdAt) || "n/a"}</td>
       <td>{c.summary || "n/a"}</td>

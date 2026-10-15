@@ -47,8 +47,10 @@ ACTORS: tuple[str, ...] = ("personal_agent", "aldo_gateway", "aldo_agent", "syst
 DEFAULT_ACTOR = "aldo_agent"
 
 #: The ONLY keys an event of the agent-to-agent stream may carry (PIVOT_ADDENDUM C3, contracts.md
-#: F.6). ``emit_a2a`` drops everything else, so no private rationale, owner reference, retailer
-#: name or token can reach the middle timeline even if a caller passes it.
+#: F.6, widened by the orchestrator so the UI and eval can read ``size_request_id``, ``approved_by``
+#: and the sizes). ``emit_a2a`` drops everything else, so no private rationale, owner reference,
+#: retailer name or token can reach the middle timeline even if a caller passes it, and the
+#: redactor still removes any token, secret, e-mail or customer-id key inside the allowed fields.
 A2A_PUBLIC_FIELDS: dict[str, frozenset[str]] = {
     "size_assist_requested": frozenset(
         {"size_request_id", "product_query", "color", "deadline_date", "channel_pref"}
@@ -81,7 +83,18 @@ A2A_PUBLIC_FIELDS: dict[str, frozenset[str]] = {
         }
     ),
     "size_confirmed": frozenset(
-        {"size_request_id", "order_id", "status", "fulfillment", "next_step"}
+        {
+            "size_request_id",
+            "order_id",
+            "status",
+            "fulfillment",
+            "next_step",
+            "size",
+            "location_name",
+            "eta_date",
+            "price_cents",
+            "approved_by",  # "owner_click": the purchase exists only after the owner's confirm click
+        }
     ),
     "memory_updated": frozenset(
         {
@@ -96,7 +109,17 @@ A2A_PUBLIC_FIELDS: dict[str, frozenset[str]] = {
         }
     ),
     "transaction_created": frozenset(
-        {"transaction_id", "state", "option_type", "order_id", "replayed"}
+        {
+            "transaction_id",
+            "state",
+            "option_type",
+            "order_id",
+            "replayed",
+            "original_size",
+            "new_size",
+            "location_id",
+            "fee_cents",
+        }
     ),
 }
 

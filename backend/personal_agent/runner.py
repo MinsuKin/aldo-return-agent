@@ -34,7 +34,7 @@ from .gateway_client import GatewayClient, build_gateway_client
 from .log import logger
 from .memory import MemoryRepo, get_repo
 from .prompt import build_system_prompt, owner_message
-from .sanitize import count_words, limit_words
+from .sanitize import count_words, limit_words, strip_markdown
 from .tools import PersonalRunContext, build_tools
 
 SAFE_ERROR_REPLY = (
@@ -318,6 +318,7 @@ def compose_proposal_reply(ctx: PersonalRunContext, owner_name: str) -> str:
 
 def _final_reply(ctx: PersonalRunContext, text: str, owner_name: str) -> tuple[str, str, int]:
     """(reply, guard, raw_words): enforce 'proposal, confirm in the app, never claim an order'."""
+    text = strip_markdown(text)
     raw_words = count_words(text)
     if ctx.hard_stopped:
         return HARD_STOP_REPLY, "hard_stop", raw_words

@@ -91,7 +91,11 @@ def no_flush(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """
     from returns_domain import execution
 
-    calls: list[str] = []
+    class FlushRecorder(list):
+        original = None  # the real ``_flush_outbox``, for tests that need it back
+
+    calls = FlushRecorder()
+    calls.original = execution._flush_outbox
     monkeypatch.setattr(execution, "_flush_outbox", lambda customer_id: calls.append(customer_id) or 0)
     monkeypatch.setattr(execution, "_sleep", lambda seconds: None)
     return calls
@@ -100,6 +104,76 @@ def no_flush(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 AVA = "DEMO-CUST-AVA"
 BEN = "DEMO-CUST-BEN"
 CHLOE = "DEMO-CUST-CHLOE"
+
+
+@pytest.fixture
+def snapshot(ddb: None):
+    """``snapshot()`` returns every item of the table as ``{(pk, sk): item}``.
+
+    ``snapshot(exclude=("AUDIT#",))`` leaves out the given pk prefixes. Tests compare a snapshot
+    before and after a call to prove that a denied or replayed call wrote nothing.
+    """
+    from returns_domain import store
+
+    def take(exclude: tuple[str, ...] = ()) -> dict:
+        items: dict = {}
+        client = store.get_client()
+        kwargs = {"TableName": store.table_name(), "ConsistentRead": True}
+        while True:
+            page = client.scan(**kwargs)
+            for raw in page["Items"]:
+                item = store._deserialize_item(raw)
+                if not item["pk"].startswith(exclude):
+                    items[(item["pk"], item["sk"])] = item
+            if "LastEvaluatedKey" not in page:
+                return items
+            kwargs["ExclusiveStartKey"] = page["LastEvaluatedKey"]
+
+    return take
+
+
+def make_agent_order(
+    order_id: str = "DEMO-A2A-81B20E",
+    customer_id: str = AVA,
+    *,
+    sku: str = "DEMO-SKU-HERO-BLACK-080",
+    size: str = "8.0",
+    delivered_at: str | None = None,
+    price_cents: int = 12999,
+) -> str:
+    """Write an order shaped like the gateway's purchase (channel agent, delivered_at null)."""
+    from returns_domain import fixtures, store
+
+    product = next(p for p in fixtures.load_bundle().products if p["sku"] == sku)
+    order = {
+        "order_id": order_id,
+        "customer_id": customer_id,
+        "banner": "ALDO_CA",
+        "currency": "CAD",
+        "channel": "agent",
+        "ordered_at": "2026-10-16",
+        "delivered_at": delivered_at,
+        "size_request_id": "SZR-3F9A1C",
+        "fulfillment": {"type": "store_pickup", "location_id": "DEMO-STORE-MTL-01",
+                        "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17"},
+        "source": "synthetic",
+    }
+    line = {
+        "line_id": f"{order_id}-L1",
+        "sku": sku,
+        "product_name": product["product_name"],
+        "style": product["style"],
+        "size": size,
+        "color": product["color"],
+        "purchased_qty": 1,
+        "returned_or_reserved_qty": 0,
+        "unit_paid_cents": price_cents,
+        "final_sale": False,
+        "source": "synthetic",
+    }
+    for item in store.order_items(order, [line]):
+        store.put_item(item)
+    return order_id
 
 
 class HeroQuote:

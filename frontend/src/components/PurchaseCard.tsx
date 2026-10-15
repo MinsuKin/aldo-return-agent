@@ -115,7 +115,7 @@ export function PurchaseCard({ proposalId, view, loading, error, agentBusy, plac
               <dt>Price</dt>
               <dd>{formatCents(view.priceCents, view.currency)}</dd>
             </div>
-            {view.fitHeadline && (
+            {view.fitHeadline && !decided && (
               <div>
                 <dt>Fit signal</dt>
                 <dd>
@@ -126,7 +126,7 @@ export function PurchaseCard({ proposalId, view, loading, error, agentBusy, plac
                 </dd>
               </div>
             )}
-            {view.rationalePublic && (
+            {view.rationalePublic && !decided && (
               <div>
                 <dt>Shared reason</dt>
                 <dd data-testid="purchase-rationale">

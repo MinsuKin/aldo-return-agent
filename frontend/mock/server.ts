@@ -16,6 +16,7 @@ import { buildPersonalRun } from "./personal.ts";
 import {
   SCALE,
   atp,
+  flushOutbox,
   hex,
   iso,
   materialize,
@@ -39,6 +40,7 @@ import {
   type RunKind,
   type Script,
   type SizeRequest,
+  writebackDelay,
 } from "./state.ts";
 
 const PORT = Number(process.env.MOCK_PORT ?? "3001");
@@ -252,9 +254,16 @@ route("POST", "/api/demo/simulate-delivery", true, (c) => {
 });
 
 route("POST", "/api/demo/simulate-pickup", true, (c) => {
+  materialize();
   const txn = state.txns.get(str(c.body.transaction_id) ?? "");
   if (!txn) throw new ApiError(404, "NOT_FOUND", "Transaction not found.");
   if (txn.customer_id !== c.customerId) throw new ApiError(403, "NOT_AUTHORIZED", "Transaction not found for this customer.");
+  if (!txn.update_id) throw new ApiError(422, "VALIDATION_ERROR", "Only exchanges can be picked up.");
+  // The pickup confirmation follows the exchange's own update; make sure that one has been delivered.
+  const saved = writebackDelay.ms;
+  writebackDelay.ms = 0;
+  flushOutbox(c.customerId);
+  writebackDelay.ms = saved;
   const update = (state.memoryUpdates.get(c.customerId) ?? []).find((u) => u.update_id === txn.update_id);
   if (!update) throw new ApiError(422, "VALIDATION_ERROR", "Only exchanges can be picked up.");
   update.outcome = "exchange_completed_kept";
@@ -409,6 +418,8 @@ route("POST", "/api/personal-agent/conversations/:conv/messages", true, (c) => {
 
 route("GET", "/api/personal-agent/memory", true, (c) => {
   materialize();
+  // Like the real API: deliver any due write-backs from ALDO (the outbox) before reading memory.
+  flushOutbox(c.customerId);
   return { status: 200, body: memoryFor(c.customerId) };
 });
 
@@ -518,6 +529,14 @@ route("POST", "/__mock/approve-other", false, (c) => {
     };
   }
   return { status: 200, body: { ok: true } };
+});
+
+route("POST", "/__mock/writeback-delay", false, (c) => {
+  // Simulates a slow outbox: a memory read only delivers write-backs older than this many milliseconds.
+  const ms = typeof c.body.ms === "number" ? c.body.ms : NaN;
+  if (!Number.isFinite(ms) || ms < 0) throw new ApiError(422, "VALIDATION_ERROR", "ms must be a number >= 0.");
+  writebackDelay.ms = ms;
+  return { status: 200, body: { ok: true, ms } };
 });
 
 route("POST", "/__mock/expire-purchase", false, (c) => {

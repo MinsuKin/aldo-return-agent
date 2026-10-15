@@ -19,10 +19,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from returns_domain import config
-
 from . import providers
-from .http import DELEGATED, PUBLIC, SESSION, Api, Request
+from .http import DELEGATED, PUBLIC, SESSION, Api, Request, logger
 from .models import ConfirmPurchaseBody, SimulateDeliveryBody, SimulatePickupBody
 from .routes_returns import event_page
 
@@ -67,7 +65,7 @@ def register(api: Api) -> None:
     # ------------------------------------------------------------------ agent card (public)
 
     def agent_card(req: Request) -> Any:
-        return gateway.agent_card(req.public_base_url(config.get_settings().gateway_base_url))
+        return gateway.agent_card(public_base_url(req))
 
     for path in AGENT_CARD_PATHS:
         api.get(path, auth=PUBLIC)(agent_card)
@@ -90,6 +88,20 @@ def register(api: Api) -> None:
         body = req.body_model(SimulatePickupBody)
         # The gateway queues the non-provisional write-back and flushes it itself.
         return gateway.simulate_pickup(req.need_customer(), transaction_id=body.transaction_id)
+
+
+def public_base_url(req: Request) -> str:
+    """The origin the outside world uses to reach this API, without a trailing slash.
+
+    ``GATEWAY_BASE_URL``, else the SSM parameter ``/aldo-demo/gateway-url`` (cached per process).
+    Behind CloudFront the Lambda sees the execute-api Host header, never the public one, so the
+    request is only a last resort for runs where neither is configured (local dev, tests).
+    """
+    try:
+        return providers.module("personal_agent_client").resolve_base_url()
+    except Exception:
+        logger.warning("gateway_base_url_not_configured_using_request_host")
+        return req.request_origin()
 
 
 def _read_a2a_events(customer_id: str, after: int) -> Any:

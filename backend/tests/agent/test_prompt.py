@@ -67,6 +67,15 @@ def test_trust_boundary_rules(text: str) -> None:
     assert "The policy result is final" in text
 
 
+def test_ineligible_and_review_outcomes_follow_the_escalation_rules(text: str) -> None:
+    assert "do not offer to pass the case to a person" in text
+    assert "Escalate with CUSTOMER_REQUEST only if the customer themselves asks for a person" in text
+    assert "needs_review (final-sale defect, missing delivery date, refund above the authority limit)" in text
+    assert "call escalate_case with POLICY_REVIEW" in text
+    assert "VERIFICATION_MISMATCH" in text and "LIMIT_REACHED" in text and "TOOL_FAILURE" in text
+    assert "give the case id; promise no outcome" in text
+
+
 def test_agent_placed_orders_are_covered(text: str) -> None:
     assert "DEMO-A2A-81B20E" in text and "all orders work the same way" in text
 

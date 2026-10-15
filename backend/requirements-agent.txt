@@ -3,3 +3,4 @@ pydantic==2.14.1
 aws-lambda-powertools==3.36.0
 strands-agents==1.61.0
 bedrock-agentcore==1.24.1
+tzdata==2025.2

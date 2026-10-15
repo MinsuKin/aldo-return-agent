@@ -25,6 +25,9 @@ export const SCALE = Number(process.env.MOCK_TIME_SCALE ?? "1");
 export const QUOTE_TTL_MS = Number(process.env.MOCK_QUOTE_TTL_MS ?? String(15 * 60 * 1000));
 export const MODEL_ID = "us.anthropic.claude-sonnet-5-5";
 
+/** How long a queued write-back must wait before a memory read delivers it (mock control: /__mock/writeback-delay). */
+export const writebackDelay = { ms: Number(process.env.MOCK_WRITEBACK_DELAY_MS ?? "0") };
+
 export const now = (): number => Date.now();
 export const iso = (ms: number): string => new Date(ms).toISOString().replace(/\.\d+Z$/, "+00:00");
 export const hex = (n: number): string => randomBytes(Math.ceil(n / 2)).toString("hex").slice(0, n).toUpperCase();
@@ -222,6 +225,8 @@ export interface MockState {
   cases: CaseRecord[];
   a2a: Map<string, A2aEvent[]>;
   memoryUpdates: Map<string, MemoryUpdate[]>;
+  /** ALDO -> ALDO bot write-backs waiting to be delivered (A2AOUT# items). */
+  outbox: Map<string, PendingWriteback[]>;
   sizeRequests: Map<string, SizeRequest>;
   auditCount: number;
 }
@@ -237,6 +242,7 @@ export const state: MockState = {
   cases: [],
   a2a: new Map(),
   memoryUpdates: new Map(),
+  outbox: new Map(),
   sizeRequests: new Map(),
   auditCount: 0,
 };
@@ -253,6 +259,8 @@ export function resetState(variant: Variant): { deleted: number; written: number
   state.cases = [];
   state.a2a = new Map();
   state.memoryUpdates = new Map();
+  state.outbox = new Map();
+  writebackDelay.ms = Number(process.env.MOCK_WRITEBACK_DELAY_MS ?? "0");
   state.sizeRequests = new Map();
   return { deleted, written: state.orders.length + state.inventory.size };
 }
@@ -293,6 +301,43 @@ export function addMemoryUpdate(customerId: string, u: MemoryUpdate): void {
   const list = state.memoryUpdates.get(customerId) ?? [];
   list.push(u);
   state.memoryUpdates.set(customerId, list);
+}
+
+export interface PendingWriteback {
+  update: MemoryUpdate;
+  queuedAt: number;
+}
+
+/** An exchange was created: the write-back waits in the outbox until something reads ALDO bot's memory. */
+export function enqueueWriteback(customerId: string, update: MemoryUpdate): void {
+  const list = state.outbox.get(customerId) ?? [];
+  list.push({ update, queuedAt: now() });
+  state.outbox.set(customerId, list);
+}
+
+/** Deliver due write-backs (the real API does this before it reads memory). Applying one emits memory_updated. */
+export function flushOutbox(customerId: string): number {
+  const list = state.outbox.get(customerId) ?? [];
+  const due = list.filter((w) => now() - w.queuedAt >= writebackDelay.ms);
+  state.outbox.set(
+    customerId,
+    list.filter((w) => !due.includes(w)),
+  );
+  for (const w of due) {
+    const u = w.update;
+    addMemoryUpdate(customerId, u);
+    pushA2a(customerId, "memory_updated", "personal_agent", {
+      update_id: u.update_id,
+      style_id: u.style_id,
+      product_name: u.product_name,
+      original_size: u.original_size,
+      new_size: u.new_size,
+      reason: u.reason,
+      outcome: u.outcome,
+      provisional: u.provisional,
+    });
+  }
+  return due.length;
 }
 
 // ---- Run script builder -----------------------------------------------------------------

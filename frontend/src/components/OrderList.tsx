@@ -70,36 +70,33 @@ export function OrderList({
                         <span className="mono order-id">{o.order_id}</span>
                         <SimulatedBadge />
                         {agentOrder && <Badge tone="neutral">Placed by ALDO bot</Badge>}
-                      </span>
-                      {o.lines.map((l) => {
-                        const total = l.unit_paid_cents * l.purchased_qty;
-                        return (
-                          <span className="order-line" key={l.line_id}>
-                            <span className="order-product">
-                              {l.product_name}
-                              <span className="muted">
-                                {" "}
-                                size {l.size}
-                                {l.color ? `, ${l.color.toLowerCase()}` : ""}
-                                {l.purchased_qty > 1 ? `, qty ${l.purchased_qty}` : ""}
-                              </span>
-                            </span>
-                            <span className="order-paid">
-                              Paid {formatCents(total, o.currency)}
-                              {l.purchased_qty > 1 ? ` (${l.purchased_qty} x ${formatCents(l.unit_paid_cents, o.currency)})` : ""}
-                            </span>
-                            <span className="order-tags">
-                              {l.final_sale === true && <Badge tone="neutral">Final sale</Badge>}
-                              {l.returned_or_reserved_qty > 0 && (
-                                <Badge tone="neutral">
-                                  {l.returned_or_reserved_qty} of {l.purchased_qty} already returned
-                                </Badge>
-                              )}
-                            </span>
+                        {o.lines.map((l) => (
+                          <span className="order-tags" key={l.line_id}>
+                            {l.final_sale === true && <Badge tone="neutral">Final sale</Badge>}
+                            {l.returned_or_reserved_qty > 0 && (
+                              <Badge tone="neutral">
+                                {l.returned_or_reserved_qty} of {l.purchased_qty} already returned
+                              </Badge>
+                            )}
                           </span>
-                        );
-                      })}
+                        ))}
+                      </span>
+                      {o.lines.map((l) => (
+                        <span className="order-product" key={l.line_id}>
+                          {l.product_name}
+                          <span className="muted">
+                            {" "}
+                            size {l.size}
+                            {l.color ? `, ${l.color.toLowerCase()}` : ""}
+                            {l.purchased_qty > 1 ? `, qty ${l.purchased_qty}` : ""}
+                          </span>
+                        </span>
+                      ))}
                       <span className="order-dates muted">
+                        {o.lines.map((l) => {
+                          const total = l.unit_paid_cents * l.purchased_qty;
+                          return `Paid ${formatCents(total, o.currency)}${l.purchased_qty > 1 ? ` (${l.purchased_qty} x ${formatCents(l.unit_paid_cents, o.currency)})` : ""}. `;
+                        })}
                         Ordered {formatDate(o.ordered_at)}. Delivered {o.delivered_at ? formatDate(o.delivered_at) : "not yet"}.
                       </span>
                     </span>

@@ -13,6 +13,7 @@ Action vocabulary used by the services: ``access_denied`` (ownership failures, r
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from typing import Any, Mapping
 
@@ -28,7 +29,9 @@ def write_audit(actor: str, action: str, outcome: str, refs: Mapping[str, Any] |
     try:
         now = clock.now_utc()
         ts = clock.iso(now)
-        pk, sk = store.audit_key(now.date().isoformat(), ts, uuid.uuid4().hex)
+        # Time-ordered unique suffix: events of the same second still list in the order they happened.
+        uid = f"{time.time_ns():016x}{uuid.uuid4().hex[:8]}"
+        pk, sk = store.audit_key(now.date().isoformat(), ts, uid)
         store.put_item(
             {
                 "pk": pk,

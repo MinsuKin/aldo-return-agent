@@ -25,10 +25,12 @@ const RUN_LABEL: Record<RunKind, string> = {
 interface Props {
   onActive: (active: boolean) => void;
   onRestart: () => void;
+  /** Ask the A2A feed to poll quickly (a demo control just changed something it will report). */
+  onNudge: () => void;
 }
 
 /** The ALDO Returns Agent: orders, chat, option cards, approval, confirmation, tool trace. */
-export function AldoPanel({ onActive, onRestart }: Props) {
+export function AldoPanel({ onActive, onRestart, onNudge }: Props) {
   const qc = useQueryClient();
   const [chat, dispatch] = useReducer(chatReducer, initialChat);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -195,7 +197,11 @@ export function AldoPanel({ onActive, onRestart }: Props) {
   const pickup = useMutation({
     mutationFn: (transactionId: string) => api.simulatePickup(transactionId),
     onMutate: () => setPickupError(null),
-    onSuccess: () => setPickupDone(true),
+    onSuccess: () => {
+      setPickupDone(true);
+      onNudge();
+      void qc.invalidateQueries({ queryKey: ["pa-memory"] });
+    },
     onError: (e) => setPickupError(describeError(e).message),
   });
 

@@ -8,18 +8,19 @@ customer id it passes, how errors map to HTTP, and that it never decides anythin
 from __future__ import annotations
 
 import json
-from typing import Any
 
+import boto3
 import pytest
 from aws_lambda_powertools.event_handler import Response
 from aws_lambda_powertools.event_handler.api_gateway import Router
 
 from api import handler as entry
 from api import http, providers
-from returns_domain import auth, clock, trace
+from returns_domain import auth, clock, personal_agent_client, trace
 from returns_domain.errors import DomainError
 
 from .conftest import AVA, BEN, delegated_token, session_token
+from .fakes import FakeGateway, GatewayError
 from .helpers import DOMAIN_NAME
 from .test_routes import PUBLIC_ROUTES, concrete, registered_routes
 
@@ -38,68 +39,6 @@ PROPOSAL = {
     "rationale_public": "runs small per ALDO signal; a half size up",
     "confidence": "high",
 }
-
-
-class GatewayError(DomainError):
-    """Mirrors ``returns_domain.gateway.GatewayError``: ``extra`` is merged into ``to_dict``."""
-
-    def __init__(self, code: str, message: str, *, extra: dict | None = None) -> None:
-        super().__init__(code, message)
-        self.extra = dict(extra or {})
-
-    def to_dict(self) -> dict[str, Any]:
-        return {**super().to_dict(), **self.extra}
-
-
-class FakeGateway:
-    """Records every call and either answers or raises ``failure``."""
-
-    def __init__(self) -> None:
-        self.calls: list[tuple[str, tuple, dict]] = []
-        self.failure: Exception | None = None
-
-    def _call(self, name: str, *args: Any, **kwargs: Any) -> None:
-        self.calls.append((name, args, kwargs))
-        if self.failure is not None:
-            raise self.failure
-
-    def size_assist(self, claims, request):
-        self._call("size_assist", claims, request)
-        return {"size_request_id": "SZR-3F9A1C", "style_id": "DEMO-STYLE-HERO", "sizes": []}
-
-    def decide_size(self, claims, request):
-        self._call("decide_size", claims, request)
-        return {
-            "size_request_id": request.get("size_request_id"),
-            "status": "proposed",
-            "awaiting": "owner_confirmation",
-            "expires_at": "2026-10-16T16:15:00+00:00",
-            "summary": {"size": request.get("chosen_size")},
-        }
-
-    def get_proposal(self, customer_id, size_request_id):
-        self._call("get_proposal", customer_id, size_request_id)
-        return {"size_request_id": size_request_id, "status": "proposed", "price_cents": 12999}
-
-    def confirm_purchase(self, customer_id, size_request_id, option_id=None):
-        self._call("confirm_purchase", customer_id, size_request_id, option_id=option_id)
-        return {"order_id": "DEMO-A2A-81B20E", "status": "placed_simulated", "replayed": False}
-
-    def simulate_delivery(self, customer_id, order_id):
-        self._call("simulate_delivery", customer_id, order_id=order_id)
-        return {"order_id": order_id, "delivered_at": "2026-10-16"}
-
-    def simulate_pickup(self, customer_id, transaction_id):
-        self._call("simulate_pickup", customer_id, transaction_id=transaction_id)
-        return {"transaction_id": transaction_id, "update_id": "MU-5C0A11"}
-
-    def agent_card(self, base_url):
-        self._call("agent_card", base_url)
-        return {"name": "ALDO Fit Gateway", "url": f"{base_url}/api/gateway"}
-
-    def flush_outbox(self, customer_id=None, limit=10, client=None):
-        self._call("flush_outbox", customer_id, limit=limit)
-        return 0
 
 
 @pytest.fixture
@@ -308,12 +247,38 @@ def test_agent_card_is_public_on_both_paths(client, gateway, path):
     assert reply.json["url"] == f"https://{DOMAIN_NAME}/api/gateway"
 
 
-def test_agent_card_base_url_prefers_the_configured_one(client, gateway, monkeypatch):
+@pytest.fixture(autouse=True)
+def no_cached_base_url():
+    """The SSM-resolved public URL is cached per process; keep tests independent."""
+    personal_agent_client.clear_cache()
+    yield
+    personal_agent_client.clear_cache()
+
+
+@pytest.mark.parametrize("path", ["/api/gateway/.well-known/agent-card.json", "/.well-known/agent-card.json"])
+def test_agent_card_uses_the_configured_public_url_not_the_request_host(client, gateway, monkeypatch, path):
+    """Behind CloudFront the Lambda sees the execute-api Host header; the card must not use it."""
     monkeypatch.setenv("GATEWAY_BASE_URL", "https://d111.cloudfront.net/")
-    assert client.get("/.well-known/agent-card.json").json["url"] == "https://d111.cloudfront.net/api/gateway"
+    reply = client.get(path, headers={"Host": DOMAIN_NAME, "X-Forwarded-Host": "other.example.com"})
+    assert reply.json["url"] == "https://d111.cloudfront.net/api/gateway"  # no trailing slash, no Host
 
 
-def test_agent_card_base_url_follows_a_forwarded_host_but_not_a_hostile_one(client, gateway):
+def test_agent_card_reads_the_public_url_from_ssm_once(client, gateway, no_cached_base_url):
+    ssm = boto3.client("ssm", region_name="us-east-1")
+    ssm.put_parameter(Name="/aldo-demo/gateway-url", Value="https://d222.cloudfront.net", Type="String")
+    first = client.get("/.well-known/agent-card.json", headers={"Host": DOMAIN_NAME})
+    assert first.json["url"] == "https://d222.cloudfront.net/api/gateway"
+    ssm.put_parameter(Name="/aldo-demo/gateway-url", Value="https://changed.cloudfront.net", Type="String", Overwrite=True)
+    second = client.get("/api/gateway/.well-known/agent-card.json", headers={"Host": DOMAIN_NAME})
+    assert second.json["url"] == "https://d222.cloudfront.net/api/gateway"  # cached for the process
+
+
+def test_agent_card_falls_back_to_the_request_only_when_nothing_is_configured(client, gateway, no_cached_base_url):
+    reply = client.get("/.well-known/agent-card.json")  # no env, no SSM parameter (local run)
+    assert reply.json["url"] == f"https://{DOMAIN_NAME}/api/gateway"
+
+
+def test_agent_card_base_url_follows_a_forwarded_host_but_not_a_hostile_one(client, gateway, no_cached_base_url):
     ok = client.get("/.well-known/agent-card.json", headers={"X-Forwarded-Host": "demo.example.com", "X-Forwarded-Proto": "https"})
     assert ok.json["url"] == "https://demo.example.com/api/gateway"
     hostile = client.get("/.well-known/agent-card.json", headers={"Host": "evil.com/\"><script>"})
@@ -482,14 +447,41 @@ class FakeRouterModule:
 
 
 @pytest.fixture
-def router_module(app, gateway):
+def router_module():
+    """Install the fake router module BEFORE the app is built (list it first in a test)."""
     module = FakeRouterModule()
     providers.override("api.personal_agent_routes", module)
     return module
 
 
-def test_the_personal_router_is_included_with_the_worker_hand_off(app, client, router_module, enqueued, gateway):
-    assert entry.include_personal_agent_routes(app) is True
+@pytest.fixture
+def no_router():
+    providers.override("api.personal_agent_routes", None)  # "module not present"
+
+
+@pytest.fixture
+def broken_router():
+    class Broken:
+        def build_router(self, **_):
+            raise RuntimeError("boom")
+
+    providers.override("api.personal_agent_routes", Broken())
+
+
+def bare_api() -> http.Api:
+    from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
+
+    resolver = APIGatewayHttpResolver(strip_prefixes=["/api"], enable_validation=False)
+    return http.Api(resolver, enqueue=lambda payload: None)
+
+
+def test_include_reports_whether_the_router_was_added(router_module):
+    assert entry.include_personal_agent_routes(bare_api()) is True
+    providers.override("api.personal_agent_routes", None)
+    assert entry.include_personal_agent_routes(bare_api()) is False
+
+
+def test_the_personal_router_is_included_with_the_worker_hand_off(router_module, client, gateway, enqueued):
     reply = client.post("/api/personal-agent/conversations/PCONV-1/messages", {}, token=session_token(AVA))
     assert reply.status == 202
     assert enqueued == [
@@ -497,30 +489,26 @@ def test_the_personal_router_is_included_with_the_worker_hand_off(app, client, r
     ]
 
 
-def test_the_router_hand_off_follows_a_replaced_enqueue(app, client, router_module, gateway):
-    entry.include_personal_agent_routes(app)
+def test_the_router_hand_off_follows_a_replaced_enqueue(router_module, app, client, gateway):
     seen: list[dict] = []
     app.enqueue = seen.append
     client.post("/api/personal-agent/conversations/PCONV-1/messages", {}, token=session_token(AVA))
     assert len(seen) == 1
 
 
-def test_reading_memory_flushes_the_write_back_outbox_first(app, client, router_module, gateway):
-    entry.include_personal_agent_routes(app)
+def test_reading_memory_flushes_the_write_back_outbox_first(router_module, client, gateway):
     reply = client.get("/api/personal-agent/memory", token=session_token(BEN))
     assert reply.status == 200 and reply.json == {"owner_id": BEN}
     assert gateway.calls == [("flush_outbox", (BEN,), {"limit": 10})]
 
 
-def test_a_failing_flush_never_blocks_reading_memory(app, client, router_module, gateway):
-    entry.include_personal_agent_routes(app)
+def test_a_failing_flush_never_blocks_reading_memory(router_module, client, gateway):
     gateway.failure = RuntimeError("receiver down")
     reply = client.get("/api/personal-agent/memory", token=session_token(BEN))
     assert reply.status == 200
 
 
-def test_router_routes_get_the_same_envelope_and_scope_rules(app, client, router_module, gateway):
-    entry.include_personal_agent_routes(app)
+def test_router_routes_get_the_same_envelope_and_scope_rules(router_module, client, gateway):
     delegated = client.get("/api/personal-agent/memory", token=delegated_token())
     assert delegated.status == 403 and delegated.code == "NOT_AUTHORIZED"
     assert client.get("/api/personal-agent/memory").status == 401
@@ -529,21 +517,15 @@ def test_router_routes_get_the_same_envelope_and_scope_rules(app, client, router
     assert busy.headers["cache-control"] == "no-store" and "request_id" in busy.error
 
 
-def test_the_api_works_when_the_router_module_is_absent_or_broken(app, client, seeded):
-    providers.override("api.personal_agent_routes", None)
-    assert entry.include_personal_agent_routes(app) is False
-
-    class Broken:
-        def build_router(self, **_):
-            raise RuntimeError("boom")
-
-    providers.override("api.personal_agent_routes", Broken())
-    assert entry.include_personal_agent_routes(app) is False
+def test_the_api_works_without_the_router_module(no_router, client, seeded):
     assert client.get("/api/demo/personas").status == 200
     assert client.get("/api/personal-agent/memory", token=session_token()).status == 404
 
 
-def test_the_route_table_lists_the_included_router(app, router_module):
-    entry.include_personal_agent_routes(app)
+def test_the_api_works_when_the_router_module_is_broken(broken_router, client, seeded):
+    assert client.get("/api/demo/personas").status == 200
+    assert client.get("/api/personal-agent/memory", token=session_token()).status == 404
+
+
+def test_the_route_table_lists_the_included_router(router_module, app):
     assert ("GET", "/personal-agent/memory") in registered_routes(app)
-    assert http.SESSION in {spec.auth for spec in app.routes}

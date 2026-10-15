@@ -607,7 +607,7 @@ def _build_expressions(
         parts = []
         for index, (name, value) in enumerate(set_values.items()):
             attr = _attr_name(name)
-            ref = f"_s{index}"
+            ref = f"setv{index}"
             parts.append(f"#{attr} = :{ref}")
             extra_values[ref] = value
             names_needed[attr] = None
@@ -616,7 +616,7 @@ def _build_expressions(
         parts = []
         for index, (name, value) in enumerate(add_values.items()):
             attr = _attr_name(name)
-            ref = f"_a{index}"
+            ref = f"addv{index}"
             parts.append(f"#{attr} :{ref}")
             extra_values[ref] = value
             names_needed[attr] = None
@@ -640,6 +640,9 @@ def _build_expressions(
     supplied: dict[str, Any] = {}
     for key, value in (values or {}).items():
         supplied[key[1:] if key.startswith(":") else key] = value
+    clash = supplied.keys() & extra_values.keys()
+    if clash:  # the helper reserves :setvN and :addvN for the set/add values
+        raise DomainError(ErrorCode.INTERNAL_ERROR, f"expression value name(s) reserved: {sorted(clash)}")
     supplied.update(extra_values)
 
     missing = referenced_values - supplied.keys()

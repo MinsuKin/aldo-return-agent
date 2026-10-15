@@ -44,16 +44,120 @@ def test_the_six_pivot_types_and_the_transaction_mirror_are_the_only_a2a_types(d
     assert store.get_item(store.run_key(trace.a2a_run_id(AVA))) is None  # nothing was created
 
 
-def test_allowlist_matches_contract_f6_exactly():
-    assert trace.A2A_PUBLIC_FIELDS == {
-        "size_assist_requested": frozenset({"size_request_id", "product_query", "color", "deadline_date", "channel_pref"}),
-        "fit_signal_shared": frozenset({"size_request_id", "style_id", "product_name", "signal", "too_small_share", "n_fit", "scope", "provenance"}),
-        "size_requested": frozenset({"size_request_id", "sizes", "option_count", "question", "expires_at"}),
-        "size_recommended": frozenset({"size_request_id", "option_id", "chosen_size", "option_type", "location_name", "eta_date", "rationale_public", "confidence"}),
-        "size_confirmed": frozenset({"size_request_id", "order_id", "status", "fulfillment", "next_step"}),
-        "memory_updated": frozenset({"update_id", "style_id", "product_name", "original_size", "new_size", "reason", "outcome", "provisional"}),
-        "transaction_created": frozenset({"transaction_id", "state", "option_type", "order_id", "replayed"}),
-    }
+#: contracts.md F.6 allowlist (the orchestrator widened three types; see EXTRA_FIELDS)
+F6_FIELDS = {
+    "size_assist_requested": {"size_request_id", "product_query", "color", "deadline_date", "channel_pref"},
+    "fit_signal_shared": {"size_request_id", "style_id", "product_name", "signal", "too_small_share", "n_fit", "scope", "provenance"},
+    "size_requested": {"size_request_id", "sizes", "option_count", "question", "expires_at"},
+    "size_recommended": {"size_request_id", "option_id", "chosen_size", "option_type", "location_name", "eta_date", "rationale_public", "confidence"},
+    "size_confirmed": {"size_request_id", "order_id", "status", "fulfillment", "next_step"},
+    "memory_updated": {"update_id", "style_id", "product_name", "original_size", "new_size", "reason", "outcome", "provisional"},
+    "transaction_created": {"transaction_id", "state", "option_type", "order_id", "replayed"},
+}
+#: public fields the orchestrator asked for on top of F.6 (eval and UI read them)
+EXTRA_FIELDS = {
+    "size_confirmed": {"size", "location_name", "eta_date", "price_cents", "approved_by"},
+    "transaction_created": {"original_size", "new_size", "location_id", "fee_cents"},
+}
+#: a value for every allowed field, so each event type can be exercised in full
+SAMPLE_VALUES = {
+    "size_request_id": "SZR-3F9A1C", "product_query": "Stessy", "color": "BLACK", "deadline_date": "2026-10-17",
+    "channel_pref": "store_pickup", "style_id": "DEMO-STYLE-HERO", "product_name": "Stessy2.0", "signal": "runs_small",
+    "too_small_share": 0.799, "n_fit": 582, "scope": "ALDO_CA", "provenance": "derived", "sizes": ["7.5", "8.0"],
+    "option_count": 3, "question": "Which size and option should I reserve?", "expires_at": "2026-10-16T16:15:00+00:00",
+    "option_id": "SO-2", "chosen_size": "8.0", "option_type": "store_pickup", "location_name": "ALDO Demo Store Montreal",
+    "eta_date": "2026-10-17", "rationale_public": "runs small per ALDO signal", "confidence": "high",
+    "order_id": "DEMO-A2A-81B20E", "status": "placed_simulated",
+    "fulfillment": {"type": "store_pickup", "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17"},
+    "next_step": "Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17.", "size": "8.0", "price_cents": 12999,
+    "approved_by": "owner_click", "update_id": "MU-5C0A11", "original_size": "8.0", "new_size": "8.5", "reason": "TOO_SMALL",
+    "outcome": "exchange_created", "provisional": True, "transaction_id": "DEMO-RMA-3F9A1C", "state": "completed",
+    "replayed": False, "location_id": "DEMO-STORE-MTL-01", "fee_cents": 0,
+}
+#: keys that must never reach the stream, whatever the caller passes
+PRIVATE_FIELDS = {
+    "token": "tok-123456", "access_token": "tok-abcdef", "secret": "s3cret", "password": "pw", "authorization": "Bearer x",
+    "customer_id": AVA, "owner_ref": AVA, "owner_id": AVA, "email": "a@b.c", "private_rationale": "Retailer C (synthetic) was too big",
+    "typical_size": "7.5", "retailer": "Retailer A (synthetic)", "owner_fit_hint": "half size up",
+}
+ACTOR_FOR = {
+    "size_assist_requested": "personal_agent", "fit_signal_shared": "aldo_gateway", "size_requested": "aldo_gateway",
+    "size_recommended": "personal_agent", "size_confirmed": "aldo_gateway", "memory_updated": "personal_agent",
+    "transaction_created": "aldo_agent",
+}
+
+
+def test_allowlist_is_f6_plus_the_orchestrator_additions_and_nothing_else():
+    expected = {t: frozenset(fields | EXTRA_FIELDS.get(t, set())) for t, fields in F6_FIELDS.items()}
+    assert trace.A2A_PUBLIC_FIELDS == expected
+    for event_type, fields in F6_FIELDS.items():
+        assert fields <= trace.A2A_PUBLIC_FIELDS[event_type]  # nothing from F.6 was removed
+    for fields in trace.A2A_PUBLIC_FIELDS.values():  # no credential or identity key can ever be allowlisted
+        assert not any(trace.is_sensitive_key(name) for name in fields)
+    assert set(SAMPLE_VALUES) >= set().union(*trace.A2A_PUBLIC_FIELDS.values())
+
+
+@pytest.mark.parametrize("event_type", sorted(F6_FIELDS))
+def test_each_a2a_event_type_keeps_every_public_field_and_drops_everything_else(ddb, event_type):
+    allowed = trace.A2A_PUBLIC_FIELDS[event_type]
+    payload = {name: SAMPLE_VALUES[name] for name in allowed} | PRIVATE_FIELDS | {"surprise": "extra"}
+    trace.emit_a2a(AVA, event_type, payload, actor=ACTOR_FOR[event_type])
+    event = trace.list_a2a_events(AVA).events[0]
+    assert event["type"] == event_type and event["actor"] == ACTOR_FOR[event_type]
+    assert event["payload"] == {name: SAMPLE_VALUES[name] for name in allowed}  # all public fields, exactly
+    text = json.dumps(event)
+    assert not set(PRIVATE_FIELDS) & set(event["payload"])
+    for distinctive in ("tok-123456", "tok-abcdef", "s3cret", "Bearer x", "a@b.c", "Retailer", "half size up",
+                        "DEMO-CUST", "surprise", "extra"):
+        assert distinctive not in text
+
+
+@pytest.mark.parametrize("event_type", sorted(F6_FIELDS))
+def test_a_missing_optional_field_is_simply_absent(ddb, event_type):
+    one_field = sorted(trace.A2A_PUBLIC_FIELDS[event_type])[0]
+    trace.emit_a2a(AVA, event_type, {one_field: SAMPLE_VALUES[one_field]}, actor=ACTOR_FOR[event_type])
+    assert trace.list_a2a_events(AVA).events[0]["payload"] == {one_field: SAMPLE_VALUES[one_field]}
+
+
+def test_size_confirmed_carries_approved_by_owner_click_for_the_eval_and_ui(ddb):
+    trace.emit_a2a(
+        AVA, "size_confirmed",
+        {"size_request_id": "SZR-3F9A1C", "order_id": "DEMO-A2A-81B20E", "size": "8.0", "location_name": "ALDO Demo Store Montreal",
+         "eta_date": "2026-10-17", "price_cents": 12999, "approved_by": "owner_click", "customer_id": AVA},
+        actor="aldo_gateway",
+    )
+    payload = trace.list_a2a_events(AVA).events[0]["payload"]
+    assert payload == {"size_request_id": "SZR-3F9A1C", "order_id": "DEMO-A2A-81B20E", "size": "8.0",
+                       "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17", "price_cents": 12999,
+                       "approved_by": "owner_click"}
+    assert isinstance(payload["price_cents"], int)
+
+
+def test_size_recommended_keeps_the_request_id_the_ui_uses_to_fetch_the_proposal(ddb):
+    trace.emit_a2a(
+        AVA, "size_recommended",
+        {"size_request_id": "SZR-3F9A1C", "option_id": "SO-2", "chosen_size": "8.0", "option_type": "store_pickup",
+         "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17", "rationale_public": "runs small",
+         "confidence": "high", "private_rationale": "Retailer C was too big"},
+        actor="personal_agent",
+    )
+    payload = trace.list_a2a_events(AVA).events[0]["payload"]
+    assert payload["size_request_id"] == "SZR-3F9A1C" and "private_rationale" not in payload
+    assert set(payload) == F6_FIELDS["size_recommended"]
+
+
+def test_transaction_created_mirror_keeps_sizes_location_and_fee(ddb):
+    trace.emit_a2a(
+        AVA, "transaction_created",
+        {"transaction_id": "DEMO-RMA-3F9A1C", "state": "completed", "option_type": "exchange_store_pickup",
+         "order_id": "DEMO-A2A-81B20E", "replayed": False, "original_size": "8.0", "new_size": "8.5",
+         "location_id": "DEMO-STORE-MTL-01", "fee_cents": 0, "quote_id": "QUO-1", "customer_id": AVA},
+        actor="aldo_agent",
+    )
+    payload = trace.list_a2a_events(AVA).events[0]["payload"]
+    assert payload == {"transaction_id": "DEMO-RMA-3F9A1C", "state": "completed", "option_type": "exchange_store_pickup",
+                       "order_id": "DEMO-A2A-81B20E", "replayed": False, "original_size": "8.0", "new_size": "8.5",
+                       "location_id": "DEMO-STORE-MTL-01", "fee_cents": 0}
 
 
 def test_a2a_public_allowlist(ddb):

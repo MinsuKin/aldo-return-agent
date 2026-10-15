@@ -34,24 +34,21 @@ export function SignIn({ notice }: { notice?: string }) {
       {personas.data && (
         <ul className="persona-list" aria-label="Synthetic customers">
           {personas.data.map((p) => (
-            <li key={p.customer_id}>
+            <li key={p.customer_id} className="persona">
               <button
                 type="button"
                 className="persona-btn"
                 disabled={signIn.isPending}
-                aria-labelledby={`persona-name-${p.customer_id}`}
                 aria-describedby={p.description ? `persona-desc-${p.customer_id}` : undefined}
                 onClick={() => signIn.mutate(p.customer_id)}
               >
-                <span className="persona-name" id={`persona-name-${p.customer_id}`}>
-                  Sign in as {p.display_name}
-                </span>
-                {p.description && (
-                  <span className="persona-desc" id={`persona-desc-${p.customer_id}`}>
-                    {p.description}
-                  </span>
-                )}
+                Sign in as {p.display_name}
               </button>
+              {p.description && (
+                <p className="persona-desc" id={`persona-desc-${p.customer_id}`}>
+                  {p.description}
+                </p>
+              )}
             </li>
           ))}
         </ul>

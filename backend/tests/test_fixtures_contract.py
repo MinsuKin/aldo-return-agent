@@ -101,6 +101,33 @@ def test_order_table_matches_the_binding_values(bundle):
     assert [(o["order_id"], o["lines"][0]["returned_or_reserved_qty"]) for o in two] == [("DEMO-1008", 1)]
 
 
+def test_offsets(bundle):
+    """G-16: delivered_at is an absolute Toronto date -12/-10/-30/-31 days from DEMO_NOW, null only on DEMO-1007."""
+    today = clock.demo_today()
+    delivered = {o["order_id"]: o["delivered_at"] for o in bundle.orders}
+    assert [(today - date.fromisoformat(delivered[oid])).days for oid in ("DEMO-1001", "DEMO-1002", "DEMO-1003", "DEMO-1004")] == [12, 10, 30, 31]
+    assert [oid for oid, value in delivered.items() if value is None] == ["DEMO-1007"]
+    assert all(len(value) == 10 and value[4] == "-" for value in delivered.values() if value)
+
+
+def test_seed_demo_script_resets_the_table_and_reports_counts(ddb, capsys):
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[2] / "scripts" / "seed_demo.py"
+    spec = importlib.util.spec_from_file_location("seed_demo_under_test", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    store.put_item({"pk": "RUN#STALE", "sk": "META"})
+    assert module.main(["--variant", "dc_stockout", "--create-table"]) == 0  # the table already exists: left alone
+    out = capsys.readouterr().out
+    assert "variant: dc_stockout" in out and "deleted: 1 runtime items" in out and "written: 98 fixture items" in out
+    assert "customers: 3" in out and "orders: 10" in out and "inventory: 52" in out
+    assert store.get_item(("RUN#STALE", "META")) is None
+    assert hero_atp("7.5")["DEMO-DC-QC"] == 0
+    assert module.main(["--variant", "default"]) == 0
+    assert hero_atp("7.5")["DEMO-DC-QC"] == 5
+
+
 def test_policy_json_equals_the_module_constants(bundle):
     data = fixtures.load_policy_json()
     assert data["window_days"] == policy.WINDOW_DAYS

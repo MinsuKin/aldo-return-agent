@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 import pytest
+from strands import ModelRetryStrategy
 from strands.tools.executors import SequentialToolExecutor
 from strands.types.exceptions import ModelThrottledException
 
@@ -285,6 +286,15 @@ def test_a_non_object_payload_is_refused() -> None:
     assert out == {"run_id": None, "status": "error", "metrics": {"error_code": "VALIDATION_ERROR"}}
 
 
+def test_run_never_raises_for_a_payload_that_blows_up_when_read() -> None:
+    class Hostile(dict):
+        def get(self, *args: Any, **kwargs: Any) -> Any:
+            raise RuntimeError("boom")
+
+    out = runner.run(Hostile())
+    assert out == {"run_id": None, "status": "error", "metrics": {"error_code": "INTERNAL_ERROR"}}
+
+
 def test_run_never_raises_when_the_run_store_is_down(domain: FakeDomain) -> None:
     domain.fail("FakeRuns.mark_agent_started", RuntimeError("table unavailable"))
     out = runner.run(payload(), services=domain.services)
@@ -308,6 +318,22 @@ def test_fallback_is_used_when_the_first_model_call_fails_before_any_tool(
     assert domain.trace.types.count("run_started") == 1
 
 
+def test_fallback_also_covers_a_primary_model_that_cannot_be_built(
+    domain: FakeDomain, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fallback = ScriptedModel([text_turn("From the fallback model.")])
+
+    def build(model_id: str) -> ScriptedModel:
+        if model_id == PRIMARY_ID:
+            raise RuntimeError("no credentials for the primary client")
+        return fallback
+
+    monkeypatch.setattr(runner, "make_model", build)
+    out = runner.run(payload(), services=domain.services)
+    assert out["status"] == "completed" and out["metrics"]["model_id_used"] == FALLBACK_ID
+    assert out["metrics"]["fallback_used"] is True
+
+
 def test_fallback_only_before_first_tool(domain: FakeDomain, models: dict[str, ScriptedModel]) -> None:
     models[PRIMARY_ID] = ScriptedModel([tool_turn("get_order_context", order_id=AGENT_ORDER), RuntimeError("late failure")])
     models[FALLBACK_ID] = ScriptedModel([text_turn("must not be used")])
@@ -319,15 +345,28 @@ def test_fallback_only_before_first_tool(domain: FakeDomain, models: dict[str, S
     assert domain.conversations.saved == {}  # a failed run does not overwrite the conversation
 
 
-def test_both_models_failing_ends_in_error_with_a_throttle_code(
-    domain: FakeDomain, models: dict[str, ScriptedModel]
+def test_throttling_is_retried_once_then_falls_back_then_ends_in_error(
+    domain: FakeDomain, models: dict[str, ScriptedModel], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    models[PRIMARY_ID] = ScriptedModel([ModelThrottledException("slow down")])
-    models[FALLBACK_ID] = ScriptedModel([ModelThrottledException("slow down")])
+    monkeypatch.setattr(ModelRetryStrategy, "_calculate_delay", lambda self, attempt: 0)  # no real sleeping
+    throttled = ModelThrottledException("slow down")
+    models[PRIMARY_ID] = ScriptedModel([throttled, throttled])
+    models[FALLBACK_ID] = ScriptedModel([throttled, throttled])
     out = runner.run(payload(), services=domain.services)
     assert out["status"] == "error" and out["metrics"]["fallback_used"] is True
     assert out["metrics"]["error_code"] == "UPSTREAM_TIMEOUT"
+    assert len(models[PRIMARY_ID].calls) == 2 and len(models[FALLBACK_ID].calls) == 2  # max 2 attempts each
     assert domain.runs.finished[0][1] == "error"
+
+
+def test_one_throttle_is_absorbed_by_the_retry_without_a_fallback(
+    domain: FakeDomain, models: dict[str, ScriptedModel], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(ModelRetryStrategy, "_calculate_delay", lambda self, attempt: 0)
+    models[PRIMARY_ID] = ScriptedModel([ModelThrottledException("slow down"), text_turn("Recovered.")])
+    out = runner.run(payload(), services=domain.services)
+    assert out["status"] == "completed" and out["metrics"]["fallback_used"] is False
+    assert out["metrics"]["rounds"] == 1  # the retried call is not a second round
 
 
 def test_no_fallback_when_it_is_the_same_model(

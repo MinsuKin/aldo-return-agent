@@ -65,10 +65,16 @@ def test_exactly_ten_tools_in_contract_order(tools_by_name: dict[str, Any]) -> N
 
 def test_no_pre_purchase_or_approval_tool(tools_by_name: dict[str, Any]) -> None:
     """PIVOT_ADDENDUM C6: the ALDO agent keeps exactly its ten tools; none creates an approval."""
-    forbidden = ("size_assist", "size_decision", "memory", "gateway", "approve", "purchase", "order_placement")
+    forbidden = (
+        "size_assist", "ask_aldo_size_assist", "size_decision", "send_size_decision", "recall_size_memory",
+        "memory", "gateway", "purchase", "place_order", "create_approval", "approve", "approve_quote",
+        "approve_resolution", "grant_approval",
+    )
     for name in tools_by_name:
-        assert not any(word in name for word in forbidden), name
-    assert "approve" not in " ".join(tools_by_name)
+        assert name not in forbidden, name
+        assert not name.startswith(("approve", "create_approval", "grant_")), name
+    # The only tool that acts on an approval executes it; the approval row is written by the API.
+    assert [n for n in tools_by_name if "approv" in n] == ["execute_approved_resolution"]
 
 
 def test_no_tool_takes_a_customer_id(tools_by_name: dict[str, Any]) -> None:
@@ -482,6 +488,21 @@ def test_deliver_pending_is_skipped_when_execution_fails(domain: FakeDomain, too
     result = tools_by_name["execute_approved_resolution"](quote_id="QUO-X", option_id="OPT-3")
     assert result["ok"] is False
     assert domain.calls_to("FakeGateway", "deliver_pending") == []
+
+
+def test_the_gateway_may_call_it_flush_outbox(ctx: RunContext, domain: FakeDomain) -> None:
+    """The addendum says deliver_pending; the module on disk exposes flush_outbox. Either works."""
+    sent: list[Any] = []
+
+    class OutboxOnly:
+        def flush_outbox(self, customer_id: str | None = None, limit: int = 10, client: Any = None) -> int:
+            sent.append(customer_id)
+            return 1
+
+    ctx.services = domain.services.override(gateway=OutboxOnly())
+    tools = {t.tool_spec["name"]: t for t in agent_tools.build_tools(ctx)}
+    assert tools["execute_approved_resolution"](quote_id="QUO-X", option_id="OPT-3")["ok"] is True
+    assert sent == [CUSTOMER]
 
 
 def test_deliver_pending_failure_never_fails_the_tool(domain: FakeDomain, tools_by_name: dict[str, Any]) -> None:

@@ -29,6 +29,9 @@ _EMPTY_BRACKETS = re.compile(r"\(\s*\)|\[\s*\]|\{\s*\}")
 _SPACE_BEFORE_PUNCT = re.compile(r"\s+([,.;:!?])")
 _REPEATED_PUNCT = re.compile(r"([,;:])(?:\s*[,;:])+")
 _WHITESPACE = re.compile(r"\s+")
+_MD_HEADING = re.compile(r"(?m)^\s{0,3}#{1,6}\s+")
+_MD_BULLET = re.compile(r"(?m)^\s*(?:[-*\u2022]|\d{1,2}[.)])\s+")
+_MD_EMPHASIS = re.compile(r"\*\*|__|\*|`")
 
 
 #: Words that are never stripped even if they show up as a memory label or item.
@@ -113,11 +116,31 @@ def truncate(text: str, max_chars: int) -> str:
 
 
 def limit_words(text: str, max_words: int) -> str:
-    """Keep at most ``max_words`` words (whitespace separated); append an ellipsis when cut."""
+    """Keep at most ``max_words`` words (whitespace separated).
+
+    When the text is cut it ends on the last complete sentence if most of the text survives that
+    way; otherwise an ellipsis marks the cut.
+    """
     words = text.split()
     if len(words) <= max_words:
         return text.strip()
-    return " ".join(words[:max_words]).rstrip(" ,;:-") + "…"
+    cut = " ".join(words[:max_words])
+    if cut.endswith((".", "!", "?")):
+        return cut
+    boundary = max(cut.rfind(". "), cut.rfind("! "), cut.rfind("? "))
+    if boundary >= int(len(cut) * 0.6):
+        return cut[: boundary + 1]
+    return cut.rstrip(" ,;:-") + "…"
+
+
+def strip_markdown(text: str) -> str:
+    """Plain text for the chat: no headings, list markers, bold/italic stars, underscores pairs or backticks.
+
+    The UI shows the reply as plain text, so markdown would appear as stray asterisks.
+    """
+    cleaned = _MD_HEADING.sub("", text)
+    cleaned = _MD_BULLET.sub("", cleaned)
+    return _MD_EMPHASIS.sub("", cleaned).strip()
 
 
 def count_words(text: str) -> int:

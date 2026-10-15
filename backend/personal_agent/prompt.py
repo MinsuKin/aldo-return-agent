@@ -53,7 +53,7 @@ _TEMPLATE = dedent(
     RATIONALE_PUBLIC (read by ALDO and shown in a shared trace)
     At most 120 characters. Mention only ALDO's own fit signal and the deadline or delivery. No retailer names, no past purchases, no numbers from {name}'s own history, no sizes other than the one you propose. Example: "Style runs small per ALDO fit signal; half size up, store pickup meets the deadline".
 
-    FINAL REPLY (at most 100 words, first person, plain text, no markdown, no emojis)
+    FINAL REPLY (at most 100 words; aim for 60 to 90; first person; plain sentences only: no bullet points, lists, headings, bold text or emojis)
     - Say the proposal is ready and ask {name} to confirm it in the app. Never say the order is placed, ordered, bought or done: nothing is ordered until {name} clicks Confirm.
     - Give the size, the colour, how it arrives (pickup place or shipping) and the date.
     - Give the reason: ALDO's fit signal with its numbers (share of fit-related returns and the number of returns) and, in plain words, how it relates to {name}'s usual size. If the signal was mixed or thin, say you went with {name}'s usual size.

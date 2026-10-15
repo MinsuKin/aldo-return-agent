@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { RunEvent } from "../api/types";
@@ -21,12 +21,18 @@ function merge(prev: RunEvent[], incoming: RunEvent[]): RunEvent[] {
   return changed ? [...bySeq.values()].sort((a, b) => a.seq - b.seq) : prev;
 }
 
+export interface A2aFeed {
+  events: RunEvent[];
+  /** Poll quickly for a while (after a demo control changed something the feed will report). */
+  nudge: () => void;
+}
+
 /**
  * The long-lived per-owner agent-to-agent stream (GET /a2a/events?after=n). Polls every
- * POLL_INTERVAL_MS while either agent is running and for a short cooldown afterwards (a
- * write-back can land just after a run ends), then slowly while idle.
+ * POLL_INTERVAL_MS while either agent is running (or while a write-back is owed) and for a short
+ * cooldown afterwards, then slowly while idle.
  */
-export function useA2aFeed(busy: boolean): RunEvent[] {
+export function useA2aFeed(busy: boolean): A2aFeed {
   const [events, setEvents] = useState<RunEvent[]>([]);
   const afterRef = useRef(0);
   const countRef = useRef(0);
@@ -69,5 +75,11 @@ export function useA2aFeed(busy: boolean): RunEvent[] {
     }
   }, [result]);
 
-  return events;
+  const { refetch } = query;
+  const nudge = useCallback(() => {
+    cooldownUntil.current = Date.now() + COOLDOWN_MS;
+    void refetch();
+  }, [refetch]);
+
+  return { events, nudge };
 }

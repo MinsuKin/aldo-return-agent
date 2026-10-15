@@ -34,7 +34,6 @@ GATEWAY_TIMEOUT_SECONDS: Final = 20.0
 ID_REGEX: Final = r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}"
 ID_PATTERN: Final = re.compile(ID_REGEX)
 
-BOT_NAME: Final = "ALDO bot"
 
 
 def _settings() -> domain_config.Settings:

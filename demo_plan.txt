@@ -1,0 +1,39 @@
+in the demo what we want is
+
+design:
+
+Iphone 17 pro max looking window on the left, select user, chat with agent.
+A2A trace window on the right, show the trace of agentic workflow real time
+
+note - I don't want left ALDO bot and right return bot, we want all on the left for ALDO bot.
+
+scenario:
+- 1. john (silver member)
+I went to also store, I liked the leather shoes but they didn't have my size
+I write to my personal agent (MUSE in real life but ALDO bot in the demo)
+to buy this model (can be aldo men 001), my size.
+agent find what's your size in the memory and find the best size for you (not only product spec, but check in the comment section for user review of size info - true to size, slightly bigger, etc.)
+after find the size and availablity pop up the button to user to review these info and purchase
+
+after purchase, it's delivered (get notification after 5 second)
+
+I realize the color does not go well with my outfit, I want to return
+
+I go back to my agent and say: I want to return 
+
+agent asks the reason, i say because color does not go well with the outfit.
+
+agent suggest exchange, i accept,
+
+agent find ALDO shop where I am 5 min away. and ask if you want to exchange by mail or in store. I acceept in store.
+
+agent make you confirm in store return and let the store know you are coming, I confirm.
+
+- 2. david (platinum member)
+I live far from city.
+I like to buy whole new collections online at once and returns what I don't like
+but I buy more than 10000 dollors from aldo every year.
+I did it again but returning with agent this time.
+I am returning 3 from 10 purchases.
+I tell the agent to return and after agent checks that you are platinum member, and checks ALDO offers you free shipping for return once a month.
+I am glad to get this promo and returns the products.

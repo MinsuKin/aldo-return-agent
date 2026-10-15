@@ -95,3 +95,40 @@ def tool_turn(name: str, **arguments: Any) -> list[dict[str, Any]]:
 
 def text_turn(text: str) -> list[dict[str, Any]]:
     return [{"text": text}]
+
+
+def tool_results(messages: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """tool name -> parsed result envelope, for the tool results found in ``messages``."""
+    names: dict[str, str] = {}
+    results: dict[str, dict[str, Any]] = {}
+    for message in messages:
+        for block in message.get("content", []):
+            if "toolUse" in block:
+                names[block["toolUse"]["toolUseId"]] = block["toolUse"]["name"]
+            if "toolResult" in block:
+                text = block["toolResult"]["content"][0].get("text", "{}")
+                try:
+                    results[names.get(block["toolResult"]["toolUseId"], "?")] = json.loads(text)
+                except ValueError:
+                    pass
+    return results
+
+
+class AdaptiveModel(ScriptedModel):
+    """A script whose turns may be callables: ``fn(results) -> turn``.
+
+    ``results`` maps tool names to the parsed envelope of their latest result, so a turn can
+    use ids that the real services generated (policy check id, option ids, transaction id).
+    """
+
+    def __init__(self, turns: list[Any], **kwargs: Any) -> None:
+        super().__init__(turns, **kwargs)
+        self.seen: dict[str, dict[str, Any]] = {}
+
+    async def stream(self, messages: Any, tool_specs: Any = None, *args: Any, **kwargs: Any):  # type: ignore[override]
+        self.seen = tool_results(messages)
+        index = len(self.calls)
+        if index < len(self.turns) and callable(self.turns[index]):
+            self.turns[index] = self.turns[index](self.seen)
+        async for event in super().stream(messages, tool_specs, *args, **kwargs):
+            yield event

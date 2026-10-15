@@ -195,9 +195,7 @@ def build_router(
 
     def owner_id() -> str:
         """Verified customer id of a SESSION token; a delegated token is refused (403)."""
-        return auth.customer_id_from_authorization(
-            router.current_event.get_header_value("authorization", case_sensitive=False)
-        )
+        return auth.customer_id_from_authorization(router.current_event.headers.get("authorization"))
 
     @router.post("/personal-agent/conversations")
     @guarded
@@ -267,9 +265,7 @@ def build_router(
     def post_memory_update(request_id: str) -> Response:
         raw = _raw_body(router)
         # HMAC only, no bearer: verify the signature over the raw bytes BEFORE parsing anything.
-        auth.verify_writeback_signature(
-            raw, router.current_event.get_header_value(SIGNATURE_HEADER, case_sensitive=False)
-        )
+        auth.verify_writeback_signature(raw, router.current_event.headers.get(SIGNATURE_HEADER))
         result = get_repo().apply_update(_json_object(raw, required=True))
         body = {key: result[key] for key in ("update_id", "applied", "duplicate", "provisional")}
         return _json(200, {"ok": True, **body}, request_id)

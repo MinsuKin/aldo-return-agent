@@ -238,8 +238,8 @@ def test_expressions_use_only_referenced_names_and_values():
         set_values={"status": "executed"}, add_values={"seq": 1},
     )
     assert built["ExpressionAttributeNames"] == {"#seq": "seq", "#size": "size", "#status": "status"}
-    assert set(built["ExpressionAttributeValues"]) == {":open", ":other", ":_s0", ":_a0"}
-    assert built["UpdateExpression"] == "SET #status = :_s0 ADD #seq :_a0"
+    assert set(built["ExpressionAttributeValues"]) == {":open", ":other", ":setv0", ":addv0"}
+    assert built["UpdateExpression"] == "SET #status = :setv0 ADD #seq :addv0"
 
 
 def test_expressions_accept_values_with_a_leading_colon_and_must_exist():
@@ -253,6 +253,8 @@ def test_expressions_report_missing_values_and_bad_names():
         store._build_expressions(condition="#a = :missing")
     with pytest.raises(DomainError):
         store._build_expressions(set_values={"bad-name": 1})
+    with pytest.raises(DomainError):  # :setv0 is reserved for the first SET value
+        store._build_expressions(condition="#a = :setv0", values={"setv0": 1}, set_values={"a": 2})
 
 
 def test_transaction_canceled_helpers():

@@ -60,6 +60,12 @@ SPA_FUNCTION_NAME = "aldo-returns-demo-spa-rewrite"
 RUNTIME_ARN_PARAM = "/aldo-demo/runtime-arn"
 GATEWAY_URL_PARAM = "/aldo-demo/gateway-url"
 DELEGATION_MAX_CENTS = "25000"
+# Name passed to `agentcore configure -n`. Runtime ARNs look like runtime/<name>-<random suffix>.
+AGENT_RUNTIME_NAME = "aldo_returns_agent"
+RUNTIME_ROLE_NAME = "AldoReturnsDemoAgentRuntimeRole"
+# requirements.md 15.2 says Haiku for the fallback; design.md, tasks.md and the account say Opus.
+PRIMARY_MODEL_ID = "us.anthropic.claude-sonnet-5-5"
+FALLBACK_MODEL_ID = "us.anthropic.claude-opus-5-5"
 # Directory inside the Lambda package that holds the bundled fixtures.
 LAMBDA_FIXTURES_DIR = "/var/task/fixtures_bundle"
 
@@ -88,6 +94,7 @@ class AldoReturnsDemoStack(Stack):
         *,
         use_real_code: bool = False,
         runtime_arn: str | None = None,
+        agent_runtime_name: str = AGENT_RUNTIME_NAME,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -160,22 +167,41 @@ class AldoReturnsDemoStack(Stack):
         # ------------------------------------------------------------------
         # Shared ARNs / statements
         # ------------------------------------------------------------------
+        # Value of AGENT_RUNTIME_ARN. The worker ignores any value containing "placeholder"
+        # and reads the SSM parameter instead (worker/handler.py runtime_arn()).
         runtime_arn_value = runtime_arn or self.format_arn(
             service="bedrock-agentcore",
             resource="runtime",
             resource_name="aldo_placeholder_not_deployed",
         )
-        gateway_url_param_arn = self.format_arn(
-            service="ssm",
-            resource="parameter",
-            resource_name=GATEWAY_URL_PARAM.lstrip("/"),
-            arn_format=ArnFormat.SLASH_RESOURCE_NAME,
-        )
+        # InvokeAgentRuntime scope. Exact ARN once known (-c runtimeArn=..., which
+        # infra/deploy.sh reads from SSM); until then every runtime whose name is
+        # <agent_runtime_name>-<random suffix>, so the worker works the moment
+        # `agentcore deploy` + the SSM parameter exist, without a redeploy.
+        if runtime_arn:
+            invoke_resources = [runtime_arn, f"{runtime_arn}/runtime-endpoint/*"]
+        else:
+            runtime_pattern = self.format_arn(
+                service="bedrock-agentcore",
+                resource="runtime",
+                resource_name=f"{agent_runtime_name}-*",
+            )
+            invoke_resources = [runtime_pattern, f"{runtime_pattern}/runtime-endpoint/*"]
+        ssm_parameter_arns = {
+            name: self.format_arn(
+                service="ssm",
+                resource="parameter",
+                resource_name=name.lstrip("/"),
+                arn_format=ArnFormat.SLASH_RESOURCE_NAME,
+            )
+            for name in (GATEWAY_URL_PARAM, RUNTIME_ARN_PARAM)
+        }
+        # Claude 5.5 inference profiles (us.*) and the foundation models they route to.
         bedrock_invoke = iam.PolicyStatement(
             sid="InvokeClaudeModels",
             actions=["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
             resources=[
-                "arn:aws:bedrock:*::foundation-model/anthropic.*",
+                "arn:aws:bedrock:*::foundation-model/anthropic.claude-*-5-5*",
                 self.format_arn(
                     service="bedrock",
                     resource="inference-profile",
@@ -200,6 +226,8 @@ class AldoReturnsDemoStack(Stack):
             # Name of the SSM parameter that holds the gateway base URL; read at runtime.
             "GATEWAY_BASE_URL_PARAM": GATEWAY_URL_PARAM,
             "DELEGATION_MAX_CENTS": DELEGATION_MAX_CENTS,
+            "BEDROCK_MODEL_ID": PRIMARY_MODEL_ID,
+            "BEDROCK_FALLBACK_MODEL_ID": FALLBACK_MODEL_ID,
             "POWERTOOLS_LOG_LEVEL": "INFO",
             "LOG_LEVEL": "INFO",
         }
@@ -228,9 +256,10 @@ class AldoReturnsDemoStack(Stack):
                 **common_env,
                 "POWERTOOLS_SERVICE_NAME": "returns-worker",
                 "AGENT_MODE": "agentcore",
-                # Exact ARN (also the only runtime the worker role may invoke). Set from the
-                # SSM parameter by infra/deploy.sh; a placeholder until the runtime exists.
+                # Exact ARN once infra/deploy.sh has read it from SSM; a placeholder before that,
+                # in which case the worker reads AGENT_RUNTIME_ARN_PARAM itself.
                 "AGENT_RUNTIME_ARN": runtime_arn_value,
+                "AGENT_RUNTIME_ARN_PARAM": RUNTIME_ARN_PARAM,
             },
             log_group=worker_logs,
             # G-05: async invocation retries would start duplicate agent runs.
@@ -277,49 +306,122 @@ class AldoReturnsDemoStack(Stack):
                 iam.PolicyStatement(
                     sid="ReadGatewayUrlParameter",
                     actions=["ssm:GetParameter"],
-                    resources=[gateway_url_param_arn],
+                    resources=[ssm_parameter_arns[GATEWAY_URL_PARAM]],
                 )
             )
         worker_fn.grant_invoke(api_fn)
+        # Requirement 1.5: the worker role is the only principal in this stack that may invoke
+        # the runtime (the API role and the browser have no such permission).
         worker_fn.add_to_role_policy(
             iam.PolicyStatement(
                 sid="InvokeAgentRuntime",
                 effect=iam.Effect.ALLOW,
                 actions=["bedrock-agentcore:InvokeAgentRuntime"],
-                resources=[runtime_arn_value, f"{runtime_arn_value}/runtime-endpoint/*"],
+                resources=invoke_resources,
+            )
+        )
+        worker_fn.add_to_role_policy(
+            iam.PolicyStatement(
+                sid="ReadRuntimeArnParameter",
+                actions=["ssm:GetParameter"],
+                resources=[ssm_parameter_arns[RUNTIME_ARN_PARAM]],
             )
         )
         # The personal agent runs in-process in the worker (pivot 5.7) and calls Bedrock.
         worker_fn.add_to_role_policy(bedrock_invoke)
 
-        # Extra permissions for the ALDO AgentCore runtime execution role. The
-        # starter toolkit creates the role; the agent deploy step attaches this
-        # managed policy to it. Deliberately NO access to the personal agent
-        # table (pivot P-a): the ALDO agent must not read the owner's memory.
-        agent_extra_policy = iam.ManagedPolicy(
+        # Execution role of the ALDO AgentCore runtime, passed to
+        # `agentcore configure -er <AgentRuntimeRoleArn>`. Trust and logging/tracing
+        # statements follow the AgentCore runtime-permissions guide. DynamoDB access
+        # is the RETURNS table only: deliberately NO access to the personal agent
+        # table (pivot P-a), so the ALDO agent cannot read the owner's memory.
+        runtime_role = iam.Role(
             self,
-            "AgentRuntimeExtraPolicy",
-            managed_policy_name="aldo-returns-demo-agent-runtime-extra",
-            description="Returns table access and Bedrock invoke for the ALDO AgentCore runtime execution role",
-            statements=[
-                iam.PolicyStatement(
-                    sid="DemoTableReadWrite",
-                    actions=[
-                        "dynamodb:BatchGetItem",
-                        "dynamodb:GetItem",
-                        "dynamodb:Query",
-                        "dynamodb:Scan",
-                        "dynamodb:ConditionCheckItem",
-                        "dynamodb:DescribeTable",
-                        "dynamodb:BatchWriteItem",
-                        "dynamodb:PutItem",
-                        "dynamodb:UpdateItem",
-                        "dynamodb:DeleteItem",
-                    ],
-                    resources=[table.table_arn, f"{table.table_arn}/index/*"],
-                ),
-                bedrock_invoke,
-            ],
+            "AgentRuntimeRole",
+            role_name=RUNTIME_ROLE_NAME,
+            description="Execution role of the ALDO returns agent on Bedrock AgentCore Runtime",
+            assumed_by=iam.ServicePrincipal(
+                "bedrock-agentcore.amazonaws.com",
+                conditions={
+                    "StringEquals": {"aws:SourceAccount": self.account},
+                    "ArnLike": {"aws:SourceArn": f"arn:aws:bedrock-agentcore:{self.region}:{self.account}:*"},
+                },
+            ),
+        )
+        runtime_logs_arn = f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws/bedrock-agentcore/runtimes/*"
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                sid="RuntimeLogGroups",
+                actions=["logs:CreateLogGroup", "logs:DescribeLogStreams"],
+                resources=[runtime_logs_arn],
+            )
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                sid="RuntimeDescribeLogGroups",
+                actions=["logs:DescribeLogGroups"],
+                resources=[f"arn:aws:logs:{self.region}:{self.account}:log-group:*"],
+            )
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                sid="RuntimeLogStreams",
+                actions=["logs:CreateLogStream", "logs:PutLogEvents"],
+                resources=[f"{runtime_logs_arn}:log-stream:*"],
+            )
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                sid="RuntimeTracing",
+                actions=[
+                    "xray:PutTraceSegments",
+                    "xray:PutTelemetryRecords",
+                    "xray:GetSamplingRules",
+                    "xray:GetSamplingTargets",
+                ],
+                resources=["*"],
+            )
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                sid="RuntimeMetrics",
+                actions=["cloudwatch:PutMetricData"],
+                resources=["*"],
+                conditions={"StringEquals": {"cloudwatch:namespace": "bedrock-agentcore"}},
+            )
+        )
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                sid="RuntimeWorkloadIdentity",
+                actions=[
+                    "bedrock-agentcore:GetWorkloadAccessToken",
+                    "bedrock-agentcore:GetWorkloadAccessTokenForJWT",
+                    "bedrock-agentcore:GetWorkloadAccessTokenForUserId",
+                ],
+                resources=[
+                    f"arn:aws:bedrock-agentcore:{self.region}:{self.account}:workload-identity-directory/default",
+                    f"arn:aws:bedrock-agentcore:{self.region}:{self.account}:workload-identity-directory/default/workload-identity/*",
+                ],
+            )
+        )
+        runtime_role.add_to_policy(bedrock_invoke)
+        runtime_role.add_to_policy(
+            iam.PolicyStatement(
+                sid="ReturnsTableReadWrite",
+                actions=[
+                    "dynamodb:BatchGetItem",
+                    "dynamodb:GetItem",
+                    "dynamodb:Query",
+                    "dynamodb:Scan",
+                    "dynamodb:ConditionCheckItem",
+                    "dynamodb:DescribeTable",
+                    "dynamodb:BatchWriteItem",
+                    "dynamodb:PutItem",
+                    "dynamodb:UpdateItem",
+                    "dynamodb:DeleteItem",
+                ],
+                resources=[table.table_arn, f"{table.table_arn}/index/*"],
+            )
         )
 
         # ------------------------------------------------------------------
@@ -418,7 +520,7 @@ class AldoReturnsDemoStack(Stack):
             api_fn,
             stage,
             spa_rewrite,
-            agent_extra_policy,
+            runtime_role,
         )
 
         # Gateway base URL for the personal agent's http transport and the agent
@@ -446,7 +548,9 @@ class AldoReturnsDemoStack(Stack):
         CfnOutput(self, "WorkerFunctionName", value=worker_fn.function_name)
         # Only this role may invoke the AgentCore runtime (requirement 1.5).
         CfnOutput(self, "WorkerRoleArn", value=worker_fn.role.role_arn)
-        CfnOutput(self, "AgentRuntimeExtraPolicyArn", value=agent_extra_policy.managed_policy_arn)
+        # Pass to: agentcore configure ... -n <AgentRuntimeName> -er <AgentRuntimeRoleArn>
+        CfnOutput(self, "AgentRuntimeRoleArn", value=runtime_role.role_arn)
+        CfnOutput(self, "AgentRuntimeName", value=agent_runtime_name)
         CfnOutput(self, "RuntimeArnParameter", value=RUNTIME_ARN_PARAM)
         CfnOutput(self, "GatewayUrlParameterName", value=gateway_url_param.parameter_name)
         CfnOutput(self, "CodeMode", value="real" if use_real_code else "stub")

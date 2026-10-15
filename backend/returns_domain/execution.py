@@ -146,18 +146,18 @@ def _execute_once(
     if existing is not None:  # replays succeed even after the quote or the window expired
         return _replay(existing, quote_id, approval_id)
 
-    window = timedelta(seconds=config.get_settings().execute_window_seconds)
-    if clock.now_utc() > clock.parse_iso(approval["approved_at"]) + window:
-        raise _deny(customer_id, quote_id, DomainError(
-            ErrorCode.QUOTE_EXPIRED, "The approval is too old to execute. Ask for a new quote."), run_id)
-
-    check, order, line = _recheck_policy(customer_id, quote, option, run_id, quote_id)
+    try:
+        check, order, line = _validate_for_commit(customer_id, quote, option, approval, run_id)
+    except DomainError as denial:
+        # A concurrent caller may have committed while we validated; its transaction wins (the
+        # line it used up would otherwise make this look like an ineligible second request).
+        winner = store.get_item(store.idem_key(approval_id))
+        if winner is not None:
+            return _replay(winner, quote_id, approval_id)
+        if denial.code == ErrorCode.NOT_AUTHORIZED:  # already audited as access_denied
+            raise
+        raise _deny(customer_id, quote_id, denial, run_id) from None
     qty, kind = int(option["qty"]), option["type"]
-    if _is_exchange(kind):
-        stock = store.get_item(store.inventory_key(option["sku"], option["location_id"]))
-        if stock is None or int(stock.get("atp", 0)) < qty:
-            raise _deny(customer_id, quote_id, DomainError(
-                ErrorCode.STOCK_CHANGED, "The replacement size is no longer in stock."), run_id)
 
     transaction_id = store.new_id("DEMO-RMA-" if _is_exchange(kind) else "DEMO-RET-")
     created_at = store.now_iso()
@@ -241,7 +241,7 @@ def _execute_once(
         approval_id=approval_id,
         memory_update_id=memory_update_id,
     )
-    _after_commit(customer_id, run_id, result, check["order_id"], memory_update_id)
+    _after_commit(customer_id, run_id, result, txn, memory_update_id)
     return result
 
 
@@ -260,34 +260,43 @@ def _replay(idem: Mapping[str, Any], quote_id: str, approval_id: str) -> Executi
     )
 
 
-def _recheck_policy(
+def _validate_for_commit(
     customer_id: str,
     quote: Mapping[str, Any],
     option: Mapping[str, Any],
+    approval: Mapping[str, Any],
     run_id: str | None,
-    quote_id: str,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    """Re-evaluate the policy with the stored inputs against CURRENT store data (no new PCHK row)."""
+    """Everything that must hold before the commit: window, policy against CURRENT data, stock.
+
+    Raises a plain DomainError (the caller audits it); writes nothing. Returns the stored policy
+    check, order and line that the transaction is built from.
+    """
+    window = timedelta(seconds=config.get_settings().execute_window_seconds)
+    if clock.now_utc() > clock.parse_iso(approval["approved_at"]) + window:
+        raise DomainError(ErrorCode.QUOTE_EXPIRED, "The approval is too old to execute. Ask for a new quote.")
+
     check = store.get_item(store.pchk_key(quote["policy_check_id"]))
     if check is None:
-        raise _deny(customer_id, quote_id, DomainError(
-            ErrorCode.MISSING_POLICY, "The policy check behind this quote is missing."), run_id)
+        raise DomainError(ErrorCode.MISSING_POLICY, "The policy check behind this quote is missing.")
     order, lines = orders.load_order_items(customer_id, check["order_id"], run_id=run_id)
     line = lines.get(check["line_id"])
     if line is None:
-        raise _deny(customer_id, quote_id, DomainError(
-            ErrorCode.NOT_FOUND, "Order line not found on this order."), run_id)
+        raise DomainError(ErrorCode.NOT_FOUND, "Order line not found on this order.")
     result = policy.evaluate(
         order, line, int(check["qty"]), check["reason_category"], check["condition"], now=clock.demo_now()
     )
     if not result.is_eligible or result.policy_version != quote["policy_version"]:
-        raise _deny(customer_id, quote_id, DomainError(
-            ErrorCode.VALIDATION_ERROR,
-            f"policy check is not eligible (decision={result.decision.value})",
-        ), run_id)
+        raise DomainError(
+            ErrorCode.VALIDATION_ERROR, f"policy check is not eligible (decision={result.decision.value})"
+        )
     if option["type"] not in result.allowed_option_types:
-        raise _deny(customer_id, quote_id, DomainError(
-            ErrorCode.VALIDATION_ERROR, "the policy does not allow this option type"), run_id)
+        raise DomainError(ErrorCode.VALIDATION_ERROR, "the policy does not allow this option type")
+
+    if _is_exchange(option["type"]):
+        stock = store.get_item(store.inventory_key(option["sku"], option["location_id"]))
+        if stock is None or int(stock.get("atp", 0)) < int(option["qty"]):
+            raise DomainError(ErrorCode.STOCK_CHANGED, "The replacement size is no longer in stock.")
     return check, order, line
 
 
@@ -381,7 +390,7 @@ def _after_commit(
     customer_id: str,
     run_id: str | None,
     result: ExecutionResult,
-    order_id: str,
+    txn: Mapping[str, Any],
     memory_update_id: str | None,
 ) -> None:
     """Audit, trace, mirror to the A2A stream and flush the outbox. None of it can fail the call."""
@@ -403,15 +412,19 @@ def _after_commit(
                 "replayed": False,
             },
         )
-    trace.emit_a2a_safe(
+    trace.emit_a2a_safe(  # public fields only: no customer id, no policy inputs, no free text
         customer_id,
         "transaction_created",
         {
             "transaction_id": result.transaction_id,
             "state": result.state,
             "option_type": result.option_type,
-            "order_id": order_id,
+            "order_id": txn["order_id"],
             "replayed": False,
+            "original_size": txn.get("original_size"),
+            "new_size": txn.get("replacement_size"),  # None for returns
+            "location_id": txn["location_id"],
+            "fee_cents": txn["fee_cents"],
         },
         actor="aldo_agent",
     )

@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useA2aFeed } from "../hooks/useA2aFeed";
-import { str, pick } from "../lib/util";
+import { transactionKind } from "../lib/normalize";
+import { pick, str } from "../lib/util";
 import { AldoPanel } from "./AldoPanel";
-import { PersonalAgentPanel } from "./PersonalAgentPanel";
+import { PersonalAgentPanel, type WritebackState } from "./PersonalAgentPanel";
 import { ActorBadge, TraceTimeline, type TraceGroup } from "./TraceTimeline";
 
 const ACTORS = ["personal_agent", "aldo_gateway", "aldo_agent", "system"] as const;
+
+/** After an exchange is created, ALDO's size update to ALDO bot is delivered when memory is read. */
+const WRITEBACK_WINDOW_MS = 15_000;
+const WRITEBACK_RETRY_MS = 2_500;
 
 /**
  * Three columns at 1200 px and up (ALDO bot, A2A trace, ALDO Returns Agent); stacked below.
@@ -18,8 +23,10 @@ export function Workspace() {
   const [aldoActive, setAldoActive] = useState(false);
   const [paKey, setPaKey] = useState(0);
   const [aldoKey, setAldoKey] = useState(0);
+  const [waitingSince, setWaitingSince] = useState<number | null>(null);
+  const [late, setLate] = useState(false);
 
-  const events = useA2aFeed(paActive || aldoActive);
+  const { events, nudge } = useA2aFeed(paActive || aldoActive || (waitingSince !== null && !late));
   const memoryVersion = useMemo(() => events.filter((e) => e.type === "memory_updated").length, [events]);
   const confirmedCount = useMemo(() => events.filter((e) => e.type === "size_confirmed").length, [events]);
   // The newest proposal ALDO bot recorded; the purchase card is rendered from the server's record of it.
@@ -27,6 +34,46 @@ export function Workspace() {
     const last = events.filter((e) => e.type === "size_recommended").at(-1);
     return last ? str(pick(last.payload, ["size_request_id"])) : undefined;
   }, [events]);
+
+  // Write-backs ALDO still owes ALDO bot: exchanges created minus the "exchange_created" updates delivered.
+  const owed = useMemo(() => {
+    const exchanges = events.filter(
+      (e) =>
+        e.type === "transaction_created" &&
+        transactionKind(str(pick(e.payload, ["transaction_id"])) ?? "", str(pick(e.payload, ["option_type"]))) === "exchange",
+    ).length;
+    const delivered = events.filter((e) => e.type === "memory_updated" && str(pick(e.payload, ["outcome"])) !== "exchange_completed_kept").length;
+    return exchanges - delivered;
+  }, [events]);
+
+  useEffect(() => {
+    if (owed > 0) setWaitingSince((prev) => prev ?? Date.now());
+    else {
+      setWaitingSince(null);
+      setLate(false);
+    }
+  }, [owed]);
+
+  // The API flushes the outbox before it reads memory, so reading memory delivers the write-back.
+  // Read it right away, then retry while the A2A feed is polled, for at most WRITEBACK_WINDOW_MS.
+  useEffect(() => {
+    if (waitingSince === null || late) return;
+    void qc.refetchQueries({ queryKey: ["pa-memory"] });
+    const id = window.setInterval(() => {
+      if (Date.now() - waitingSince >= WRITEBACK_WINDOW_MS) {
+        setLate(true);
+        return;
+      }
+      void qc.refetchQueries({ queryKey: ["pa-memory"] });
+    }, WRITEBACK_RETRY_MS);
+    return () => window.clearInterval(id);
+  }, [waitingSince, late, qc]);
+
+  const writeback: WritebackState = waitingSince === null ? "idle" : late ? "late" : "waiting";
+  const checkAgain = useCallback(() => {
+    setLate(false);
+    setWaitingSince(Date.now());
+  }, []);
 
   // A confirmed purchase creates an order; refresh the order list as soon as it appears.
   useEffect(() => {
@@ -48,6 +95,8 @@ export function Workspace() {
           memoryVersion={memoryVersion}
           proposalId={proposalId}
           confirmedCount={confirmedCount}
+          writeback={writeback}
+          onCheckAgain={checkAgain}
           onActive={setPaActive}
           onRestart={restartPa}
         />
@@ -82,7 +131,7 @@ export function Workspace() {
         <h2 id="col-aldo-title" className="column-title">
           ALDO Returns Agent
         </h2>
-        <AldoPanel key={aldoKey} onActive={setAldoActive} onRestart={restartAldo} />
+        <AldoPanel key={aldoKey} onActive={setAldoActive} onRestart={restartAldo} onNudge={nudge} />
       </section>
     </div>
   );

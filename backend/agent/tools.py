@@ -223,7 +223,11 @@ def deliver_pending_best_effort(ctx: RunContext, budget_seconds: float | None = 
 
     def work() -> None:
         try:
-            ctx.services.gateway.deliver_pending(ctx.customer_id)
+            gateway = ctx.services.gateway
+            # PIVOT_ADDENDUM 9.3 names it deliver_pending; the module on disk may call it
+            # flush_outbox (same arguments, same job). The code on disk wins.
+            deliver = getattr(gateway, "deliver_pending", None) or gateway.flush_outbox
+            deliver(ctx.customer_id)
         except Exception as exc:  # noqa: BLE001 - includes ImportError and delivery failures
             logger.warning(
                 "deliver_pending_skipped", run_id=ctx.run_id, error_type=type(exc).__name__

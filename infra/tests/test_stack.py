@@ -1,5 +1,7 @@
 """Assertions on the synthesized AldoReturnsDemo template. No AWS access needed."""
+import ast
 import json
+from pathlib import Path
 
 import aws_cdk as cdk
 import pytest
@@ -211,8 +213,16 @@ def test_worker_role_permissions(template: Template) -> None:
     assert {"bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"} <= actions
     invoke = [s for s in statements if s["Action"] == "bedrock-agentcore:InvokeAgentRuntime"]
     assert len(invoke) == 1
-    assert "aldo_placeholder_not_deployed" in json.dumps(invoke[0]["Resource"])
-    assert invoke[0]["Resource"] != "*"
+    # Without a runtime ARN the policy covers runtimes named aldo_returns_agent-<suffix> only.
+    resources = [json.dumps(r) for r in invoke[0]["Resource"]]
+    assert len(resources) == 2
+    assert all("runtime/aldo_returns_agent-*" in r for r in resources)
+    assert "runtime/aldo_returns_agent-*/runtime-endpoint/*" in resources[1]
+    # The worker reads the runtime ARN (and the gateway URL) from SSM itself.
+    parameter_statements = [s for s in statements if s["Action"] == "ssm:GetParameter"]
+    rendered_parameters = json.dumps([s["Resource"] for s in parameter_statements])
+    assert "parameter/aldo-demo/runtime-arn" in rendered_parameters
+    assert "parameter/aldo-demo/gateway-url" in rendered_parameters
     # Both tables are reachable by the worker (it runs the personal agent in process).
     rendered = json.dumps(statements)
     table_ids = {
@@ -223,26 +233,79 @@ def test_worker_role_permissions(template: Template) -> None:
     assert table_ids["aldo-personal-agent-demo"] in rendered
 
 
-def test_agent_runtime_policy_has_no_access_to_the_personal_agent_table(template: Template) -> None:
-    policy = next(
-        p
-        for p in template.find_resources("AWS::IAM::ManagedPolicy").values()
-        if p["Properties"].get("ManagedPolicyName") == "aldo-returns-demo-agent-runtime-extra"
+def test_agent_runtime_role(template: Template) -> None:
+    role = next(
+        r
+        for r in template.find_resources("AWS::IAM::Role").values()
+        if r["Properties"].get("RoleName") == "AldoReturnsDemoAgentRuntimeRole"
     )
-    rendered = json.dumps(policy["Properties"]["PolicyDocument"])
-    assert "PersonalAgentTable" not in rendered
+    (trust,) = role["Properties"]["AssumeRolePolicyDocument"]["Statement"]
+    assert trust["Principal"] == {"Service": "bedrock-agentcore.amazonaws.com"}
+    assert set(trust["Condition"]) == {"StringEquals", "ArnLike"}
+    assert "aws:SourceAccount" in trust["Condition"]["StringEquals"]
+    assert "aws:SourceArn" in trust["Condition"]["ArnLike"]
+
+    statements = _statements(template, "AgentRuntimeRole")
+    rendered = json.dumps(statements)
+    tables = {
+        t["Properties"]["TableName"]: logical_id
+        for logical_id, t in template.find_resources("AWS::DynamoDB::Table").items()
+    }
+    # Pivot P-a: the returns table yes, the personal agent's memory table never.
+    assert tables["aldo-returns-demo"] in rendered
+    assert tables["aldo-personal-agent-demo"] not in rendered
     assert "aldo-personal-agent-demo" not in rendered
-    assert "dynamodb:" in rendered and "bedrock:InvokeModel" in rendered
+    actions = _actions(statements)
+    assert {"dynamodb:GetItem", "dynamodb:UpdateItem", "dynamodb:Query", "dynamodb:ConditionCheckItem"} <= actions
+    assert {"bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"} <= actions
+    assert {"logs:CreateLogStream", "logs:PutLogEvents"} <= actions
+    # It must not be able to start runtimes, read secrets or write the SSM parameters.
+    assert "bedrock-agentcore:InvokeAgentRuntime" not in actions
+    assert not any(a.startswith(("secretsmanager:", "ssm:", "lambda:", "iam:")) for a in actions)
 
 
 def test_only_the_worker_role_can_invoke_the_agent_runtime(template: Template) -> None:
-    """Requirement 1.5: exactly one IAM statement in the stack allows bedrock-agentcore actions."""
+    """Requirement 1.5: exactly one IAM policy in the stack allows InvokeAgentRuntime."""
     holders = []
-    for resource_type in ("AWS::IAM::Policy", "AWS::IAM::ManagedPolicy", "AWS::IAM::Role"):
+    for resource_type in ("AWS::IAM::Policy", "AWS::IAM::ManagedPolicy"):
         for logical_id, resource in template.find_resources(resource_type).items():
-            if "bedrock-agentcore:" in json.dumps(resource["Properties"]):
+            if "bedrock-agentcore:InvokeAgentRuntime" in json.dumps(resource["Properties"]["PolicyDocument"]):
                 holders.append(logical_id)
     assert len(holders) == 1 and holders[0].startswith("WorkerFnServiceRoleDefaultPolicy"), holders
+
+
+def test_lambda_model_environment(template: Template) -> None:
+    for name in ("aldo-returns-demo-api", "aldo-returns-demo-worker"):
+        env = _function(template, name)["Properties"]["Environment"]["Variables"]
+        assert env["BEDROCK_MODEL_ID"] == "us.anthropic.claude-sonnet-5-5"
+        # requirements.md 15.2 says Haiku; the account and design.md say Opus.
+        assert env["BEDROCK_FALLBACK_MODEL_ID"] == "us.anthropic.claude-opus-5-5"
+
+
+def test_main_table_mirrors_store_table_schema(template: Template) -> None:
+    """backend/returns_domain/store.py TABLE_SCHEMA is what moto tests create; the real table must match."""
+    source = (Path(__file__).resolve().parents[2] / "backend" / "returns_domain" / "store.py").read_text()
+    schema = None
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.AnnAssign) and getattr(node.target, "id", "") == "TABLE_SCHEMA":
+            schema = ast.literal_eval(node.value)
+    if schema is None:
+        pytest.skip("store.TABLE_SCHEMA not found")
+    table = next(
+        t["Properties"]
+        for t in template.find_resources("AWS::DynamoDB::Table").values()
+        if t["Properties"]["TableName"] == "aldo-returns-demo"
+    )
+    assert table["KeySchema"] == schema["KeySchema"]
+    assert table["BillingMode"] == schema["BillingMode"]
+    assert {(d["AttributeName"], d["AttributeType"]) for d in table["AttributeDefinitions"]} == {
+        (d["AttributeName"], d["AttributeType"]) for d in schema["AttributeDefinitions"]
+    }
+    (expected_gsi,) = schema["GlobalSecondaryIndexes"]
+    (gsi,) = table["GlobalSecondaryIndexes"]
+    assert gsi["IndexName"] == expected_gsi["IndexName"]
+    assert gsi["KeySchema"] == expected_gsi["KeySchema"]
+    assert gsi["Projection"] == expected_gsi["Projection"]
 
 
 def test_runtime_arn_from_context_tightens_the_worker_policy() -> None:
@@ -267,7 +330,8 @@ def test_outputs(template: Template) -> None:
         "ApiFunctionName",
         "WorkerFunctionName",
         "WorkerRoleArn",
-        "AgentRuntimeExtraPolicyArn",
+        "AgentRuntimeRoleArn",
+        "AgentRuntimeName",
         "RuntimeArnParameter",
         "GatewayUrlParameterName",
         "CodeMode",

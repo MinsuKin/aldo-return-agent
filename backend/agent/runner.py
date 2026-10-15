@@ -40,7 +40,7 @@ from .context import RUN_KINDS, RoundLimitExceeded, RunContext
 from .envelope import emit_event
 from .hooks import RunHooks
 from .log import logger
-from .prompt import SERVER_MARKER, build_system_prompt
+from .prompt import PROMPT_VERSION, SERVER_MARKER, build_system_prompt
 from .services import Services
 from .tools import build_tools
 
@@ -172,6 +172,13 @@ def run(payload: dict[str, Any], services: Services | None = None) -> dict[str, 
     except DomainError as exc:
         logger.warning("payload_rejected", code=exc.code)
         return {"run_id": _safe_run_id(payload), "status": "error", "metrics": {"error_code": exc.code}}
+    except Exception:  # noqa: BLE001 - run() never raises
+        logger.exception("payload_unreadable")
+        return {
+            "run_id": _safe_run_id(payload),
+            "status": "error",
+            "metrics": {"error_code": ErrorCode.INTERNAL_ERROR.value},
+        }
 
     try:
         if not ctx.services.runs.mark_agent_started(ctx.run_id):
@@ -179,7 +186,11 @@ def run(payload: dict[str, Any], services: Services | None = None) -> dict[str, 
             return {"run_id": ctx.run_id, "status": "duplicate", "metrics": {}}
     except Exception:  # noqa: BLE001 - the worker marks the run failed when we cannot start
         logger.exception("mark_agent_started_failed", run_id=ctx.run_id)
-        return {"run_id": ctx.run_id, "status": "error", "metrics": {"error_code": ErrorCode.INTERNAL_ERROR}}
+        return {
+            "run_id": ctx.run_id,
+            "status": "error",
+            "metrics": {"error_code": ErrorCode.INTERNAL_ERROR.value},
+        }
 
     try:
         outcome = _converse(ctx, payload)
@@ -190,8 +201,11 @@ def run(payload: dict[str, Any], services: Services | None = None) -> dict[str, 
 
 
 def _safe_run_id(payload: Any) -> str | None:
-    if isinstance(payload, Mapping) and isinstance(payload.get("run_id"), str):
-        return payload["run_id"][:64]
+    try:
+        if isinstance(payload, Mapping) and isinstance(payload.get("run_id"), str):
+            return payload["run_id"][:64]
+    except Exception:  # noqa: BLE001 - only used to label an error result
+        pass
     return None
 
 
@@ -214,7 +228,13 @@ def _converse(ctx: RunContext, payload: Mapping[str, Any]) -> _Outcome:
             "max_rounds": ctx.max_rounds,
         },
     )
-    logger.info("run_started", run_id=ctx.run_id, kind=ctx.kind, model_id=ctx.model_id)
+    logger.info(
+        "run_started",
+        run_id=ctx.run_id,
+        kind=ctx.kind,
+        model_id=ctx.model_id,
+        prompt_version=PROMPT_VERSION,
+    )
 
     prior = ctx.services.conversations.load_messages(ctx.conv_id)
     fallback_id = settings.bedrock_fallback_model_id
@@ -223,12 +243,13 @@ def _converse(ctx: RunContext, payload: Mapping[str, Any]) -> _Outcome:
         ctx.model_id = model_id
         ctx.rounds = 0
         ctx.seen_message_count = -1
-        agent = make_agent(ctx, make_model(model_id), copy.deepcopy(prior))
+        agent: Agent | None = None
         try:
+            agent = make_agent(ctx, make_model(model_id), copy.deepcopy(prior))
             result = agent(content)
             return _Outcome("completed", _final_text(result), messages=list(agent.messages))
         except Exception as exc:  # noqa: BLE001
-            if _is_hard_stop(exc):
+            if agent is not None and _is_hard_stop(exc):
                 return _hard_stop(ctx, agent)
             if ctx.tool_calls == 0 and not ctx.fallback_used and fallback_id and fallback_id != model_id:
                 logger.warning(
@@ -243,7 +264,8 @@ def _converse(ctx: RunContext, payload: Mapping[str, Any]) -> _Outcome:
             logger.exception("agent_failed", run_id=ctx.run_id, model_id=model_id)
             return _Outcome("error", CUSTOMER_ERROR_TEXT, _error_code(exc))
         finally:
-            _add_usage(ctx, agent)
+            if agent is not None:
+                _add_usage(ctx, agent)
 
 
 def _final_text(result: Any) -> str:

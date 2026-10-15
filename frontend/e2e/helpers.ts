@@ -73,3 +73,27 @@ export async function latestSizeRequestId(page: Page): Promise<string> {
     return body.events.filter((e) => e.type === "size_recommended").at(-1)?.payload.size_request_id ?? "";
   });
 }
+
+/** Scroll a card to the top of its own scrolling column, so the screenshot starts at its heading. */
+export async function revealTop(locator: Locator): Promise<void> {
+  await locator.evaluate((el) => el.scrollIntoView({ block: "start" }));
+}
+
+/** Run assertions that depend on the mock's scripted agent text and data; skipped against a real deployment. */
+export async function onMock(fn: () => Promise<void>): Promise<void> {
+  if (IS_MOCK) await fn();
+}
+
+/** `actual` contains all of `expected`, in that order (other items may be interleaved). */
+export function expectInOrder(actual: string[], expected: string[]): void {
+  let from = 0;
+  for (const want of expected) {
+    const at = actual.indexOf(want, from);
+    expect(at, `${want} in ${JSON.stringify(actual)} after position ${from}`).toBeGreaterThanOrEqual(0);
+    from = at + 1;
+  }
+}
+
+/** Approve button of the first exchange card (the write-back only happens for exchanges). */
+export const firstExchangeApprove = (page: Page): Locator =>
+  page.locator('[data-option-type^="exchange_"]').first().getByRole("button", { name: /^Approve/ });

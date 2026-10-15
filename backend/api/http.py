@@ -131,10 +131,13 @@ class Request:
             )
         return int(raw)
 
-    def public_base_url(self, configured: str | None) -> str:
-        """Origin to advertise: the configured base URL, else the one this request came in on."""
-        if configured:
-            return configured.rstrip("/")
+    def request_origin(self) -> str:
+        """The origin this request came in on, as far as a header can be trusted to say.
+
+        Behind CloudFront this is the execute-api host, NOT the public one, so absolute URLs
+        come from configuration first (see ``routes_gateway.public_base_url``). Hosts that do
+        not look like host names are ignored in favour of the API Gateway domain name.
+        """
         host = self.header("x-forwarded-host") or self.header("host")
         if not host or not _HOST.match(host):
             host = getattr(self.event.request_context, "domain_name", None) or "localhost"
@@ -170,8 +173,10 @@ class Api:
         self.routes: list[RouteSpec] = []
 
     def route(self, method: str, path: str, *, auth: str, status: int = 200) -> Callable:
-        if auth not in AUTH_KINDS:
-            raise ValueError(f"unknown auth kind {auth!r}")
+        """Register ``func(request, **path_params)``. ``auth`` is one of ``AUTH_KINDS`` (required)."""
+        kind = auth  # the keyword reads well at call sites; ``auth`` is also the token module
+        if kind not in AUTH_KINDS:
+            raise ValueError(f"unknown auth kind {kind!r}")
 
         def decorator(func: Callable) -> Callable:
             def endpoint(**path_params: str) -> Response:
@@ -179,13 +184,13 @@ class Api:
                     if not _PATH_PARAM.match(value):
                         raise DomainError(ErrorCode.NOT_FOUND, "Not found.")
                 request = Request(self.resolver, self.resolver.context["_request_id"])
-                request.authenticate(auth)
+                request.authenticate(kind)
                 return to_response(func(request, **path_params), default_status=status)
 
             endpoint.__name__ = func.__name__
             endpoint.__doc__ = func.__doc__
             self.resolver.route(path, method)(endpoint)
-            self.routes.append(RouteSpec(method, path, auth))
+            self.routes.append(RouteSpec(method, path, kind))
             return func
 
         return decorator
@@ -283,7 +288,7 @@ def observe(resolver: APIGatewayHttpResolver, next_middleware: Callable[..., Res
     log = logger.warning if status >= 500 else logger.info
     log(
         "request",
-        route=f"{matched.method} {matched.path}" if matched is not None else "unmatched",
+        route=f"{matched.method} {matched.path}"[:160] if matched is not None else "unmatched",
         status=status,
         latency_ms=int((time.perf_counter() - started) * 1000),
         **fields,

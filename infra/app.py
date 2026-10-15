@@ -19,8 +19,10 @@ AldoReturnsDemoStack(
     # cdk deploy -c useRealCode=true switches the Lambda assets from infra/stubs to
     # infra/build/lambda (built by scripts/bundle_backend.sh --lambda).
     use_real_code=_flag("useRealCode"),
-    # cdk deploy -c runtimeArn=arn:aws:bedrock-agentcore:... tightens the worker IAM
-    # policy and sets AGENT_RUNTIME_ARN. Unset keeps a safe placeholder.
+    # cdk deploy -c runtimeArn=arn:aws:bedrock-agentcore:... pins the worker IAM policy to
+    # that exact runtime and sets AGENT_RUNTIME_ARN. Unset: the policy covers runtimes named
+    # <agentRuntimeName>-* and the worker reads the SSM parameter /aldo-demo/runtime-arn.
     runtime_arn=app.node.try_get_context("runtimeArn"),
+    agent_runtime_name=app.node.try_get_context("agentRuntimeName") or "aldo_returns_agent",
 )
 app.synth()

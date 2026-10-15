@@ -10,7 +10,7 @@ import {
   POLICY_VERSION,
   QUOTE_TTL_MS,
   addDays,
-  addMemoryUpdate,
+  enqueueWriteback,
   candidatesFor,
   evaluatePolicy,
   finishRun,
@@ -55,7 +55,7 @@ interface Intent {
 function understand(message: string): Intent {
   const m = message.toLowerCase();
   const mentioned = /DEMO-\d{4}/i.exec(message)?.[0].toUpperCase() ?? null;
-  const defect = /(broke|broken|defect|damag|crack|tore|torn|split|fell apart|peeling)/.test(m);
+  const defect = /\b(broke|broken|defect\w*|damag\w*|crack\w*|tore|torn|split|fell apart|peeling)\b/.test(m);
   const mind = /(changed my mind|change of mind|don'?t want|do not want|no longer|not what i expected|return them for a refund|just want a refund)/.test(m);
   const small = /(too small|too tight|tight|half size up|size up|too narrow|pinch)/.test(m);
   const big = /(too big|too large|too loose|loose|half size down|size down)/.test(m);
@@ -486,7 +486,8 @@ export function buildApprovalRun(p: ApprovalParams): Script {
         const originalSize = line.size;
         const newSize = opt.replacement_size ?? originalSize;
         const reasonCode = Number(newSize) > Number(originalSize) ? "TOO_SMALL" : "TOO_BIG";
-        addMemoryUpdate(p.customerId, {
+        // Queued, not delivered: the real API delivers it when ALDO bot's memory is next read.
+        enqueueWriteback(p.customerId, {
           update_id: updateId,
           order_id: order.order_id,
           style_id: line.style,
@@ -499,16 +500,6 @@ export function buildApprovalRun(p: ApprovalParams): Script {
           provisional: true,
           source: "ALDO_CA",
           ts: iso(now()),
-        });
-        pushA2a(p.customerId, "memory_updated", "personal_agent", {
-          update_id: updateId,
-          style_id: line.style,
-          product_name: line.product_name,
-          original_size: originalSize,
-          new_size: newSize,
-          reason: reasonCode,
-          outcome: "exchange_created",
-          provisional: true,
         });
       },
     );

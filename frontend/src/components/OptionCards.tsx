@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useNow } from "../hooks/useNow";
 import { formatCents, formatCountdown, formatDate } from "../lib/format";
 import type { OptionView, QuoteView } from "../lib/normalize";
@@ -35,10 +36,20 @@ export function OptionCards({ quote, quoteId, loading, error, runActive, requoti
   const locked = !!approvedId || quote?.status === "executed";
   const dead = quote?.status === "superseded";
 
+  // Bring the options into view once per quote, when the agent has finished (the column scrolls on its own).
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const revealed = useRef<string | null>(null);
+  const ready = !!quote && !runActive;
+  useEffect(() => {
+    if (!ready || revealed.current === quoteId) return;
+    revealed.current = quoteId;
+    headingRef.current?.scrollIntoView({ block: "start" });
+  }, [ready, quoteId]);
+
   return (
     <section className="card" aria-labelledby="options-title" data-testid="options">
       <div className="card-head">
-        <h3 id="options-title" tabIndex={-1}>
+        <h3 id="options-title" ref={headingRef} tabIndex={-1}>
           Your options
         </h3>
         <span className="muted mono">{quoteId}</span>

@@ -175,7 +175,7 @@ function Row({ row, showActors }: { row: TraceRow; showActors: boolean }) {
     case "assistant":
       return (
         <li className="trace-item trace-muted">
-          <Icon name="message" size={16} /> {actor} <span>Replied to the owner</span>
+          <Icon name="message" size={16} /> {actor} <span>{row.actor === "personal_agent" ? "Replied to the owner" : "Replied to the customer"}</span>
         </li>
       );
 

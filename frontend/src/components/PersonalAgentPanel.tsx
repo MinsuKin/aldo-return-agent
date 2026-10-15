@@ -16,6 +16,9 @@ import { MemoryCard } from "./MemoryCard";
 import { PurchaseCard, type PlacedOrder } from "./PurchaseCard";
 import { TraceTimeline, type TraceGroup } from "./TraceTimeline";
 
+/** Whether ALDO's size update to ALDO bot is still owed (see Workspace). */
+export type WritebackState = "idle" | "waiting" | "late";
+
 interface Props {
   /** Increments whenever the A2A feed shows a memory_updated event. */
   memoryVersion: number;
@@ -23,6 +26,8 @@ interface Props {
   proposalId: string | undefined;
   /** Increments whenever the A2A feed shows a size_confirmed event. */
   confirmedCount: number;
+  writeback: WritebackState;
+  onCheckAgain: () => void;
   onActive: (active: boolean) => void;
   onRestart: () => void;
 }
@@ -30,7 +35,7 @@ interface Props {
 const PA_SUGGESTIONS = [PA_PROMPT];
 
 /** ALDO bot, the owner's personal agent: memory card, chat, purchase proposal, and its own tool trace. */
-export function PersonalAgentPanel({ memoryVersion, proposalId, confirmedCount, onActive, onRestart }: Props) {
+export function PersonalAgentPanel({ memoryVersion, proposalId, confirmedCount, writeback, onCheckAgain, onActive, onRestart }: Props) {
   const qc = useQueryClient();
   const [chat, dispatch] = useReducer(chatReducer, initialChat);
   const [sending, setSending] = useState(false);
@@ -153,7 +158,13 @@ export function PersonalAgentPanel({ memoryVersion, proposalId, confirmedCount, 
 
   return (
     <>
-      <MemoryCard memory={memory} loading={memoryQuery.isPending} error={memoryQuery.isError ? describeError(memoryQuery.error).message : null} />
+      <MemoryCard
+        memory={memory}
+        loading={memoryQuery.isPending}
+        error={memoryQuery.isError ? describeError(memoryQuery.error).message : null}
+        writeback={writeback}
+        onCheckAgain={onCheckAgain}
+      />
 
       <Chat
         idPrefix="pa"

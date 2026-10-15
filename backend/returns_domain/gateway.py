@@ -40,24 +40,34 @@ Write-back (C2, 5.4): ``build_memory_update``, ``enqueue_memory_update`` and ``f
 thin wrappers over ``memory_updates`` (the single implementation of the update payload, the
 outbox item and its state changes). ``flush_outbox`` never raises; only the caller that wins the
 ``pending -> delivered`` transition emits ``memory_updated``, so it appears exactly once.
-``memory_updates`` is bound late (imported on first use).
 """
 
 from __future__ import annotations
 
-import importlib
 import logging
 import random
 import re
 import time
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import date, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from . import audit, auth, clock, config, fit, fixtures, money, personal_agent_client, store, trace
+from . import (
+    audit,
+    auth,
+    clock,
+    config,
+    fit,
+    fixtures,
+    memory_updates,
+    money,
+    options,
+    store,
+    trace,
+)
 from .errors import DomainError, ErrorCode
 from .personal_agent_client import PersonalAgentClient, get_client
 
@@ -95,25 +105,6 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
-
-class _LateModule:
-    """Handle on a sibling module that is imported on first attribute access."""
-
-    def __init__(self, name: str) -> None:
-        self._name = name
-        self._module: Any = None
-
-    def __getattr__(self, attr: str) -> Any:
-        if attr.startswith("__"):
-            raise AttributeError(attr)
-        if self._module is None:
-            self._module = importlib.import_module(f"{__package__}.{self._name}")
-        return getattr(self._module, attr)
-
-
-#: Written by the persistence stream; bound late. Tests replace this name with a fake.
-memory_updates: Any = _LateModule("memory_updates")
-
 # --------------------------------------------------------------------------- constants
 
 BANNER = "ALDO_CA"
@@ -129,6 +120,7 @@ REQUEST_ID_PREFIX = "SZR-"
 STATUS_OPEN = "open"
 STATUS_PROPOSED = "proposed"
 STATUS_DECIDED = "decided"
+STATUS_EXPIRED = "expired"  # only ever shown by get_proposal, never stored
 ORDER_STATUS = "placed_simulated"
 APPROVED_BY = "owner_click"
 
@@ -140,6 +132,8 @@ OUTCOME_KEPT = "exchange_completed_kept"
 
 MAX_CANDIDATES = 10
 PENDING_LIMIT_CAP = 50
+INDEX_ATTEMPTS = 4  # reads of a GSI1 size run that is still catching up
+INDEX_WAIT_SECONDS = 0.1
 _TRANSACTION_ATTEMPTS = 4
 
 _REQUEST_ID = re.compile(r"SZR-[0-9A-F]{6}")
@@ -221,11 +215,16 @@ class SizeDecisionRequest(_Request):
     rationale_public: str = ""
     confidence: Literal["low", "medium", "high"] = "medium"
 
+    @field_validator("chosen_size", mode="before")
+    @classmethod
+    def _not_a_flag(cls, value: Any) -> Any:
+        if isinstance(value, bool):  # pydantic would read True as the size 1
+            raise ValueError("chosen_size must be a size such as 8.0")
+        return value
+
     @field_validator("chosen_size")
     @classmethod
     def _size(cls, value: str | int | float) -> str:
-        if isinstance(value, bool):
-            raise ValueError("chosen_size must be a size such as 8.0")
         try:
             return store.size_str(value)
         except DomainError as exc:
@@ -417,11 +416,10 @@ def _transit_days(location: Mapping[str, Any], field: str) -> int:
 def eta_for_option(location: Mapping[str, Any], option_type: str, today: date) -> date:
     """Calendar-day ETA of ``option_type`` from ``location`` on ``today`` (no business days).
 
-    Pickup uses ``pickup_ready_days``; both ship types use ``ship_days``. This is the same
-    calculation as ``options.eta_for`` in the persistence stream; keep the two in step.
+    The single place the gateway asks for an ETA: it delegates to ``options.eta_for``, the rule
+    the returns options use (pickup: ``pickup_ready_days``; both ship types: ``ship_days``).
     """
-    field = "pickup_ready_days" if option_type == TYPE_PICKUP else "ship_days"
-    return today + timedelta(days=_transit_days(location, field))
+    return options.eta_for(location, option_type, today)
 
 
 def _location_id(item: Mapping[str, Any]) -> str:
@@ -577,19 +575,23 @@ def next_step_text(option: Mapping[str, Any]) -> str:
     )
 
 
-def _option_summary(record: Mapping[str, Any], option_id: str) -> dict[str, Any]:
-    """The server-rendered facts of one offered option, for proposals and the owner's card."""
-    option = record["offered"][option_id]
+def _option_summary(record: Mapping[str, Any], option_id: str | None) -> dict[str, Any]:
+    """The server-rendered facts of one offered option, for proposals and the owner's card.
+
+    With no option (a request nothing has been proposed for yet) the option fields are None.
+    """
+    option = record["offered"][option_id] if option_id else {}
+    eta_date = option.get("eta_date")
     return {
         "product_name": record["product_name"],
         "color": record["color"],
-        "option_id": option_id,
-        "size": option["size"],
-        "option_type": option["type"],
-        "location_id": option["location_id"],
-        "location_name": option["location_name"],
-        "eta_date": option["eta_date"],
-        "eta_text": _eta_text(option["eta_date"]),
+        "option_id": option_id or None,
+        "size": option.get("size"),
+        "option_type": option.get("type"),
+        "location_id": option.get("location_id"),
+        "location_name": option.get("location_name"),
+        "eta_date": eta_date,
+        "eta_text": _eta_text(eta_date) if eta_date else None,
         "meets_deadline": option.get("meets_deadline"),
         "price_cents": record["price_cents"],
         "currency": record.get("currency", money.CURRENCY),
@@ -662,7 +664,10 @@ def _pause() -> None:
 
 def _emit(customer_id: str, event_type: str, payload: dict[str, Any], actor: str) -> None:
     """A2A trace event; failures are logged, never raised (the business write already won)."""
-    trace.emit_a2a_safe(customer_id, event_type, payload, actor=actor)
+    try:
+        trace.emit_a2a_safe(customer_id, event_type, payload, actor=actor)
+    except Exception:
+        logger.warning("a2a trace event %s was not recorded", event_type, exc_info=True)
 
 
 def _delegated_owner(claims: Any) -> str:
@@ -728,12 +733,27 @@ def _require_stock(option: Mapping[str, Any]) -> None:
 
 
 def _style_products(style_id: str, color: str) -> list[dict[str, Any]]:
-    items = store.query(f"STYLE#{style_id}#{color}", index="GSI1")
-    products = [
-        item
-        for item in items
-        if isinstance(item.get("sku"), str) and isinstance(item.get("size"), str)
-    ]
+    """The size run of one style and color from GSI1 (eventually consistent).
+
+    Right after a demo reset the index can be a few milliseconds behind the table, so a run
+    that is shorter than the fixture catalog's is read again a few times before it is used.
+    """
+    expected = {
+        p["sku"]
+        for p in fixtures.load_bundle().products
+        if p.get("style") == style_id and p.get("color") == color
+    }
+    products: list[dict[str, Any]] = []
+    for attempt in range(1, INDEX_ATTEMPTS + 1):
+        items = store.query(f"STYLE#{style_id}#{color}", index="GSI1")
+        products = [
+            item
+            for item in items
+            if isinstance(item.get("sku"), str) and isinstance(item.get("size"), str)
+        ]
+        if {p["sku"] for p in products} >= expected or attempt == INDEX_ATTEMPTS:
+            break
+        time.sleep(INDEX_WAIT_SECONDS * attempt)
     if not products:
         raise DomainError(ErrorCode.NOT_FOUND, "No stock data for this style.")
     if len({item.get("price_cents") for item in products}) != 1:
@@ -844,6 +864,13 @@ def size_assist(claims: auth.TokenClaims, request: Mapping[str, Any]) -> SizeAss
     else:
         raise DomainError(ErrorCode.TRANSACTION_CONFLICT, "Could not create a size request; retry.")
 
+    logger.info(
+        "size request created id=%s style=%s sizes=%d options=%d",
+        request_id,
+        style_id,
+        len(sizes),
+        len(offered),
+    )
     _emit(
         owner,
         "size_assist_requested",
@@ -961,6 +988,18 @@ def decide_size(claims: auth.TokenClaims, request: Mapping[str, Any]) -> SizePro
             )
         _require_stock(option)
 
+        if (
+            record.get("status") == STATUS_PROPOSED
+            and record.get("proposed_option_id") == option_id
+            and record.get("proposed_size") == size
+            and record.get("rationale_public") == body.rationale_public
+            and record.get("confidence") == body.confidence
+        ):  # the same proposal again (a retry): nothing to write, nothing new to show
+            return SizeProposalResponse(
+                size_request_id=request_id,
+                expires_at=record["expires_at"],
+                summary=_option_summary(record, option_id),
+            )
         proposed_at = store.now_iso()
         try:
             store.update_item(
@@ -978,6 +1017,7 @@ def decide_size(claims: auth.TokenClaims, request: Mapping[str, Any]) -> SizePro
             )
         except store.ConditionFailed:
             continue  # decided (or removed) since the read: look again
+        logger.info("purchase proposed id=%s option=%s size=%s", request_id, option_id, size)
         _emit(
             owner,
             "size_recommended",
@@ -1008,19 +1048,21 @@ def get_proposal(customer_id: str, size_request_id: str) -> dict[str, Any]:
     """The owner's purchase card (``GET /api/purchases/{id}``, session token, owner-checked).
 
     Server data only: product, color, size, option type, location, ETA, deadline flag, price,
-    the fit headline, the bot's public rationale and confidence, status and expiry. A request
-    with no proposal yet is NOT_FOUND; another customer's is NOT_AUTHORIZED plus an audit event.
+    the fit headline, the bot's public rationale and confidence, status and expiry. ``status``
+    says where the request stands: ``open`` (nothing proposed yet; the option fields are None),
+    ``proposed``, ``decided`` (``order_id`` and ``next_step`` are set) or ``expired`` (a request
+    that was never confirmed and is past ``expires_at``; the proposal, if any, is still shown).
+    Another customer's request is NOT_AUTHORIZED plus an audit event.
     """
     owner = _clean_record_id(customer_id, "customer_id")
     request_id = _clean_request_id(size_request_id)
     record = _load_request(owner, request_id, actor=owner)
-    status = record.get("status")
-    if status == STATUS_DECIDED:
-        option_id = record["chosen_option_id"]
-    elif status == STATUS_PROPOSED:
-        option_id = record["proposed_option_id"]
+    stored = record.get("status")
+    if stored == STATUS_DECIDED:
+        status, option_id = STATUS_DECIDED, record.get("chosen_option_id")
     else:
-        raise DomainError(ErrorCode.NOT_FOUND, "No purchase has been proposed for this request yet.")
+        option_id = record.get("proposed_option_id") if stored == STATUS_PROPOSED else None
+        status = STATUS_EXPIRED if _is_expired(record) else stored
     view = {
         "size_request_id": request_id,
         "status": status,
@@ -1030,7 +1072,6 @@ def get_proposal(customer_id: str, size_request_id: str) -> dict[str, Any]:
         "confidence": record.get("confidence"),
         "proposed_at": record.get("proposed_at"),
         "expires_at": record["expires_at"],
-        "expired": status != STATUS_DECIDED and _is_expired(record),
         "order_id": record.get("order_id"),
         "next_step": (record.get("result") or {}).get("next_step"),
     }
@@ -1141,6 +1182,7 @@ def confirm_purchase(
 
         result: SizeDecisionResponse = plan["result"]
         option = plan["option"]
+        logger.info("purchase confirmed id=%s order=%s", request_id, result.order_id)
         _emit(
             owner,
             "size_confirmed",
@@ -1205,91 +1247,31 @@ def simulate_delivery(customer_id: str, order_id: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------- write-back (5.4)
 
 
-def _txn_value(txn: Mapping[str, Any], name: str) -> Any:
-    if name in txn:
-        return txn[name]
-    nested = txn.get("option")
-    return nested.get(name) if isinstance(nested, Mapping) else None
-
-
-def _policy_direction(txn: Mapping[str, Any]) -> str | None:
-    """``size_direction`` of the transaction's policy check, best effort (None when unknown)."""
-    try:
-        check_id = _txn_value(txn, "policy_check_id")
-        if not check_id and _txn_value(txn, "quote_id"):
-            quote = store.get_item(store.quote_key(txn["quote_id"]))
-            check_id = quote.get("policy_check_id") if quote else None
-        if not check_id:
-            return None
-        check = store.get_item(store.pchk_key(check_id))
-        direction = check.get("size_direction") if check else None
-        return direction if isinstance(direction, str) else None
-    except Exception:
-        return None
-
-
-def _exchange_reason(txn: Mapping[str, Any], original_size: str, new_size: str) -> str:
-    """F.5: the policy check's size direction, else the sizes (larger = too small), else OTHER."""
-    direction = _txn_value(txn, "size_direction") or _policy_direction(txn)
-    if direction == "too_small":
-        return "TOO_SMALL"
-    if direction == "too_big":
-        return "TOO_BIG"
-    try:
-        old, new = Decimal(original_size), Decimal(new_size)
-    except (InvalidOperation, TypeError):
-        return "OTHER"
-    if new > old:
-        return "TOO_SMALL"
-    if new < old:
-        return "TOO_BIG"
-    return "OTHER"
-
-
 def build_memory_update(
     txn: Mapping[str, Any], *, outcome: str = OUTCOME_CREATED, provisional: bool | None = None
 ) -> dict[str, Any] | None:
-    """The write-back payload (addendum 5.4) of an exchange transaction; None for a return.
+    """The write-back payload (addendum 5.4) of a stored exchange ``TXN#`` item; None for a return.
 
-    A thin wrapper: it gathers the order line and the reason, then ``memory_updates.build_update``
-    builds the payload and its ``update_id``. ``exchange_created`` is always provisional (ALDO
-    cannot know the owner keeps the pair); ``exchange_completed_kept`` is not. The payload has
-    no typical size, no hint, no other retailer or event.
+    A thin wrapper over ``memory_updates.update_from_txn_item``, which owns the payload and the
+    ``update_id``. ``exchange_created`` is always provisional (ALDO cannot know the owner keeps
+    the pair); ``exchange_completed_kept`` never is. The payload has no typical size, no hint,
+    no other retailer or event.
     """
-    option_type = _txn_value(txn, "option_type")
-    if not (isinstance(option_type, str) and option_type.startswith("exchange_")):
-        return None
-    customer_id, order_id, line_id = txn.get("customer_id"), txn.get("order_id"), txn.get("line_id")
-    new_size = _txn_value(txn, "replacement_size")
-    line = store.get_item(store.line_key(order_id, line_id), consistent=True)
-    if line is None or not isinstance(new_size, str):
-        raise DomainError(ErrorCode.INTERNAL_ERROR, "the exchange has no order line or new size")
-    original_size = line["size"]
-    return memory_updates.build_update(
-        customer_id=customer_id,
-        order_id=order_id,
-        line=line,
-        txn=txn,
-        original_size=original_size,
-        new_size=new_size,
-        reason=_exchange_reason(txn, original_size, new_size),
-        outcome=outcome,
-        provisional=(outcome == OUTCOME_CREATED) if provisional is None else provisional,
-    )
+    try:
+        return memory_updates.update_from_txn_item(txn, outcome=outcome, provisional=provisional)
+    except KeyError:
+        raise DomainError(
+            ErrorCode.INTERNAL_ERROR, "the transaction has no write-back snapshot"
+        ) from None
 
 
 def enqueue_memory_update(update: Mapping[str, Any]) -> bool:
     """Idempotent outbox put; False when the update was already queued (or delivered)."""
-    item = memory_updates.outbox_item(update, update["owner_ref"])
-    try:
-        store.put_item(item, condition="attribute_not_exists(#pk)")
-    except store.ConditionFailed:
-        return False
-    return True
+    return bool(memory_updates.enqueue(update))
 
 
 def _outbox_update(item: Mapping[str, Any]) -> Mapping[str, Any]:
-    update = item.get("payload", item.get("update"))
+    update = item.get("payload", item.get("update")) if isinstance(item, Mapping) else None
     if not isinstance(update, Mapping) or not isinstance(update.get("update_id"), str):
         raise DomainError(ErrorCode.INTERNAL_ERROR, "an outbox item has no update")
     return update
@@ -1339,7 +1321,6 @@ def flush_outbox(
     change emits ``memory_updated``, so the event appears exactly once. A transport that cannot
     be built (not configured) leaves the items pending without burning attempts.
     """
-    delivered = 0
     try:
         bound = max(1, min(int(limit), PENDING_LIMIT_CAP))
         sender = client if client is not None else get_client()
@@ -1347,9 +1328,14 @@ def flush_outbox(
     except Exception:
         logger.warning("write-back outbox could not be read or the client built", exc_info=True)
         return 0
+    return _deliver_items(pending, sender)
 
-    for item in pending:
-        update_id = str(item.get("update_id") or "")
+
+def _deliver_items(items: Iterable[Mapping[str, Any]], sender: PersonalAgentClient) -> int:
+    """Send outbox items one by one; a failure is recorded on the item and never raised."""
+    delivered = 0
+    for item in items:
+        update_id = ""
         try:
             update = _outbox_update(item)
             update_id = update["update_id"]
@@ -1361,11 +1347,24 @@ def flush_outbox(
             delivered += 1
         except Exception as exc:
             logger.warning("write-back delivery failed: %s", type(exc).__name__)
+            if not update_id:
+                continue  # not a usable outbox item: there is nothing to record the failure on
             try:
                 memory_updates.mark_failed(update_id, _error_text(exc))
             except Exception:
                 logger.warning("write-back failure could not be recorded", exc_info=True)
     return delivered
+
+
+def _flush_new_update(owner: str, update_id: str) -> None:
+    """Deliver one just-queued item without waiting for the (eventually consistent) pending index."""
+    try:
+        item = memory_updates.get(update_id)
+        if item is not None and item.get("status") == "pending":
+            _deliver_items([item], get_client())
+        flush_outbox(owner, limit=3)  # anything else waiting for this owner
+    except Exception:
+        logger.warning("write-back flush after a pickup failed", exc_info=True)
 
 
 def simulate_pickup(customer_id: str, transaction_id: str) -> dict[str, Any]:
@@ -1399,7 +1398,7 @@ def simulate_pickup(customer_id: str, transaction_id: str) -> dict[str, Any]:
         already_done = False
     except store.ConditionFailed:
         already_done = True
-    flush_outbox(owner, limit=3)
+    _flush_new_update(owner, update["update_id"])
     return {
         "transaction_id": tid,
         "update_id": update["update_id"],
