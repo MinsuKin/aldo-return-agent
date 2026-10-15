@@ -328,3 +328,31 @@ def test_sanitize_public_rationale_accepts_the_owner_memory_model(repo: MemoryRe
 
 def test_sanitize_public_rationale_never_raises() -> None:
     assert tools.sanitize_public_rationale("anything", None).startswith("Chosen from")  # type: ignore[arg-type]
+
+
+# ------------------------------------------------------------------------------- clean_orders
+
+
+def test_clean_orders_keeps_the_category_when_present() -> None:
+    raw = [{"order_id": "DEMO-X-1", "channel": "web", "ordered_at": "2026-10-01", "delivered_at": "2026-10-02",
+            "lines": [{"product_name": "Lededanten", "color": "BLACK", "category": "derby", "size": "10.0", "qty": 1}]}]
+    cleaned = tools.clean_orders(raw)
+    assert cleaned is not None
+    line = cleaned[0]["lines"][0]
+    assert line == {"product_name": "Lededanten", "color": "BLACK", "size": "10.0", "qty": 1, "category": "derby"}
+
+
+def test_clean_orders_omits_the_category_when_absent_or_blank() -> None:
+    raw = [{"order_id": "DEMO-X-2", "lines": [
+        {"product_name": "Stessy2.0", "color": "BLACK", "size": "8.0", "qty": 1},
+        {"product_name": "Clementinne", "color": "TAN", "size": "8.0", "qty": 1, "category": "   "},
+    ]}]
+    for line in tools.clean_orders(raw)[0]["lines"]:  # type: ignore[index]
+        assert "category" not in line
+
+
+def test_clean_orders_bounds_the_category_to_the_maximum() -> None:
+    raw = [{"order_id": "DEMO-X-3", "lines": [
+        {"product_name": "Big", "color": "BLACK", "size": "9.0", "qty": 1, "category": "x" * 100}]}]
+    category = tools.clean_orders(raw)[0]["lines"][0]["category"]  # type: ignore[index]
+    assert len(category) <= tools.MAX_CATEGORY

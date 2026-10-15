@@ -254,7 +254,7 @@ function OptionBlock({ quote, option: o, primary, disabled, approved, onChoose }
             disabled={disabled}
             onClick={(e) => onChoose(quote, o, e.currentTarget)}
             data-testid={primary ? "confirm-option-open" : `choose-option-${o.optionId}`}
-            aria-label={primary ? undefined : `${confirmLabel(o)}: ${o.typeLabel}${o.locationName ? ` at ${o.locationName}` : ""}`}
+            aria-label={primary ? undefined : `Choose this instead: ${o.typeLabel}${o.locationName ? ` at ${o.locationName}` : ""}`}
           >
             {primary ? confirmLabel(o) : "Choose this instead"}
           </button>

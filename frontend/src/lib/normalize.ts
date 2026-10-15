@@ -187,12 +187,14 @@ function normalizeLines(raw: unknown, line: LineFallback): OptionLine[] {
   return out;
 }
 
-function normalizeBenefit(raw: unknown): BenefitView | undefined {
+function normalizeBenefit(raw: unknown, fallbackTier?: string): BenefitView | undefined {
   if (!isObj(raw)) return undefined;
   const label = str(pick(raw, ["label", "title", "name"])) ?? "Free return shipping";
   const used = num(raw.used);
-  const perMonth = num(raw.per_month);
-  const tier = str(pick(raw, ["tier_label", "tier"]));
+  // The option note of the real API (benefits.benefit_note) says `allowed`; the A2A benefit_applied event says `per_month`.
+  const perMonth = num(pick(raw, ["per_month", "allowed"]));
+  // That note has no tier field either: take it from the option's evidence, else from the label ("Platinum free return shipping").
+  const tier = str(pick(raw, ["tier_label", "tier"])) ?? fallbackTier ?? label.match(/^(\w+) free return shipping$/i)?.[1];
   const prefix = tier ? humanize(tier.replace(/ member$/i, "")) : "Member";
   const note =
     str(pick(raw, ["note", "text", "description"])) ??
@@ -233,7 +235,7 @@ export function normalizeOption(raw: Record<string, unknown>, fallbackCurrency: 
     isColorSwap: isExchange && !!fromColor && !!toColor && fromColor.toLowerCase() !== toColor.toLowerCase(),
     minutesAway: num(pick(raw, ["minutes_away", "travel_minutes", "eta_minutes"])),
     lines,
-    benefit: normalizeBenefit(raw.benefit),
+    benefit: normalizeBenefit(raw.benefit, isObj(raw.evidence) ? str(raw.evidence.tier) : undefined),
     rankingNote: str(pick(raw, ["ranking_note", "rank_reason", "ranking_reason"])),
   };
 }

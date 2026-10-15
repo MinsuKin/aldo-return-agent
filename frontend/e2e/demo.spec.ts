@@ -157,7 +157,8 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(page.getByTestId("bubble-bot").last()).toContainText("Brown");
     await expect(traceEvent(page, "memory_consulted")).toHaveCount(1);
     await page.getByTestId("quick-john-4").click();
-    await expect(page.getByTestId("bubble-bot").last()).toContainText("5 min away");
+    // The bubble is model text on a real deployment ("5 minutes away") and scripted on the mock ("5 min away").
+    await expect(page.getByTestId("bubble-bot").last()).toContainText(/5 min(ute)?s? away/);
     await page.getByTestId("quick-john-5").click();
 
     const quote = page.getByTestId("quote-card");
@@ -169,7 +170,8 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(primary).toContainText("brown 9.5");
     await expect(primary).toContainText("ALDO Demo Store Montreal");
     await expect(primary).toContainText("5 min away");
-    await expect(primary).toContainText("Today");
+    // Ready date: scripted "Today" on the mock; the deployed fixture says Sat Oct 17 (pickup_ready_days 1, builder section 8).
+    await expect(primary).toContainText(IS_MOCK ? "Today" : /Sat Oct 17|Tomorrow/);
     await expect(primary).toContainText("Free");
     await expect(quote.getByTestId("confirm-option-open")).toHaveText("Confirm exchange");
     // Refund options stay reachable under "See other options".
@@ -197,7 +199,7 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(txn.getByTestId("txn-id")).toHaveText(/^DEMO-RMA-[0-9A-F]{6}$/);
     await expect(txn.getByTestId("store-notice")).toContainText("ALDO Store Desk notified");
     await expect(txn.getByTestId("store-notice")).toContainText("5 min away");
-    await expect(page.getByTestId("bubble-bot").last()).toContainText("notified the store");
+    await expect(page.getByTestId("bubble-bot").last()).toContainText(/store.*notified|notified.*store/is);
     await expect(page.getByTestId("workflow-pill")).toContainText("Purchase");
     // The return workflow's public milestones sit in the trace next to the A2A events.
     await expect(trace(page).getByText("Policy decision: eligible")).toBeVisible();
@@ -239,8 +241,11 @@ test.describe("David (Platinum): the bundle return", () => {
 
     await page.getByTestId("quick-david-1").click();
     await expect(page.getByTestId("workflow-pill")).toContainText("Return");
-    await expect(page.getByTestId("bubble-bot").last().locator("li")).toHaveCount(10);
-    await expect(page.getByTestId("bubble-bot").last()).toContainText("Which three");
+    // Addendum 11.2: ALDO bot shows the 10 items (numbered) and asks which three and why. SOFT on purpose: finding F2 in
+    // test-findings.md (the deployed hand-off is one short sentence, addendum 12.1, and lists nothing). The assertion stays
+    // red until that is decided, and the rest of the flow still runs.
+    await expect.soft(page.getByTestId("bubble-bot").last().locator("li")).toHaveCount(10);
+    await expect(page.getByTestId("bubble-bot").last()).toContainText(/which (three|ones|items)/i);
     await expect(traceEvent(page, "handoff_to_returns").first()).toBeVisible();
 
     await page.getByTestId("quick-david-2").click();
@@ -254,7 +259,9 @@ test.describe("David (Platinum): the bundle return", () => {
     await expect(primary.getByTestId("benefit-note")).toContainText("Platinum perk 1 of 1 this month");
     await expect(primary.getByTestId("option-fee")).toContainText("CAD 0.00");
     await expect(primary.getByTestId("option-fee")).toContainText("CAD 5.95");
-    await expect(primary.getByTestId("option-refund")).toHaveText("CAD 429.97");
+    // Refund total of the three lines: CAD 419.97 on the deployed fixtures (17999 + 10999 + 12999, handoff section 4);
+    // the mock's own price list gives 429.97 (finding F3).
+    await expect(primary.getByTestId("option-refund")).toHaveText(IS_MOCK ? "CAD 429.97" : "CAD 419.97");
     await expect(quote.getByTestId("confirm-option-open")).toHaveText("Confirm bundle return");
     await onMock(async () => {
       await expect(primary).toContainText("Goer boot");
@@ -281,16 +288,20 @@ test.describe("David (Platinum): the bundle return", () => {
 
     // The optional beat: the perk is used for this month, the standard fee applies, and no argument changes it.
     await page.getByTestId("quick-david-3").click();
+    // A deployment asks for the reason of the second return (the stage script gives none); the phone offers it as the next chip (F5).
+    if (!IS_MOCK) await page.getByTestId("quick-david-3b").click();
     const second = page.getByTestId("quote-card").last();
     await expect(second).toContainText("Your options");
     await expect(page.getByTestId("typing")).toHaveCount(0);
     await expect(second.getByTestId("benefit-note")).toHaveCount(0);
     await expect(second.getByTestId("option-fee")).toContainText("CAD 5.95");
     await expect(second.getByTestId("option-refund")).toHaveText("CAD 94.04");
-    await expect(page.getByTestId("bubble-bot").last()).toContainText("already used");
+    await expect(page.getByTestId("bubble-bot").last()).toContainText(/(already|been) used|used (up|this month)|no (more|longer)/i);
     await page.getByTestId("quick-david-4").click();
-    await expect(page.getByTestId("bubble-bot").last()).toContainText("I can't change that");
+    await expect(page.getByTestId("bubble-bot").last()).toContainText(/can(no|')t|unable|not able|won't|isn't possible|not something/i);
     await expect(page.getByTestId("quote-card")).toHaveCount(2);
+    // The refusal is not just words: the fee on the card is still the standard one.
+    await expect(page.getByTestId("quote-card").last().getByTestId("option-fee")).toContainText("CAD 5.95");
     await expectNaming(page);
   });
 });

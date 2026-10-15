@@ -528,10 +528,21 @@ def test_recent_orders_are_compact_and_newest_first(world):
     listed = returns_chat.recent_orders(AVA)
     assert listed and listed[0]["order_id"].startswith("DEMO-")
     assert set(listed[0]) == {"order_id", "channel", "ordered_at", "delivered_at", "lines"}
-    assert set(listed[0]["lines"][0]) == {"product_name", "color", "size", "qty"}
+    assert set(listed[0]["lines"][0]) <= {"product_name", "color", "size", "qty", "category"}
+    assert {"product_name", "color", "size", "qty"} <= set(listed[0]["lines"][0])
     assert len(returns_chat.recent_orders(AVA, limit=2)) == 2
     assert returns_chat.recent_orders("DEMO-CUST-NOBODY") == []
     assert AVA not in json.dumps(listed)
+
+
+def test_recent_orders_carry_the_category_when_the_order_has_one(world):
+    david = returns_chat.recent_orders("DEMO-CUST-DAVID")
+    bundle = next((o for o in david if len(o["lines"]) > 1), None)
+    assert bundle is not None, "David's multi-item bundle order should be listed"
+    assert any(line.get("category") for line in bundle["lines"])  # category reaches the bot
+    for line in bundle["lines"]:
+        if "category" in line:
+            assert isinstance(line["category"], str) and line["category"]
 
 
 def test_no_user_facing_text_of_the_single_chat_mentions_a_second_agent(world, app, enqueued):

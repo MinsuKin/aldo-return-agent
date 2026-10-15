@@ -2495,6 +2495,182 @@ def scenario_s1(ctx: Ctx, rec: Recorder) -> None:
     check_hygiene(rec, ctx, ctx.tables.snapshot(pa=True), JOHN, texts)
 
 
+# ------------------------------------------------------------- K1 (two owners at the same time)
+
+
+def _merge_thread_recorder(rec: Recorder, thread: Recorder, prefix: str) -> None:
+    """Fold a thread's own Recorder into the main one: checks (name-prefixed), llm_runs, observed, latency."""
+    for chk in thread.checks:
+        rec.check(f"{prefix}{chk.name}", chk.ok, chk.detail)
+    rec.llm_runs.extend(thread.llm_runs)
+    for key, value in thread.observed.items():
+        rec.observe(f"{prefix}{key}", value)
+    rec.latency_ms += thread.latency_ms
+
+
+def _john_buys(ctx: Ctx, trec: Recorder, barrier: "Any") -> None:
+    """John's whole purchase, API/Chat only (no ctx.tables): propose via the bot, confirm, simulate delivery.
+
+    An exception becomes a failed check carrying its text, so the thread never crashes the scenario."""
+    try:
+        session = ctx.api.session(JOHN)
+        chat = Chat(ctx, trec, session, JOHN).open()
+        barrier.wait(timeout=30)  # start at the same instant as David
+        _body, _res = chat.send(JOHN_BUY, "bot_run")
+        # Find the size_request_id through the API: newest `size_recommended` event in John's own stream.
+        events = ctx.api.get("/api/a2a/events?after=0", token=session)
+        recs = [e for e in dig(events.body, "events", default=[]) if e.get("type") == "size_recommended"]
+        rid = str(dig(recs[-1], "payload.size_request_id", default="")) if recs else ""
+        if not trec.check("john_found_size_request_through_the_api", bool(rid), f"{events.brief()} size_recommended events={len(recs)}"):
+            return
+        view = ctx.api.get(f"/api/purchases/{rid}", token=session)
+        option_id = str(dig(view.body, "option_id", default="") or "")
+        if not trec.check("john_purchase_view_is_proposed_with_an_option",
+                          view.ok and dig(view.body, "status") == "proposed" and bool(option_id), view.brief()):
+            return
+        click = owner_confirm(ctx, trec, session, rid, option_id)
+        oid = str(dig(click.body, "order_id", default="") or "")
+        if not trec.check("john_owner_click_placed_one_order", click.status == 200 and bool(oid), click.brief()):
+            return
+        trec.observe("john_order_id", oid)
+        trec.observe("john_size_request_id", rid)
+        d1 = ctx.api.post("/api/demo/simulate-delivery", {"order_id": oid}, token=session)
+        trec.check("john_delivery_simulated", d1.ok, d1.brief())
+    except Exception as exc:  # a thread error is a failed check, never a crash
+        trec.check("john_thread_did_not_raise", False, f"{type(exc).__name__}: {exc}")
+
+
+def _david_returns(ctx: Ctx, trec: Recorder, barrier: "Any") -> None:
+    """David's 3-of-10 mail return, API/Chat only: hand off, drive to the quote, approve the return_mail option."""
+    try:
+        session = ctx.api.session(DAVID)
+        chat = Chat(ctx, trec, session, DAVID).open()
+        barrier.wait(timeout=30)  # start at the same instant as John
+        chat.send(DAVID_RETURN[0], "handoff_run")
+        quote_id, last = drive_to_quote(chat, DAVID_RETURN[1:], DAVID_NUDGES, "bundle_run")
+        if not trec.check("david_quote_created", quote_id is not None, f"last run events: {last.types if last else None}"):
+            return
+        trec.observe("david_quote_id", quote_id)
+        # Read the quote and pick the return_mail option through the API only (no ctx.tables in a thread).
+        resp = ctx.api.get(f"/api/quotes/{quote_id}", token=session)
+        options = [dict(o) for o in dig(resp.body, "options", default=[])] if resp.ok else []
+        mail = pick_option(options, type_="return_mail")
+        if not trec.check("david_quote_offers_return_by_mail", mail is not None, f"{resp.brief()} types={[o.get('type') for o in options]}"):
+            return
+        trec.check("david_mail_fee_zero_refund_41997", (mail.get("fee_cents"), mail.get("refund_cents")) == (0, 41997),
+                   f"fee/refund = {mail.get('fee_cents')}/{mail.get('refund_cents')}")
+        tid, _run = bundle_commit(ctx, trec, session, quote_id, mail, "david_approve")
+        if not trec.check("david_bundle_committed_one_transaction", bool(tid), f"transaction id: {tid}"):
+            return
+        trec.observe("david_transaction_id", tid)
+    except Exception as exc:  # a thread error is a failed check, never a crash
+        trec.check("david_thread_did_not_raise", False, f"{type(exc).__name__}: {exc}")
+
+
+def scenario_k1(ctx: Ctx, rec: Recorder) -> None:
+    """Two owners at the same instant: John buys the Men 001 while David returns 3 of 10 by mail. No cross-talk:
+    one order for John, one transaction for David, the Platinum perk used once, and neither stream carries the
+    other owner's ids. Each flow runs in its own thread on HTTP + Chat only (boto3 is not thread safe)."""
+    import threading
+
+    base = reset_and_baseline(ctx, rec, "default", pa=True)
+
+    john_rec = Recorder("K1", rec.run_index, rec.variant)
+    david_rec = Recorder("K1", rec.run_index, rec.variant)
+    barrier = threading.Barrier(2)
+    john = threading.Thread(target=_john_buys, args=(ctx, john_rec, barrier), name="K1-john")
+    david = threading.Thread(target=_david_returns, args=(ctx, david_rec, barrier), name="K1-david")
+
+    wall_start = time.perf_counter()
+    john.start()
+    david.start()
+    john.join()
+    david.join()
+    rec.observe("concurrent_section_wall_ms", round((time.perf_counter() - wall_start) * 1000.0, 1))
+
+    _merge_thread_recorder(rec, john_rec, "")   # John's checks already carry a john_ prefix
+    _merge_thread_recorder(rec, david_rec, "")  # David's checks already carry a david_ prefix
+
+    john_done = all(c.ok for c in john_rec.checks) and bool(john_rec.checks)
+    david_done = all(c.ok for c in david_rec.checks) and bool(david_rec.checks)
+    rec.check("both_flows_completed", john_done and david_done, f"john_ok={john_done} david_ok={david_done}")
+
+    # Carry the ids each thread found over to the main thread's assertions.
+    john_oid = str(john_rec.observed.get("john_order_id") or "")
+    john_rid = str(john_rec.observed.get("john_size_request_id") or "")
+    david_tid = str(david_rec.observed.get("david_transaction_id") or "")
+    david_qid = str(david_rec.observed.get("david_quote_id") or "")
+    for key in ("bot_run_busy_retries", "handoff_run_busy_retries"):
+        if key in john_rec.observed:
+            rec.observe(f"john_{key}", john_rec.observed[key])
+    rec.observe("busy_retry_keys",
+                sorted(k for k in {**john_rec.observed, **david_rec.observed} if k.endswith("_busy_retries")))
+
+    # One final snapshot, taken in the main thread only (boto3 resources are not shared with the threads).
+    snap = ctx.tables.snapshot(pa=True)
+
+    # John: exactly one DEMO-A2A- order, and ATP -1 only at the proposed option's sku/location.
+    agent_orders = sorted(snap.agent_orders())
+    rec.check("exactly_one_agent_order_for_john", agent_orders == [john_oid] and bool(john_oid), f"agent orders: {agent_orders}")
+    john_order = snap.agent_orders().get(john_oid) or {}
+    rec.check("the_one_agent_order_is_johns", john_order.get("customer_id") == JOHN, f"customer_id={john_order.get('customer_id')}")
+    sr = snap.sizereqs().get(john_rid) or {}
+    offered = sr.get("offered") or {}
+    chosen = offered.get(sr.get("chosen_option_id") or sr.get("proposed_option_id")) or {}
+    want_sku = chosen.get("sku") or hero_sku(sr.get("chosen_size") or sr.get("proposed_size") or "0")
+    want_loc = chosen.get("location_id")
+    atp = inv_deltas(base, snap)
+    expected_atp = {(str(want_sku), str(want_loc)): -1} if want_loc else {}
+    rec.check("atp_minus_one_only_at_the_proposed_sku_and_location", atp == expected_atp,
+              f"atp deltas: {fmt_deltas(atp)}; expected {fmt_deltas(expected_atp)}")
+
+    # David: exactly one TXN, DEMO-RET- id, 3 lines L2/L5/L8, fee 0 refund 41997; perk used once.
+    txns = snap.txns()
+    rec.check("exactly_one_transaction_davids", list(txns) == ([david_tid] if david_tid else []) and bool(david_tid),
+              f"transactions: {sorted(txns)}")
+    txn = txns.get(david_tid or "") or {}
+    rec.check("transaction_id_is_a_mail_return", bool(david_tid and re.fullmatch(r"DEMO-RET-[0-9A-F]{6}", david_tid)), f"tid={david_tid}")
+    txn_lines = txn.get("lines") or dig(txn, "option.lines", default=[])
+    rec.check("transaction_has_davids_three_lines", sorted(str(ln.get("line_id")) for ln in txn_lines) == sorted(DAVID_BUNDLE),
+              f"lines: {[ln.get('line_id') for ln in txn_lines]}")
+    rec.check("transaction_fee_zero_refund_41997",
+              (dig(txn, "option.fee_cents", "fee_cents"), dig(txn, "option.refund_cents", "refund_cents")) == (0, 41997),
+              f"fee/refund = {dig(txn, 'option.fee_cents', 'fee_cents')}/{dig(txn, 'option.refund_cents', 'refund_cents')}")
+    period = DEMO_DATE[:7]
+    ledger = snap.benefits().get(f"{DAVID}#{period}") or {}
+    rec.check("perk_ledger_used_once_for_david", ledger.get("used") == 1 and ledger.get("last_transaction_id") == david_tid,
+              f"ledger {DAVID}#{period}: used={ledger.get('used')} last_txn={ledger.get('last_transaction_id')}")
+
+    # David's three lines +1 each, nothing else changed; no stock move for a mail return.
+    rec.check("only_davids_three_lines_changed",
+              line_qty_deltas(base, snap) == {(DAVID_ORDER, ln): 1 for ln in DAVID_BUNDLE},
+              f"line deltas: {line_qty_deltas(base, snap)}")
+
+    # Exactly one SIZEREQ (John's), exactly one QUOTE (David's), no CASE.
+    rec.check("exactly_one_sizereq_johns", list(snap.sizereqs()) == ([john_rid] if john_rid else []) and bool(john_rid)
+              and (snap.sizereqs().get(john_rid) or {}).get("customer_id") == JOHN, f"sizereqs: {sorted(snap.sizereqs())}")
+    rec.check("exactly_one_quote_davids", list(snap.quotes()) == ([david_qid] if david_qid else []) and bool(david_qid),
+              f"quotes: {sorted(snap.quotes())}")
+    rec.eq("no_case_created", len(snap.cases()), 0)
+
+    # No cross-talk: neither owner's A2A stream carries the other owner's ids.
+    john_stream = json.dumps([e.get("payload") for e in snap.a2a_events(JOHN)], default=str)
+    david_stream = json.dumps([e.get("payload") for e in snap.a2a_events(DAVID)], default=str)
+    davids_ids = {DAVID_ORDER, *DAVID_BUNDLE}
+    john_leaks = sorted(t for t in davids_ids if t and t in john_stream)
+    david_leaks = [john_oid] if john_oid and john_oid in david_stream else []
+    rec.check("johns_stream_names_no_david_order_or_line_id", not john_leaks, f"leaked into John's stream: {john_leaks}")
+    rec.check("davids_stream_names_no_john_order_id", not david_leaks, f"leaked into David's stream: {david_leaks}")
+
+    # Every run completed and none fell back to the fallback model.
+    rec.check("every_run_reported_fallback_used_flag", all("fallback_used" in r for r in rec.llm_runs), f"{len(rec.llm_runs)} llm runs")
+    rec.check("no_run_used_the_fallback_model", not any(r.get("fallback_used") for r in rec.llm_runs),
+              f"fallback runs: {[r['label'] for r in rec.llm_runs if r.get('fallback_used')]}")
+
+    check_hygiene(rec, ctx, snap, JOHN, [], prefix="john_")
+    check_hygiene(rec, ctx, snap, DAVID, [], prefix="david_")
+
+
 @dataclass(frozen=True)
 class ScenarioSpec:
     sid: str
@@ -2531,6 +2707,7 @@ _register(
     ScenarioSpec("D3", "Bundle above the Platinum limit needs a person; policy change and fake owner context change nothing", "default", scenario_d3, False, live_only=True),
     ScenarioSpec("P5", "Demo v2 contract without a model: personas, review flags, token scopes, A2A paging, labels, branding", "default", scenario_p5, False, uses_llm=False, live_only=True),
     ScenarioSpec("S1", "Prompt injection in the owner's message, a fake owner-context block and a policy-change request", "default", scenario_s1, False, live_only=True),
+    ScenarioSpec("K1", "Two owners at the same time (John buys while David returns): no cross-talk, one order, one transaction, perk used once", "default", scenario_k1, False, live_only=True),
 )
 SCENARIO_ORDER = tuple(SCENARIOS)
 

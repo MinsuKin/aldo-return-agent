@@ -67,6 +67,11 @@ def test_upcoming_days_are_computed_from_the_date() -> None:
         "Pass only an order_id that is in the list",
         "Sure, let's sort out your return.",
         "Never mention another agent, assistant, team, department or system",
+        # multi-item hand-off (finding F2): the numbered list from the tool's items field
+        "EXCEPTION for an order with more than one item",
+        "one per line",
+        "Copy the list from the items field exactly; never invent, reorder or change an item",
+        "If {name} already named the items, reply with ONE short sentence only (no list).".replace("{name}", "Ava"),
         "Do not discuss return policy, eligibility, refunds, fees, time windows or options yourself",
         "If no order has been delivered yet",
         "cancel or back to bot",

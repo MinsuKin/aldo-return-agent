@@ -187,6 +187,36 @@ def test_the_note_to_the_model_asks_for_one_short_sentence_that_names_nobody(rep
     assert "do not mention any other agent, assistant or team" in note
 
 
+def test_a_single_line_order_result_is_unchanged_no_items_field(repo: MemoryRepo) -> None:
+    data = hand_off(make_ctx(repo))["data"]  # ORDER has one line
+    assert data == {"handed_off": True, "order_id": ORDER, "note": tools.HANDOFF_NOTE}
+    assert "items" not in data
+
+
+def test_a_multi_item_order_adds_a_formatted_items_list_and_the_multi_item_note(repo: MemoryRepo) -> None:
+    data = hand_off(make_ctx(repo), "DEMO-OLD-1")["data"]  # two lines
+    assert data["items"] == ["1. Stessy2.0, black, size 8.0", "2. Clementinne, tan, size 8.0"]
+    assert data["note"] == tools.HANDOFF_NOTE_MULTI.format(n=2)
+    assert "ONE short sentence" in data["note"] and "one per line" in data["note"]
+    assert "do not mention any other agent" in data["note"].lower()
+
+
+def test_the_items_list_carries_the_category_when_the_order_has_one(repo: MemoryRepo) -> None:
+    orders = [{"order_id": "DEMO-CAT-1", "channel": "web", "ordered_at": "2026-10-01", "delivered_at": "2026-10-02",
+               "lines": [{"product_name": "Lededanten", "color": "BLACK", "category": "derby", "size": "10.0", "qty": 1},
+                         {"product_name": "Valegyn", "color": "BROWN", "category": "loafer", "size": "9.5", "qty": 1}]}]
+    data = hand_off(make_ctx(repo, orders=orders), "DEMO-CAT-1")["data"]
+    assert data["items"] == ["1. Lededanten, black derby, size 10.0", "2. Valegyn, brown loafer, size 9.5"]
+
+
+def test_a_repeat_hand_off_of_a_multi_item_order_still_returns_the_items(repo: MemoryRepo) -> None:
+    ctx = make_ctx(repo)
+    assert hand_off(ctx, "DEMO-OLD-1")["ok"] is True
+    repeat = hand_off(ctx, "DEMO-OLD-1")["data"]  # a repeat inside the same run
+    assert repeat["items"] == ["1. Stessy2.0, black, size 8.0", "2. Clementinne, tan, size 8.0"]
+    assert repeat["note"] == tools.HANDOFF_NOTE_MULTI.format(n=2)
+
+
 def test_the_public_stream_shows_the_hand_off_then_the_memory_that_was_consulted(repo: MemoryRepo, stream: Stream) -> None:
     ctx = make_ctx(repo)
     hand_off(ctx)
@@ -468,6 +498,61 @@ def test_a_model_that_names_another_agent_is_corrected_in_the_whole_run(repo: Me
 def test_after_a_hand_off_no_proposal_wording_is_added(repo: MemoryRepo, monkeypatch: pytest.MonkeyPatch, stream: Stream) -> None:
     run_turn(repo, monkeypatch, hand_off_policy(ORDER), orders=ORDERS)
     assert "confirm" not in reply_of(repo).lower() and "ordered" not in reply_of(repo).lower()
+
+
+# ----------------------------------------------------------- the numbered list for an order with several items (F2)
+
+TWO_ITEMS = ["1. Stessy2.0, black, size 8.0", "2. Clementinne, tan, size 8.0"]
+LIST_QUESTION = "Which ones are you returning, and why?"
+
+
+def test_a_multi_item_order_gets_the_server_list_and_one_question(repo: MemoryRepo, monkeypatch: pytest.MonkeyPatch, stream: Stream) -> None:
+    result = run_turn(repo, monkeypatch, hand_off_policy("DEMO-OLD-1"), message="I'm returning 1 of the 2 items.", orders=ORDERS)
+    assert reply_of(repo).split("\n") == ["Sure, let's sort out your return.", *TWO_ITEMS, LIST_QUESTION]
+    assert result["metrics"]["reply_guard"] == "list_added"
+
+
+def test_the_list_is_the_servers_even_when_the_model_writes_its_own_long_list(repo: MemoryRepo, monkeypatch: pytest.MonkeyPatch, stream: Stream) -> None:
+    own = ("Sure, let's sort out your return. Here are your items: 1. Invented boot, red, size 1.0 2. Another thing, blue, size 2.0 "
+           "Which ones are you returning? " + "and tell me everything about it " * 4)
+    run_turn(repo, monkeypatch, hand_off_policy("DEMO-OLD-1", own), message="I'm returning 1 of the 2 items.", orders=ORDERS)
+    text = reply_of(repo)
+    assert text.split("\n") == ["Sure, let's sort out your return.", *TWO_ITEMS, LIST_QUESTION]
+    assert "Invented" not in text and "Another thing" not in text
+
+
+def test_a_short_model_sentence_is_the_lead_unless_it_is_a_question_or_names_somebody(repo: MemoryRepo, monkeypatch: pytest.MonkeyPatch, stream: Stream) -> None:
+    run_turn(repo, monkeypatch, hand_off_policy("DEMO-OLD-1", "Of course, let's get that return started. What's the reason?"), message="Return some of these.", orders=ORDERS)
+    assert reply_of(repo).split("\n")[0] == "Of course, let's get that return started."
+    assert reply_of(repo).split("\n")[-1] == LIST_QUESTION
+
+
+@pytest.mark.parametrize("lead", ["What's the reason?", "I'm passing you to our returns agent.", "Done."])
+def test_an_unusable_lead_becomes_the_fixed_sentence_in_the_list_reply(lead: str) -> None:
+    assert runner.handoff_list_reply(lead, TWO_ITEMS) == "\n".join(["Sure, let's sort out your return.", *TWO_ITEMS, LIST_QUESTION])
+
+
+@pytest.mark.parametrize("message", ["Please return the Clementinne for me.", "I want to send back the black Stessy2.0."])
+def test_when_the_owner_already_named_an_item_the_reply_stays_one_short_sentence(
+    repo: MemoryRepo, monkeypatch: pytest.MonkeyPatch, stream: Stream, message: str
+) -> None:
+    result = run_turn(repo, monkeypatch, hand_off_policy("DEMO-OLD-1"), message=message, orders=ORDERS)
+    assert reply_of(repo) == "Sure, let's sort out your return."
+    assert result["metrics"]["reply_guard"] == "none"
+
+
+def test_the_owner_naming_colour_and_kind_counts_as_naming_an_item() -> None:
+    order = {"order_id": "DEMO-X", "lines": [{"product_name": "Aahliyah", "color": "TAN", "category": "boot", "size": "10.5", "qty": 1}]}
+    ctx = PersonalRunContext(run_id="r", conv_id="c", owner_id=JOHN, gateway=None, repo=None, orders=[order], handoff_order_id="DEMO-X",
+                             message="the tan boot please")  # type: ignore[arg-type]
+    assert runner.owner_named_an_item(ctx) is True
+    ctx.message = "the whole collection, 3 of 10"
+    assert runner.owner_named_an_item(ctx) is False
+
+
+def test_a_single_item_order_never_gets_a_list(repo: MemoryRepo, monkeypatch: pytest.MonkeyPatch, stream: Stream) -> None:
+    result = run_turn(repo, monkeypatch, hand_off_policy(ORDER), message="I want to return these.", orders=ORDERS)
+    assert reply_of(repo) == "Sure, let's sort out your return." and result["metrics"]["reply_guard"] == "none"
 
 
 def test_a_hand_off_that_failed_is_not_announced(repo: MemoryRepo, monkeypatch: pytest.MonkeyPatch, stream: Stream) -> None:

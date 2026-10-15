@@ -83,7 +83,8 @@ def recent_orders(customer_id: str, limit: int = RECENT_ORDERS) -> list[dict[str
     """The owner's recent ALDO orders, newest first, compact: what the bot needs to pick an order.
 
     ``order_id``, ``channel`` (``agent`` for orders ALDO bot's purchases created), ``ordered_at``,
-    ``delivered_at`` and the lines (``product_name``, ``color``, ``size``, ``qty``).
+    ``delivered_at`` and the lines (``product_name``, ``color``, ``size``, ``qty``, and ``category``
+    when the fixture names what the shoe is; it is left out otherwise).
     """
     compact: list[dict[str, Any]] = []
     for order in list(orders.list_orders(customer_id))[:limit]:
@@ -93,17 +94,22 @@ def recent_orders(customer_id: str, limit: int = RECENT_ORDERS) -> list[dict[str
                 "channel": order.channel,
                 "ordered_at": order.ordered_at,
                 "delivered_at": order.delivered_at,
-                "lines": [
-                    {
-                        "product_name": line.product_name,
-                        "color": line.color,
-                        "size": line.size,
-                        "qty": line.purchased_qty,
-                    }
-                    for line in order.lines[:MAX_LINES_PER_ORDER]
-                ],
+                "lines": [_compact_line(line) for line in order.lines[:MAX_LINES_PER_ORDER]],
             }
         )
+    return compact
+
+
+def _compact_line(line: Any) -> dict[str, Any]:
+    """One order line for the bot's prompt; ``category`` is included only when the fixture has it."""
+    compact: dict[str, Any] = {
+        "product_name": line.product_name,
+        "color": line.color,
+        "size": line.size,
+        "qty": line.purchased_qty,
+    }
+    if getattr(line, "category", None):
+        compact["category"] = line.category
     return compact
 
 

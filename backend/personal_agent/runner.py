@@ -343,6 +343,40 @@ def handoff_reply(text: str) -> tuple[str, str]:
     return HANDOFF_REPLY, "replaced"
 
 
+#: Closing question of the multi-item hand-off reply (demo script: "shows the 10 items and asks which three and why").
+HANDOFF_LIST_QUESTION = "Which ones are you returning, and why?"
+
+
+def owner_named_an_item(ctx: PersonalRunContext) -> bool:
+    """The owner's message already names an item of the handed-off order (its product name, or colour and kind)."""
+    message = (ctx.message or "").lower()
+    order = next((o for o in (ctx.orders or []) if o.get("order_id") == ctx.handoff_order_id), None)
+    for line in (order or {}).get("lines") or []:
+        name = str(line.get("product_name") or "").strip().lower()
+        color = str(line.get("color") or "").strip().lower()
+        kind = str(line.get("category") or "").strip().lower()
+        if name and name in message:
+            return True
+        if color and kind and color in message and kind in message:
+            return True
+    return False
+
+
+def handoff_list_reply(text: str, items: list[str]) -> str:
+    """After a hand-off of an order with several items: one short sentence, the numbered items exactly as the
+    server formatted them (never the model's copy), then one question. The model's first sentence is the lead
+    when it is short, names nobody else and is not itself a question; otherwise the fixed sentence."""
+    stripped = (text or "").strip()
+    lead = re.split(r"(?<=[.!?])\s+", stripped, maxsplit=1)[0] if stripped else ""
+    if (
+        not HANDOFF_MIN_WORDS <= count_words(lead) <= HANDOFF_MAX_WORDS
+        or _OTHER_AGENT.search(lead)
+        or lead.rstrip().endswith("?")
+    ):
+        lead = HANDOFF_REPLY
+    return "\n".join([lead, *items, HANDOFF_LIST_QUESTION])
+
+
 def _final_reply(ctx: PersonalRunContext, text: str, owner_name: str) -> tuple[str, str, int]:
     """(reply, guard, raw_words): enforce 'proposal, confirm in the app, never claim an order'.
 
@@ -355,6 +389,8 @@ def _final_reply(ctx: PersonalRunContext, text: str, owner_name: str) -> tuple[s
         return HARD_STOP_REPLY, "hard_stop", raw_words
     if ctx.handed_off:
         reply, guard = handoff_reply(text)
+        if ctx.handoff_items and not owner_named_an_item(ctx):
+            return handoff_list_reply(text, ctx.handoff_items), "list_added", raw_words
         return reply, guard, raw_words
     guard = "none"
     if ctx.flagged_texts and quotes_any(text, ctx.flagged_texts):
