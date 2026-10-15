@@ -30,6 +30,7 @@ SERVICE_NAMES: frozenset[str] = frozenset(
         "conversations",
         "runs",
         "gateway",
+        "benefits",
     }
 )
 

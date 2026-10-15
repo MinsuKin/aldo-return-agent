@@ -63,15 +63,37 @@ def add_money_text(option: Mapping[str, Any]) -> dict[str, Any]:
     nothing else in it is touched or invented.
     """
     enriched = dict(option)
-    for cents_key, text_key in (("refund_cents", "refund_text"), ("fee_cents", "fee_text")):
+    for cents_key, text_key in (
+        ("refund_cents", "refund_text"),
+        ("fee_cents", "fee_text"),
+        # a bundle return (S19b): the total of the lines, the amount after the one shipping fee, the tier limit
+        ("refund_total_cents", "refund_total_text"),
+        ("net_refund_cents", "net_refund_text"),
+        ("authority_limit_cents", "authority_limit_text"),
+    ):
         text = money_text(option.get(cents_key))
         if text is not None:
             enriched[text_key] = text
+    lines = option.get("lines")
+    if isinstance(lines, list):
+        enriched["lines"] = [
+            _line_with_money(line) if isinstance(line, Mapping) else line for line in lines
+        ]
     benefit = option.get("benefit")
     if isinstance(benefit, Mapping):
         saved = money_text(benefit.get("saved_cents"))
         if saved is not None:
             enriched["benefit"] = {**benefit, "saved_text": saved}
+    return enriched
+
+
+def _line_with_money(line: Mapping[str, Any]) -> dict[str, Any]:
+    """A bundle line with ``refund_text`` / ``unit_paid_text`` next to the cents."""
+    enriched = dict(line)
+    for cents_key, text_key in (("refund_cents", "refund_text"), ("unit_paid_cents", "unit_paid_text")):
+        text = money_text(line.get(cents_key))
+        if text is not None:
+            enriched[text_key] = text
     return enriched
 
 
@@ -125,6 +147,8 @@ def ranking_reason(
     channel = normalize_channel(preferred_channel)
     top = ordered[0]
     top_type = str(top.get("type"))
+    if isinstance(top.get("lines"), list):
+        return _bundle_reason(ordered)
     has_return = any(str(o.get("type")) in RETURN_TYPES for o in ordered)
     has_exchange = any(str(o.get("type")) in EXCHANGE_TYPES for o in ordered)
     if top_type in RETURN_TYPES:
@@ -157,6 +181,40 @@ def ranking_reason(
         core += ", as you asked for delivery by mail"
     tail = " Refund options stay available." if has_return else ""
     return f"{core}.{tail}"[:240]
+
+
+def _bundle_reason(ordered: Sequence[Mapping[str, Any]]) -> str:
+    """The reason line for a bundle return (several lines of one order, no exchange).
+
+    Facts only, all taken from the options: whether a store is within reach (an in-store option exists, with
+    ``minutes_away``), the shipping fee the option carries and a perk only when the option carries ``benefit``.
+    """
+    top = ordered[0]
+    count = len(top["lines"])
+    items = f"{count} item{'' if count == 1 else 's'}"
+    if top.get("decision") == "needs_review":
+        total = top.get("refund_total_text") or "the total"
+        limit = top.get("authority_limit_text") or "the limit"
+        return (
+            f"A person must review this return: {total} for {items} is above the {limit} I can approve."
+        )[:240]
+    has_store = any(str(o.get("type")) == "return_in_store" for o in ordered)
+    fee = top.get("fee_cents")
+    fee_text = "free" if fee == 0 else (money_text(fee) or "fee shown on the card")
+    if str(top.get("type")) == "return_in_store":
+        away = _minutes(top)
+        where = str(top.get("location_name") or "the nearest store")
+        near = f", {away} minute{'' if away == 1 else 's'} away" if away != _UNKNOWN_MINUTES else ""
+        core = f"Returning {items} in store at {where}{near} is {fee_text}"
+    else:
+        core = f"Returning {items} by mail is {fee_text}"
+        if not has_store:
+            core = f"No store is within reach, so returning {items} by mail is {fee_text}"
+    benefit = top.get("benefit")
+    if isinstance(benefit, Mapping) and benefit.get("label"):
+        saved = money_text(benefit.get("saved_cents"))
+        core += f" with your {benefit['label']}" + (f", saving {saved}" if saved else "")
+    return f"{core}."[:240]
 
 
 def _deadline_clause(meets: object, deadline_date: str | None) -> str:

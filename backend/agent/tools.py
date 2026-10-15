@@ -33,7 +33,7 @@ from strands import tool
 from returns_domain import config, fit, taxonomy
 from returns_domain.errors import DomainError, ErrorCode
 
-from . import owner_context, ranking
+from . import line_match, owner_context, ranking
 from .context import RunContext
 from .envelope import emit_tool_call, emit_tool_result, fail, limit_envelope, ok
 from .log import logger
@@ -77,6 +77,16 @@ MAX_COLOR_CHOICES = 8
 _OPTION_FIELDS_NOT_FOR_THE_MODEL = ("evidence", "source_refs", "provenance", "sku", "replacement_sku", "qty", "currency")
 #: Fields of a store notice the model may use (no names of people, no tier).
 _STORE_NOTICE_FIELDS = ("store_name", "eta_minutes", "summary")
+#: Fields of one bundle line the model reads (no sku, no policy check id; amounts come with their text).
+_BUNDLE_LINE_FIELDS = (
+    "line_id", "number", "product_name", "color", "category", "size", "refund_cents", "refund_text",
+    "unit_paid_cents", "unit_paid_text",
+)
+#: Fields of a bundle option the quote summary repeats for the model.
+_BUNDLE_QUOTE_OPTION_FIELDS = (
+    "option_id", "type", "fee_cents", "fee_text", "refund_total_cents", "refund_total_text", "net_refund_cents",
+    "net_refund_text", "benefit", "decision", "location_name", "minutes_away",
+)
 
 FIT_LABEL = "derived from provided data"
 INTERNAL_MESSAGE = "Something went wrong while running this step. Please try again."
@@ -313,6 +323,69 @@ def _unique(refs: list[str]) -> list[str]:
     return list(seen)
 
 
+def _compact_lines(lines: Any) -> Any:
+    """Bundle lines as the model reads them (every line stays; only fields it does not need go)."""
+    if not isinstance(lines, list):
+        return lines
+    return [
+        {k: line[k] for k in _BUNDLE_LINE_FIELDS if k in line} if isinstance(line, Mapping) else line
+        for line in lines
+    ]
+
+
+def _bundle_view(data: Any) -> Any:
+    """``data`` of a bundle transaction with money text next to the cents and compact lines.
+
+    Anything that is not a bundle (no ``lines``, no ``benefit``) is returned untouched.
+    """
+    if not isinstance(data, Mapping) or not (isinstance(data.get("lines"), list) or data.get("benefit")):
+        return data
+    view = ranking.add_money_text(data)
+    if "lines" in view:
+        view["lines"] = _compact_lines(view["lines"])
+    return view
+
+
+def _bundle_quote_summary(quote: Mapping[str, Any]) -> dict[str, Any] | None:
+    """What the model may say about a bundle quote: the lines, and per option fee, totals and perk."""
+    if not isinstance(quote.get("lines"), list):
+        return None
+    options = []
+    for option in quote.get("options", []):
+        if not isinstance(option, Mapping):
+            continue
+        enriched = ranking.add_money_text(option)
+        options.append({k: enriched[k] for k in _BUNDLE_QUOTE_OPTION_FIELDS if k in enriched})
+    lines = ranking.add_money_text({"lines": quote["lines"]})["lines"]
+    return {"lines": _compact_lines(lines), "options": options}
+
+
+def _perk_status(ctx: RunContext, options: list[Mapping[str, Any]]) -> dict[str, Any] | None:
+    """Tell the model when the member's monthly free shipping is already used up (a second bundle).
+
+    Only when the customer's tier HAS the perk, this month's ledger is full and no option carries it.
+    A tier without the perk, or any failure to read the ledger, says nothing (the agent never mentions
+    a perk that does not exist for this owner).
+    """
+    if not options or any(o.get("benefit") for o in options) or any(o.get("decision") == "needs_review" for o in options):
+        return None
+    try:
+        usage = _js(ctx, ctx.services.benefits.ledger_usage(ctx.customer_id))
+        allowed, used = int(usage.get("allowed") or 0), int(usage.get("used") or 0)
+    except Exception:  # noqa: BLE001 - an unreadable ledger must not stop the options
+        return None
+    if allowed < 1 or used < allowed:
+        return None
+    return {
+        "type": usage.get("benefit"),
+        "label": f"{str(usage.get('tier', '')).capitalize()} free return shipping".strip(),
+        "status": "used_this_month",
+        "used": used,
+        "allowed": allowed,
+        "period": usage.get("period"),
+    }
+
+
 def _compact_options(
     offered: list[dict[str, Any]], order: list[str], limit: int = MAX_OPTIONS_IN_RESULT
 ) -> tuple[list[dict[str, Any]], list[str]]:
@@ -330,7 +403,11 @@ def _compact_options(
                 keep.append(option_id)
         kept_ids = set(keep)
     options = [
-        {k: v for k, v in option.items() if k not in _OPTION_FIELDS_NOT_FOR_THE_MODEL}
+        {
+            k: (_compact_lines(v) if k == "lines" else v)
+            for k, v in option.items()
+            if k not in _OPTION_FIELDS_NOT_FOR_THE_MODEL
+        }
         for option in offered
         if str(option.get("option_id")) in kept_ids
     ]
@@ -415,12 +492,18 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
         return _run_tool(ctx, "list_my_orders", {}, call, retry=True)
 
     @tool
-    def get_order_context(order_id: str) -> dict:
-        """Get the lines, quantities, price paid, delivery date, final-sale flag and already-returned quantity of one of the customer's orders.
+    def get_order_context(order_id: str, items: list[str] | None = None) -> dict:
+        """Get the lines, quantities, price paid, delivery date, final-sale flag and already-returned quantity of one of the customer's orders. An order with several lines comes numbered (number 1, 2, 3 ...) in the order to show the owner, with colour, category and size.
+
+        When the owner names the items they are returning in their own words, pass those words in items (one entry per item, for example ["tan boot", "white sneaker", "navy loafer"] or ["3", "7"]). The result then has selection: for each entry matched (exactly one line, with its line_id), ambiguous (several lines fit, with candidates: ask the owner which one) or none (no line fits), plus selected_line_ids and complete. The matching is done by the server from colour, category and name; never pick a line yourself when a match is ambiguous.
 
         Args:
             order_id: The order id exactly as shown by list_my_orders or in [selected_order_id: ...], for example DEMO-1001 or DEMO-A2A-81B20E.
+            items: Optional. The owner's own words for the items to return, one entry per item (at most 10).
         """
+        args: dict[str, Any] = {"order_id": order_id}
+        if items:
+            args["items"] = list(items)
 
         def call() -> Out:
             data = _js(ctx, ctx.services.orders.order_context(ctx.customer_id, order_id, run_id=ctx.run_id))
@@ -428,7 +511,11 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                 _with_money(line, (("unit_paid_cents", "unit_paid_text"),))
                 for line in data.get("lines", [])
             ]
+            if len(lines) > 1:  # the numbered list the owner is shown, L1 .. L10
+                lines = line_match.number_lines(lines)
             data = {**data, "lines": lines}
+            if items:
+                data["selection"] = line_match.resolve(lines, items)
             first = lines[0] if lines else {}
             return Out(
                 data,
@@ -440,7 +527,7 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                 },
             )
 
-        return _run_tool(ctx, "get_order_context", {"order_id": order_id}, call, retry=True)
+        return _run_tool(ctx, "get_order_context", args, call, retry=True)
 
     @tool
     def evaluate_return_policy(
@@ -545,32 +632,44 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
 
     @tool
     def find_resolution_options(
-        policy_check_id: str,
+        policy_check_id: str | None = None,
         replacement_size: str | None = None,
         deadline_date: str | None = None,
         preferred_channel: PreferredChannelArg | None = None,
         replacement_color: str | None = None,
+        policy_check_ids: list[str] | None = None,
     ) -> dict:
         """Find the eligible resolution options for an ELIGIBLE policy check: store-pickup, ship-from-store and ship-from-warehouse exchanges (only when stock exists) plus in-store and mail-in returns, each with fee, refund, location, minutes_away (stores only, when known), ETA, conditions and any benefit. Also returns ranking (order and reason) that follows the ranking rule, and other_sizes_in_stock as information only.
 
         For a colour exchange (reason EXPECTATION or CHANGE_OF_MIND) call it WITHOUT replacement_color first: the result then has no exchange options but needs_choice.replacement_color, the colours in stock in the owner's size (usual colours first, marked preferred). Ask the owner which colour, then call it again with replacement_color. A fit problem never takes a colour.
 
+        For SEVERAL items of one order returned together (a bundle), evaluate the policy for EACH item first, then call this ONCE with policy_check_ids (all the ids, no policy_check_id). A bundle has no exchange: the options are an in-store return (only when a store is within reach, with minutes_away) and a mail return, each with lines, ONE shipping fee, refund_total and net_refund, and a benefit only when the owner's membership perk applies. decision needs_review means a person must decide: do not quote it.
+
         Args:
-            policy_check_id: The policy_check_id returned by evaluate_return_policy.
-            replacement_size: A STRING with one decimal such as "8.5". Leave it out to use the server default (current size plus one half for too_small, minus one half for too_big). Pass it only when the customer asks for a specific different size. Never pass it for a colour exchange.
+            policy_check_id: The policy_check_id returned by evaluate_return_policy, for ONE item. Leave it out for a bundle.
+            replacement_size: A STRING with one decimal such as "8.5". Leave it out to use the server default (current size plus one half for too_small, minus one half for too_big). Pass it only when the customer asks for a specific different size. Never pass it for a colour exchange or a bundle.
             deadline_date: The customer's deadline as YYYY-MM-DD, if they gave one. Options then show meets_deadline.
             preferred_channel: ship, store_pickup or return, only if the customer stated a preference.
             replacement_color: The colour the owner chose from needs_choice.replacement_color, exactly as listed, for a colour exchange only.
+            policy_check_ids: For a bundle: the policy_check_id of EVERY selected item (1 to 10, one per line, same order, all eligible).
         """
-        args = {
+        args: dict[str, Any] = {
             "policy_check_id": policy_check_id,
             "replacement_size": replacement_size,
             "deadline_date": deadline_date,
             "preferred_channel": preferred_channel,
             "replacement_color": replacement_color,
         }
+        if policy_check_ids is not None:
+            args["policy_check_ids"] = list(policy_check_ids)
 
         def call() -> Out:
+            if (policy_check_id is None) == (policy_check_ids is None):
+                raise DomainError(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Give policy_check_id for one item, or policy_check_ids for a bundle, not both and not neither.",
+                )
+            extra = {"policy_check_ids": list(policy_check_ids)} if policy_check_ids is not None else {}
             found = _js(
                 ctx,
                 ctx.services.options.find_options(
@@ -581,6 +680,7 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                     preferred_channel,
                     replacement_color,
                     run_id=ctx.run_id,
+                    **extra,
                 ),
             )
             offered = [
