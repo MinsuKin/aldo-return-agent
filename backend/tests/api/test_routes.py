@@ -127,6 +127,13 @@ def test_reset_restores_stock_and_clears_runtime_items(client, seeded):
     assert store.get_item(("RUN#RUN-LEFTOVER", "META")) is None
 
 
+def test_reset_reseeds_the_real_personal_agent_memory(client, seeded, personal_table):
+    assert personal_table.get_repo().get_owner(AVA) is None  # the table starts empty
+    assert client.post("/api/demo/reset", {"variant": "default"}, headers=ADMIN).status == 200
+    memory = personal_table.get_repo().list_memory(AVA)
+    assert memory["typical_size"] == "7.5" and len(memory["memory"]) == 3
+
+
 def test_reset_applies_the_requested_variant_and_defaults_to_default(client, seeded):
     key = store.inventory_key(HERO_SKU_75, DC)
     assert client.post("/api/demo/reset", {"variant": "dc_stockout"}, headers=ADMIN).status == 200
