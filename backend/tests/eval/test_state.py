@@ -95,11 +95,10 @@ def test_key_formats_match_returns_domain_store(ev):
     assert store.order_key("O") == ("ORDER#O", "META") and store.run_key("R") == ("RUN#R", "META")
     assert store.event_key("R", 3) == ("RUN#R", "EVT#000003") and store.sizereq_key("Z") == ("SIZEREQ#Z", "META")
     assert store.outbox_key("MU-1")[0].startswith(ev.OUTBOX_PREFIXES) and store.outbox_key("MU-1")[1] == "META"
-    # STORENOTE# (domain v2 S17A: the store-desk notice of an in-store exchange or return) is deleted by
-    # fixtures.reset through store.RUNTIME_PREFIXES; scripts/eval_scenarios.py should list it in
-    # ALDO_RUNTIME_PREFIXES with the J2 scenario (eval v2). Tolerated here until then.
-    not_yet_in_the_eval_script = {"STORENOTE#", "BENEFIT#"}  # BENEFIT#: the monthly perk ledger (domain v2 S17B)
-    assert set(store.RUNTIME_PREFIXES) - {"AUDIT#"} - not_yet_in_the_eval_script <= set(ev.ALDO_RUNTIME_PREFIXES), (
+    # STORENOTE# (the store-desk notice of an in-store exchange or return) and BENEFIT# (the monthly perk ledger)
+    # are deleted by fixtures.reset through store.RUNTIME_PREFIXES; the eval lists them since eval v2, so the
+    # reset check now covers every runtime partition except the audit log.
+    assert set(store.RUNTIME_PREFIXES) - {"AUDIT#"} <= set(ev.ALDO_RUNTIME_PREFIXES), (
         "store has a runtime partition the eval's reset check does not know")
 
 
