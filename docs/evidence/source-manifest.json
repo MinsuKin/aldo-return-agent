@@ -1,0 +1,72 @@
+[
+  {
+    "path": "dataset/All OMS orders_Feb 2024 to Feb 2026.csv",
+    "bytes": 91680522,
+    "sha256": "43b1663bdb0427276c7ee03a0bb120a11ddce711fd0ce93d1d71ed04ad2349f5"
+  },
+  {
+    "path": "dataset/Book.xlsx",
+    "bytes": 6244,
+    "sha256": "24581bdec66042dc4bec3d33a872672768273a11f83b6b9d839b1041206f1f26"
+  },
+  {
+    "path": "dataset/McGill - Returns - Restocking Fees 2024 - 2025.csv",
+    "bytes": 12220049,
+    "sha256": "395a491d5f9d3c76f1cfce965f344c56b577fbc08d95d02a17e1759c8142d41f"
+  },
+  {
+    "path": "dataset/McGill - Returns - Returnable Flag 2024-2025.csv",
+    "bytes": 47105207,
+    "sha256": "2fa2e25682c727521067c6f852f38e7ff770bbe9ee2b74cf1aee77f2c5ec307d"
+  },
+  {
+    "path": "dataset/McGill_Instore_return_exchanges.csv",
+    "bytes": 3662465,
+    "sha256": "3f5255834922aa15b79cb28247883345ae1548ec9c4da9b1d871c75d241e8e5b"
+  },
+  {
+    "path": "dataset/Notes.docx",
+    "bytes": 14278,
+    "sha256": "d16c2c186f40d0695074126d700eec0797eeb72131f206c6219dc818f794e0b8"
+  },
+  {
+    "path": "dataset/OMS Data_Feb24-Jan26_new.csv",
+    "bytes": 137207018,
+    "sha256": "76ebd5fb9cc7e16e13bb191ebdf1f5c916c295afe3289a6e913d800feb50d1a5"
+  },
+  {
+    "path": "docs/sources/AWS × McGill Hackathon — Intro AWS.pdf",
+    "bytes": 1806557,
+    "sha256": "a0b79a583554e301ad2e8a512d0e6b58359ec8734f8a97b4c8732cff009f5e62"
+  },
+  {
+    "path": "docs/sources/BSRM X ALDO HACKATHON OVERVIEW 2026.pdf",
+    "bytes": 5188802,
+    "sha256": "221cfe95013f7a10634c47abaf64198f65d08e81a8f111db3f43679183037ab9"
+  },
+  {
+    "path": "docs/sources/BSRM × ALDO RETAIL GEN AI HACKATHON.pptx",
+    "bytes": 169320,
+    "sha256": "f165419342fd4e77ef795904a2b4540a5a6e8581e535a13ba166aac128c0e39b"
+  },
+  {
+    "path": "docs/sources/Hackathon Final Instructions.pdf",
+    "bytes": 879171,
+    "sha256": "cc601994e0abd4bb0cd04626ccf0f038706de63fa778d179d7adff8ca944da08"
+  },
+  {
+    "path": "docs/sources/PHASE 1 HACKATHON  INSTRUCTIONS 923.pdf",
+    "bytes": 378304,
+    "sha256": "ee6af92bfeef5443fd73be858a29f6c77fd79bf72839d4edbc433dd9ca50a828"
+  },
+  {
+    "path": "docs/sources/Participant Handout.pdf",
+    "bytes": 12242,
+    "sha256": "7492ebed33d8be2cd6a564e4b480570f17a4343130b1ffd141522a363f39d0b6"
+  },
+  {
+    "path": "docs/sources/USE CASE RETAIL GEN AI HACKATHON 923.pdf",
+    "bytes": 138253,
+    "sha256": "d4501131d654319424525017ad84a9b44c0bf56c562cf86e801eef7689aa064d"
+  }
+]

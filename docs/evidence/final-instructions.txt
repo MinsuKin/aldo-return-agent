@@ -1,0 +1,89 @@
+--- Page 1 ---
+T H E
+F I N A L
+O C T O B E R  1 5 T H  A N D  1 6 T H
+
+--- Page 2 ---
+WHAT TO EXPECT IN
+THE FINAL 2-DAY EVENT 
+OCT 15TH AND 16TH
+During the 2-day Final, you will
+need to develop your idea to the
+next level,   develop a working
+prototype and pitch before a Jury
+Panel.
+Oct 15th : 10:00AM  Bronfman 2nd floor - all teams
+for the kick off, registration, swag, meet your
+mentors , AWS access and begin hacking at your
+pod stations.
+Oct 16th  morning : Hacking continues until 2PM
+OCT 16  AFTERNOON FINAL PRESENTATION :TH
+Presentation Output: 8-minute presentation per
+team + 1 Question from Jury Panel
+Number of Slides: No slide limit.
+
+--- Page 3 ---
+1  -  P R O B L E M  A N D
+T H E S I S
+2- AGENTIC
+APPROACH
+Clearly explain:
+What problem or
+opportunity did you
+identify?
+Who or what is affected?
+Why does it matter?
+Why is the current
+approach insufficient?
+What is your thesis for
+improving gross margin
+and/or customer
+satisfaction?
+Show:
+What the agent knows
+What it is trying to
+accomplish
+What decisions it makes
+What tools, data or
+systems it can access
+What actions it can take
+Where human
+intervention remains
+appropriate
+3  -  W O R K I N G
+P R O T O T Y P E
+4- BUSINESS
+IMPACT
+Quantify or estimate the
+potential impact of the
+solution.
+Teams should select the
+measures most relevant
+to their own thesis rather
+than optimize against a
+predefined set of KPIs.
+5- RESPONSIBLE AI
+Explain the risks associated
+with giving the proposed
+agent autonomy and how
+those risks would be
+managed.
+Consider issues such as:
+Customer fairness
+Privacy
+Bias
+Explainability
+Financial authority
+Appropriate human
+oversight
+Demonstrate at least one
+end-to-end scenario.
+The prototype should
+make the agent's
+reasoning, decisions and
+actions visible enough to
+understand how the
+solution works.
+DELIVERABLES: 
+
+--- Page 4 ---

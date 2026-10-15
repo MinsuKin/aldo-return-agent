@@ -1,0 +1,334 @@
+{
+  "files": {
+    "All OMS orders_Feb 2024 to Feb 2026.csv": {
+      "bytes": 91680522,
+      "sha256": "43b1663bdb0427276c7ee03a0bb120a11ddce711fd0ce93d1d71ed04ad2349f5",
+      "rows": 1000000,
+      "columns": [
+        "Banner",
+        "order_number",
+        "order_date_est",
+        "sku",
+        "Style",
+        "Size",
+        "category name",
+        "Requested_QTY",
+        "Shipped"
+      ],
+      "blank_counts": {
+        "Banner": 0,
+        "order_number": 0,
+        "order_date_est": 0,
+        "sku": 0,
+        "Style": 0,
+        "Size": 55044,
+        "category name": 294,
+        "Requested_QTY": 0,
+        "Shipped": 0
+      },
+      "exact_duplicate_rows": 0,
+      "categories": {
+        "Banner": {
+          "ALDO_US": 284213,
+          "ALDO_CA": 253000,
+          "SPERRY_US": 234514,
+          "CIS_CA": 157835,
+          "GLOBO_CA": 59747,
+          "SPERRY_CA": 10680,
+          "GHBASS_US": 11
+        }
+      },
+      "order_date_est": {
+        "min": "2024-02-04 00:00:00",
+        "max": "2026-01-31 00:00:00",
+        "invalid": 0
+      },
+      "Requested_QTY": {
+        "sum": 1014431.0,
+        "min": 1.0,
+        "max": 10.0,
+        "invalid": 0,
+        "negative": 0
+      },
+      "Shipped": {
+        "sum": 1013613.0,
+        "min": 1.0,
+        "max": 6.0,
+        "invalid": 0,
+        "negative": 0
+      }
+    },
+    "McGill - Returns - Restocking Fees 2024 - 2025.csv": {
+      "bytes": 12220049,
+      "sha256": "395a491d5f9d3c76f1cfce965f344c56b577fbc08d95d02a17e1759c8142d41f",
+      "rows": 521660,
+      "columns": [
+        "return_order_number",
+        "restocking revenue"
+      ],
+      "blank_counts": {
+        "return_order_number": 0,
+        "restocking revenue": 0
+      },
+      "exact_duplicate_rows": 0,
+      "categories": {
+        "restocking revenue": {
+          "0.00": 437008,
+          "4.95": 42355,
+          "5.95": 42297
+        }
+      },
+      "restocking revenue": {
+        "sum": 461324.4,
+        "min": 0.0,
+        "max": 5.95,
+        "invalid": 0,
+        "negative": 0
+      }
+    },
+    "McGill - Returns - Returnable Flag 2024-2025.csv": {
+      "bytes": 47105207,
+      "sha256": "2fa2e25682c727521067c6f852f38e7ff770bbe9ee2b74cf1aee77f2c5ec307d",
+      "rows": 1597921,
+      "columns": [
+        "order_number",
+        "sku",
+        "Is item final sale?"
+      ],
+      "blank_counts": {
+        "order_number": 0,
+        "sku": 0,
+        "Is item final sale?": 0
+      },
+      "exact_duplicate_rows": 0,
+      "categories": {
+        "Is item final sale?": {
+          "no": 1201672,
+          "yes": 396249
+        }
+      }
+    },
+    "McGill_Instore_return_exchanges.csv": {
+      "bytes": 3662465,
+      "sha256": "3f5255834922aa15b79cb28247883345ae1548ec9c4da9b1d871c75d241e8e5b",
+      "rows": 61934,
+      "columns": [
+        "Exchange_Confidence",
+        "transactions_businessdaydate",
+        "transactions_transnumber",
+        "Original Order Number",
+        "Exchange SKU",
+        "Exchange QTY",
+        "Return store",
+        "Sales"
+      ],
+      "blank_counts": {
+        "Exchange_Confidence": 0,
+        "transactions_businessdaydate": 0,
+        "transactions_transnumber": 0,
+        "Original Order Number": 1209,
+        "Exchange SKU": 0,
+        "Exchange QTY": 0,
+        "Return store": 0,
+        "Sales": 0
+      },
+      "exact_duplicate_rows": 0,
+      "categories": {
+        "Exchange_Confidence": {
+          "CONFIRMED": 45778,
+          "ASSUMED": 16156
+        }
+      },
+      "transactions_businessdaydate": {
+        "min": "2025-02-02 00:00:00",
+        "max": "2026-03-16 00:00:00",
+        "invalid": 0
+      },
+      "Exchange QTY": {
+        "sum": 61934.0,
+        "min": 1.0,
+        "max": 1.0,
+        "invalid": 0,
+        "negative": 0
+      },
+      "Sales": {
+        "sum": 3656657.7500000005,
+        "min": -7.11e-15,
+        "max": 380.0,
+        "invalid": 0,
+        "negative": 2
+      }
+    },
+    "OMS Data_Feb24-Jan26_new.csv": {
+      "bytes": 137207018,
+      "sha256": "76ebd5fb9cc7e16e13bb191ebdf1f5c916c295afe3289a6e913d800feb50d1a5",
+      "rows": 649745,
+      "columns": [
+        "store_banner",
+        "order_number",
+        "sku",
+        "orderitem_product_name",
+        "cnsmr_prof_sid",
+        "customer_uid",
+        "return_order_number",
+        "return_channel",
+        "return_creation_date",
+        "return_creation_date_tmstmp",
+        "last return status",
+        "Refund amount",
+        "item return qty",
+        "reason",
+        "Instore return location"
+      ],
+      "blank_counts": {
+        "store_banner": 0,
+        "order_number": 0,
+        "sku": 0,
+        "orderitem_product_name": 2386,
+        "cnsmr_prof_sid": 104648,
+        "customer_uid": 104648,
+        "return_order_number": 0,
+        "return_channel": 0,
+        "return_creation_date": 0,
+        "return_creation_date_tmstmp": 0,
+        "last return status": 0,
+        "Refund amount": 0,
+        "item return qty": 0,
+        "reason": 78,
+        "Instore return location": 320817
+      },
+      "exact_duplicate_rows": 0,
+      "categories": {
+        "store_banner": {
+          "ALDO_US": 228738,
+          "ALDO_CA": 160059,
+          "SPERRY_US": 136118,
+          "CIS_CA": 116903,
+          "SPERRY_CA": 7927
+        },
+        "return_channel": {
+          "InStore": 328928,
+          "Web": 184086,
+          "CCC": 97371,
+          "HappyReturnMail": 22634,
+          "HappyReturnBar": 16726
+        },
+        "last return status": {
+          "RETURN_COMPLETED": 600536,
+          "RETURN_SHIPPING": 29211,
+          "RECEIVED_AT_BAR": 5196,
+          "REFUND_FAILED": 4660,
+          "RETURN_RECEIVED": 3226,
+          "CREATED": 3151,
+          "RETURN_RCV_IN_PROGRESS": 2795,
+          "SHOPIFY_RETURN_CREATION_FAILED": 580,
+          "RETURN_PROCESSED": 318,
+          "LABEL_BOOKING_FAILED": 48,
+          "RETURN_TAX_FAILED": 24
+        },
+        "reason": {
+          "Changed idea": 132609,
+          "Too big": 111115,
+          "Too small": 108532,
+          "Changed my mind / Other": 92084,
+          "Uncomfortable": 41060,
+          "Not what I expected": 20064,
+          "Lost In Transit": 14988,
+          "Found something else": 14967,
+          "Return Without Merchandise": 11662,
+          "Lost in transit": 11526,
+          "Wrong Item": 10032,
+          "Return without merch": 9150,
+          "Defective": 8421,
+          "Wrong item delivered": 7280,
+          "Poor quality": 6617,
+          "Not satisfied with the colour": 5724,
+          "Arrived in poor condition": 5449,
+          "Arrived too late": 5036,
+          "Changed my mind / other": 4592,
+          "Manufacturer defect": 3940,
+          "Not as advertised": 3352,
+          "Return extension": 3040,
+          "Wrong size delivered": 2983,
+          "Gift return": 2647,
+          "Return Extension": 2634,
+          "Return To Sender": 2385,
+          "return.page.reasons.Too big": 1660,
+          "return.page.reasons.Too small": 1340,
+          "Return to sender": 1276,
+          "Missing Item": 808
+        }
+      },
+      "return_creation_date": {
+        "min": "2024-02-04 00:00:00",
+        "max": "2026-01-31 00:00:00",
+        "invalid": 0
+      },
+      "Refund amount": {
+        "sum": 45227217.96,
+        "min": 0.0,
+        "max": 1200.0,
+        "invalid": 0,
+        "negative": 0
+      },
+      "item return qty": {
+        "sum": 653771.0,
+        "min": 0.0,
+        "max": 10.0,
+        "invalid": 0,
+        "negative": 0
+      }
+    }
+  },
+  "joins": {
+    "returns_order_sku": {
+      "unique_keys": 645423,
+      "duplicate_key_groups": 4185,
+      "max_rows_per_key": 7
+    },
+    "returns_return_sku": {
+      "unique_keys": 648454,
+      "duplicate_key_groups": 1288,
+      "max_rows_per_key": 3
+    },
+    "orders_order_sku": {
+      "unique_keys": 1000000,
+      "duplicate_key_groups": 0,
+      "max_rows_per_key": 1
+    },
+    "flags_order_sku": {
+      "unique_keys": 1597921,
+      "duplicate_key_groups": 0,
+      "max_rows_per_key": 1
+    },
+    "fees_return_number": {
+      "unique_keys": 521660,
+      "duplicate_key_groups": 0,
+      "max_rows_per_key": 1
+    },
+    "return_to_flag": {
+      "matched_return_rows": 168131,
+      "total_return_rows": 649745,
+      "fraction": 0.2587645922631186
+    },
+    "return_to_order": {
+      "matched_return_rows": 150396,
+      "total_return_rows": 649745,
+      "fraction": 0.23146926871311052
+    },
+    "return_to_fee": {
+      "matched_return_rows": 649730,
+      "total_return_rows": 649745,
+      "fraction": 0.9999769140201156
+    },
+    "flag_conflicting_keys": 0,
+    "fee_conflicting_keys": 0,
+    "exchange_to_original_order": {
+      "matched_exchange_rows": 16133,
+      "total_exchange_rows": 61934
+    }
+  },
+  "return_unique_orders": 495502,
+  "return_unique_transactions": 515537,
+  "shipped_unique_orders": 753782
+}

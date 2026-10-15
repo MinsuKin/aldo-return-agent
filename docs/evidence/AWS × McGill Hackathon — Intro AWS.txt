@@ -1,0 +1,137 @@
+--- Page 1 ---
+MCGILL RETAIL GEN AI HACKATHON  ·  FALL 2026
+From Idea to AgentBuilding on AWSAn intro to agentic AI and the AWS services you can build with
+Vincent RiouxSenior Solutions Architect, AWS CanadaAWS Virtual Workshop  ·  Wed Sep 30, 2026  ·  5:30 to 6:30 PM EDT
+From Idea to Agent  ·  Building on AWS 1 / 14
+
+--- Page 2 ---
+00  ·  AGENDA
+What we'll cover
+01What an agent really isAssistant versus agent, and the levels of autonomy
+02Amazon BedrockYour model foundation, live in the AWS console
+03From demo to productionAgentCore: the platform to run agents at scale
+04Build fasterStrands and Kiro, with short videos
+05The finalsYour AWS environment, mentors, and the jury
+06Start on your ownThe new AWS Free Tier and free training
+From Idea to Agent  ·  Building on AWS 2 / 14
+
+--- Page 3 ---
+01  ·  WHY AWS
+Machine learning is in Amazon's DNAAWS did not arrive at AI last year. Amazon has built with machine learning for over two decades.
+Fulfillment robotics1M+ robots across our network
+Prime AirAutonomous drone delivery
+AlexaBillions of interactions a week
+Generative AIAmazon Bedrock and Nova
+We turned that experience into services any developer can call in a few lines of code. When you build this week, you stand on 20 years of innovation.
+From Idea to Agent  ·  Building on AWS 3 / 14
+
+--- Page 4 ---
+01  ·  FOUNDATIONS
+Assistant vs. Agent
+AI Assistant
+●Reactiveresponds to your input●One turn at a timeyou drive every step●Mostly retrieves and answerslimited to RAG●Needs explicit commandsthink chatbot
+AI Agent
+●Proactiveinitiates actions toward a goal●Reasons and plansbreaks a goal into steps●Uses tools and datacalls APIs, observes results●Minimal hand-holdingit acts to get work done
+An assistant answers questions. An agent gets work done.
+From Idea to Agent  ·  Building on AWS 4 / 14
+
+--- Page 5 ---
+01  ·  FOUNDATIONS
+Agents work at different levels of autonomy
+L1AnalyticalGathers info and gives insights. Changes nothing.
+GREAT FORResearch, trend analysis
+L2LogicalMakes calculated changes within set limits.
+GREAT FORPricing, inventory optimization
+L3TransactionalTakes independent digital actions.
+GREAT FORProcess an order, email a customer
+L4Physical
+Controls the physical world.
+GREAT FORFulfillment, logistics robotics
+Most agents you build over a weekend live at L2 to L3. That is plenty to show real autonomy.
+From Idea to Agent  ·  Building on AWS 5 / 14
+
+--- Page 6 ---
+02  ·  AMAZON BEDROCK
+Amazon Bedrock: your model foundation
+Many top models, one APIAmazon Nova, Anthropic Claude, Llama, Mistral and more. Swap models without rewriting your app.
+Your data stays yoursPrivate by default and never used to train the base models.
+Knowledge Bases and GuardrailsGround answers in your own data, andadd safety controls.
+LIVE DEMOOpen the AWS consoleBrowse the Bedrock model catalogRun one prompt in the playground
+aws.amazon.com/bedrock
+From Idea to Agent  ·  Building on AWS 6 / 14
+
+--- Page 7 ---
+03  ·  TO PRODUCTION
+From demo to production: Amazon Bedrock AgentCore
+1. Modelreasons about the goal
++
+2. Contextmemory, knowledge, web search
++
+3. Toolscall APIs, take action
++
+4. Environmentrun many agents safely at scale
+AgentCore provides the environment: runtime, memory, gateway to tools, identity, and observability. Any framework, any model.
+2.1x  faster development75%  less infrastructure time5.2x  faster deployment
+Jump straight to agents: AgentCore CLI quickstart·   Source: Signal65, vs custom development
+From Idea to Agent  ·  Building on AWS 7 / 14
+
+--- Page 8 ---
+04  ·  BUILD FASTER
+Build faster: Strands Agents SDK●Open-source SDKPython or TypeScript●A working agent in a few linespick a model, add tools, run the loop●A fast on-rampideal for a hackathon prototype
+strandsagents.comKeep learning on your own: the AWS Developers channelyoutube.com/@awsdevelopers
+WATCH TOGETHER  ·  ~11 MINHow AI agents really workAWS Developers: youtu.be/ZpXWGjISMs8Chapter 1 of the free "Building AI Agent Harnesses with Strands Agents" course
+From Idea to Agent  ·  Building on AWS 8 / 14
+
+--- Page 9 ---
+04  ·  KIRO
+Kiro: your agentic coding partner●AWS agentic IDEbuilt on the editor you know●Spec-driventurns a prompt into requirements, design, and tasks, then writes code●Great for mixed-skill teamsnon-coders help shape the spec●Start on the free tier50 credits with a social or Builder ID login, paid plans from $20/mo
+kiro.dev·   Kiro + AgentCore how-to: AWS blog
+WATCH  ·  ~3 MINIntroducing Kiro, an agentic IDEKiro channel (2:46): youtu.be/lYuxyp8lp_U60-second version: youtu.be/BIuakTF6NMs
+From Idea to Agent  ·  Building on AWS 9 / 14
+
+--- Page 10 ---
+05  ·  THE FINALS  ·  OCT 15-16
+Your AWS environment at the finals
+●One AWS account per finalist teambuild your full solution on AWS●AWS services at no chargefor the two days of the event●Activated the morning of Oct 15ready when hacking begins
+The account is wipedEvery account is completely destroyedat the end of the event on October 16. Nothing survives.
+Keep your code on GitHubKeep data and notes on your laptops
+Treat the AWS account as a powerful two-day workspace, not as storage. Plan for the wipe from the start and you will not lose a thing.
+From Idea to Agent  ·  Building on AWS 10 / 14
+
+--- Page 11 ---
+05  ·  THE FINALS
+Mentors on site, and how the jury sees AWS
+5 AWS Solutions Architects
+●On site as mentors for the full two days●Ask us anything: architecture, service choice, cost, security, debugging●Live guidance and answers whenever you are stuckWe guide and unblock you. We do not code your solution for you.
+AWS leaders on the juryHow well you use AWS is an important factor in your score.
+Manon YelleSA Manager, Quebec (L7)AWS WWPS Canada
+Lisa RichardsonEnterprise Sr. Leader (L7)AWS Canada
+From Idea to Agent  ·  Building on AWS 11 / 14
+
+--- Page 12 ---
+06  ·  START ON YOUR OWN
+The new AWS Free TierAWS just reimagined getting started. It is simpler and safer, which is perfect for experimenting on your own.
+Sign in fastUse Google, GitHub, or Apple. For most new users, no credit card to start.
+$100 in free creditsBuild immediately in your first project. Earn extra credits as you deploy.
+Wire up a coding agentPaste the setup prompt and your agent deploys resources for you.
+Spend limit keeps you safeOn a paid plan, set a limit from $20/mo. Hit it and the project pauses, no surprise bills.
+Start: aws.amazon.com/freeRead about the new experience: the AWS blog
+From Idea to Agent  ·  Building on AWS 12 / 14
+
+--- Page 13 ---
+06  ·  KEEP LEARNING
+Keep learning, for free
+AWS Student RewardsVerified students: 12 months of Skill Builder Premium (900+ courses, hands-on labs), AWS credits, and a certification exam voucher.builder.aws.com/learn/students
+AWS Skill Builder1,000+ free resources, including GenAI and agents learning plans, plus SimuLearn.skillbuilder.aws
+GenAI learning pathCurated courses on generative AI and Amazon Bedrock: Knowledge Bases, Agents, Guardrails.aws.amazon.com/training/learn-about/generative-ai
+AWS Certified AI PractitionerAn achievable first certification to put on your resume.aws.amazon.com/certification
+From Idea to Agent  ·  Building on AWS 13 / 14
+
+--- Page 14 ---
+Go build. We're here to help.
+Reach for agents, not just chatbotsShow reasoning and action, the L2 to L3 sweet spot.
+Lean into AWS servicesBedrock, AgentCore, Strands, Kiro. Use them and explain them.
+Use your mentorsFive AWS SAs on site for two days. Ask us anything.
+You have the tools, the mentors, and a free path to keep going.I cannot wait to see what you build.
+Vincent RiouxSenior Solutions Architect, AWS CanadaQuestions welcome in English or French
+From Idea to Agent  ·  Building on AWS 14 / 14

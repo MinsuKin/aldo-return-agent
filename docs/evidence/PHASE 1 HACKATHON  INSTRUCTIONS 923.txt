@@ -1,0 +1,90 @@
+--- Page 1 ---
+PHASE 1 IDEATION 
+INSTRUCTIONS 
+DUE DATE: OCTOBER 4TH - 4PM 
+PDF Format - you can use your own template 
+design
+EMAIL TO:  bsrmcomp.mgmt@mcgill.ca 
+
+
+--- Page 2 ---
+COVER PAGE: TEAM 
+NAME
+NAME
+ROLE 
+ROLE
+NAME
+ROLE 
+NAME
+ROLE
+
+--- Page 3 ---
+SLIDE 1
+• Based on the Use Case provided, submit a clear and concise 
+summary of the agentic solution you aim to develop during 
+the Hackathon.
+• Scope: Specify the primary problems your solution will address 
+in the use case.
+• Technologies: List the primary technologies, frameworks, or 
+tools you intend to use.
+WHAT IS THE AGENTIC  AI SOLUTION 
+YOU PROPOSE TO CREATE? 
+
+
+--- Page 4 ---
+SLIDE 2
+• Phases: Outline the major phases or milestones of your project, 
+from inception to completion.
+• Team Roles: Identify the roles and responsibilities within your 
+team. Who will do what?
+• Risk Mitigation: Describe any anticipated challenges and your 
+plan to overcome them.
+WHAT IS YOUR PROPOSED 
+PROCESS/METHODOLOGY TO CREATE 
+THE SOLUTION? 
+
+
+--- Page 5 ---
+SLIDE 3
+• Business Impact: Enumerate the business metrics (example- 
+increased sales, inventory, cost savings etc ) that your solution 
+aims to positively influence.
+• User Experience: Explain how the user experience will be 
+affected by your proposal
+• Strategic Alignment: Discuss how your solution aligns with 
+ALDO Group’s current business strategy, objectives, or 
+challenges.
+WHAT VALUE DO YOU ANTICIPATE 
+CREATING FOR ALDO GROUP'S 
+BUSINESS STAKEHOLDERS? 
+
+
+--- Page 6 ---
+PHASE 1 JUDGING CRITERIA
+BUSINESS IMPACT & STRENGTH OF THESIS — 30%
+• Has  the team identified a meaningful 
+problem or opportunity?
+• Is there a compelling and well-supported 
+thesis for why the proposed solution creates 
+value?
+• Is there a credible path to protecting gross 
+margin and/or improving customer 
+satisfaction?
+SCALABILITY AND FEASIBILITY — 25%
+• Could this concept realistically 
+operate at retail scale?
+AGENTIC INNOVATION — 25%
+• Does the solution genuinely take 
+advantage of autonomous reasoning 
+and action?
+• Would a traditional rules engine, 
+analytics model or chatbot accomplish 
+essentially the same thing?
+PRESENTATION — 20%
+• Is the solution clearly explained 
+and convincingly 
+demonstrated?
+
+--- Page 7 ---
+QUESTIONS?
+CONTACT US: BSRMCOMP.MGMT@MCGILL.CA

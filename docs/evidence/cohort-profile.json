@@ -1,0 +1,13 @@
+{
+  "fit_size_reason_rows": 222647,
+  "fit_size_fraction_all_return_rows": 0.3426682775550408,
+  "joined_orders_and_flags_nonblank": 30352,
+  "joined_banner_mismatch": 0,
+  "return_dates_before_order_dates": 0,
+  "aldo_ca": {
+    "rows": 160059,
+    "completed_rows": 153739,
+    "fit_size_rows": 37210,
+    "raw_refund_sum_no_status_filter": 12759254.670000002
+  }
+}

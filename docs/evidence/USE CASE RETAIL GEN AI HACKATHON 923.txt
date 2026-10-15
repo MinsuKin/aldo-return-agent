@@ -1,0 +1,305 @@
+--- Page 1 ---
+BSRM X ALDO – RETAIL   GEN  AI    HACKATHON
+USE CASE: 
+RETHINKING   RETURNS WITH  AGENTIC AI
+
+
+--- Page 2 ---
+CONTEXT
+Product returns are one of the most complex and costly parts of modern retail, particularly in footwear.
+A return may look simple from the customer's perspective, but behind the scenes it can involve:
+CUSTOMER EXPERIENCE 
+AND INTERACTIONS
+E-COMMERCE STORES
+INVENTORY DISTRIBUTION CENTERS TRANSPORTATION
+MERCHANDISING PRODUCT QUALITY FINANCE
+FRAUD PREVENTION SUSTAINABILITY
+
+--- Page 3 ---
+The  reasons behind returns are equally varied. A product may not fit, may look different than expected, may arrive late or damaged, 
+may simply no longer be wanted, or may be returned as a result of customer behaviors that negatively impact economics, including
+abuse or fraud.
+Most retailers still manage returns through a combination of rules, workflows and disconnected systems. Decisions are often made
+without considering the full context of the customer, product, inventory position, logistics cost and likelihood of resale.
+The business objective itself is simple: protect gross margin while improving customer satisfaction.
+Agentic AI creates an opportunity to rethink this model as a whole.
+An AI agent can potentially understand context, investigate information across multiple sources, make decisions, coordinate with
+people or systems, take actions and learn from outcomes.
+
+--- Page 4 ---
+THE CHALLENGE
+How could agentic AI fundamentally improve the return lifecycle for both customers and retailers?
+Design and prototype an agentic solution that addresses a meaningful problem related to retail returns across stores and e-commerce.
+The objective is not simply to automate an existing returns workflow.
+We encourage teams to rethink how returns could work when AI agents are able to understand context, reason about complex 
+situations, make decisions and take action.
+SCOPE
+The scope of this challenge is intentionally broad. Returns should be considered as an end-to-end business problem rather than a single 
+transaction or process. Teams are expected to determine where agentic AI can create the most meaningful value and define the 
+problem they choose to solve.
+Identifying the opportunity is part of the challenge.
+
+--- Page 5 ---
+WHAT MAKES THIS AN AGENTIC AI CHALLENGE?
+Strong solutions should demonstrate some combination of:
+Understanding the end-to-end process, situation and objective
+ Gathering information from multiple sources
+Reasoning about possible actions and trade-offs
+ Making or recommending decisions
+Taking actions through APIs, tools or simulated business systems
+ Coordinating multiple steps toward an objective
+Knowing when human approval is required
+ Evaluating whether an action worked
+Adapting based on the result
+ Demonstrating and defending a clear thesis for gross-margin protection and 
+customer satisfaction
+Teams may use one agent or multiple cooperating agents.
+The use of generative AI alone does not make a solution agentic. We are looking for systems capable of reasoning and acting toward an objective, rather 
+than simply generating content or answering questions.
+
+--- Page 6 ---
+YOUR SOLUTION
+In the Ideation Phase 1: describe what your initial idea is for the development of a prototype to reduce returns ( see Phase 1 Instrucions)
+Finalists in the Final Hacking Phase: Teams should develop a working prototype demonstrating how their solution would operate.
+Your prototype does not need to integrate with real ALDO systems.
+Simulated APIs, databases and workflows may be used.
+We care more about the quality of the problem identified, the strength of the team's thesis, the agent's reasoning and the potential business impact than production-ready software.
+Each team should demonstrate the following 5 :
+1. PROBLEM AND THESIS
+Clearly explain:
+• What problem or opportunity did you identify?
+• Who or what is affected?
+• Why does it matter?
+• Why is the current approach insufficient?
+• What is your thesis for improving gross margin and/or customer satisfaction?
+2. AGENTIC APPROACH
+Show:
+• What the agent knows
+• What it is trying to accomplish
+• What decisions it makes
+• What tools, data or systems it can access
+• What actions it can take
+• Where human intervention remains appropriate
+
+--- Page 7 ---
+3. WORKING PROTOTYPE
+Demonstrate at least one end-to-end scenario.
+The prototype should make the agent's reasoning, decisions and actions visible 
+enough to understand how the solution works.
+4. BUSINESS IMPACT
+Quantify or estimate the potential impact of the solution.
+Teams should select the measures most relevant to their own thesis rather than 
+optimize against a predefined set of KPIs.
+5. RESPONSIBLE AI
+Explain the risks associated with giving the proposed agent autonomy and how 
+those risks would be managed.
+Consider issues such as:
+• Customer fairness
+• Privacy
+• Bias
+• Explainability
+• Financial authority
+• Appropriate human oversight
+
+--- Page 8 ---
+PHASE 1 JUDGING CRITERIA
+BUSINESS IMPACT & STRENGTH OF THESIS —
+30%
+Has the team identified a meaningful problem or opportunity?
+Is there a compelling and well-supported thesis for why the proposed 
+solution creates value?
+Is there a credible path to protecting gross margin and/or improving 
+customer satisfaction?
+AGENTIC INNOVATION — 25%
+Does the solution genuinely take advantage of autonomous reasoning and 
+action?
+Would a traditional rules engine, analytics model or chatbot accomplish 
+essentially the same thing?
+SCALABILITY AND FEASIBILITY — 25%
+Could this concept realistically operate at retail scale?
+PRESENTATION — 20%
+Is the solution clearly explained and convincingly demonstrated?
+
+--- Page 9 ---
+FINAL JUDGING CRITERIA
+BUSINESS IMPACT & STRENGTH OF THESIS — 30%
+Has the team identified a meaningful problem or opportunity?
+Is there a compelling and well-supported thesis for why the proposed solution creates value?
+Is there a credible path to protecting gross margin and/or improving customer satisfaction?
+AGENTIC INNOVATION — 25%
+Does the solution genuinely take advantage of autonomous reasoning and action?
+Would a traditional rules engine; analytics model or chatbot accomplish essentially the same thing?
+TECHNICAL EXECUTION — 15%
+How effectively does the prototype demonstrate the concept?
+SCALABILITY AND FEASIBILITY — 15%
+Could this concept realistically operate at retail scale?
+PRESENTATION — 15%
+Is the solution clearly explained and convincingly demonstrated?
+
+--- Page 10 ---
+DATA AVAILABLE TO TEAMS
+All datasets will be anonymized and may be simplified or synthetically enhanced for the hackathon.
+Teams should not require access to production ALDO systems.
+1. ORDER DATASET
+Example fields:
+• Order ID
+• Customer ID
+• Order date
+• Channel
+• Country
+• Store or e-commerce
+• SKU
+• Product
+• Colour
+• Size
+• Quantity
+• Selling price
+• Discount
+• Promotion
+• Shipping method
+• Shipping cost
+• Fulfilment location
+• Delivery date
+• Estimated delivery date
+2. RETURNS DATASET
+Example fields:
+• Return ID
+• Original order ID
+• Customer ID
+• SKU
+• Return date
+• Return channel
+• Store or mail return
+• Return reason
+• Return sub-reason
+• Refund amount
+• Return shipping cost
+• Product condition
+• Disposition
+• Days between purchase and return
+Return reasons may include fields such as fit, comfort, quality, damage, 
+expectations, delivery or change of mind.
+3. CUSTOMER BEHAVIOR 
+DATASET
+An anonymized customer profile could include:
+• Customer ID
+• Country
+• Loyalty status
+• Customer tenure
+• Number of lifetime orders
+• Lifetime spend
+• Number of returns
+• Return rate
+• Average order value
+• Preferred channel
+• Previous product categories purchased
+No personally identifiable information would be provided.
+
+--- Page 11 ---
+DATA AVAILABLE TO TEAMS
+4. PRODUCT CATALOGUE
+Example fields:
+• SKU
+• Style
+• Brand
+• Category
+• Subcategory
+• Gender
+• Colour
+• Material
+• Heel height
+• Closure type
+• Size
+• Price
+• Product description
+• Product attributes
+• Fit guidance
+• Width
+• Product type
+• Heel type
+• Sole material
+5. PRODUCT REVIEWS
+Example fields:
+• Product
+• Rating
+• Review text
+• Review date
+• Size purchased
+• Fit feedback
+• Comfort rating
+• Quality rating
+Where available, structured fit information such as runs small, true to size or runs large may also be included.
+6. INVENTORY DATASET
+Inventory by location:
+• SKU
+• Location
+• Location type
+• On-hand quantity
+• Available-to-promise quantity
+• Incoming inventory
+Locations may include distribution centers, stores and outlet stores.
+7. STORE DATASET
+Example fields:
+• Store ID
+• City
+• Region
+• Country
+• Store format
+• Inventory capacity
+• Store operating characteristics
+Precise customer addresses would not be provided.
+8. LOGISTICS DATASET
+Example fields:
+• Origin
+• Destination region
+• Shipping method
+• Estimated shipping cost
+• Typical transit time
+• Carbon estimate
+This may be provided as a simplified transportation rate and service table.
+
+--- Page 12 ---
+DATA AVAILABLE TO TEAMS
+9. PRODUCT ECONOMICS
+Example fields:
+• SKU
+• Retail price
+• Estimated product cost
+• Gross margin
+• Markdown level
+• Estimated recovery value
+• Processing cost
+Commercially sensitive values may be normalized or synthetically generated while maintaining realistic 
+economic relationships.
+10. RETURN POLICIES AND BUSINESS 
+RULES
+A simplified set of policies covering areas such as:
+• Return eligibility
+• Final-sale rules
+• Refunds
+• Exchanges
+• Loyalty-member exceptions
+• Damaged merchandise
+• Financial authority and approval limits
+Some of this information may deliberately be provided as unstructured documents rather than structured data.
+ADDITIONAL DATA
+Depending on availability and anonymization requirements, teams may also receive:
+• Product images
+• Anonymized or synthetic customer-service conversations
+• Store return-processing information
+• External contextual datasets
+• Other relevant retail data
+Teams may also supplement the provided datasets with publicly available information where appropriate.
+TECHNICAL ENVIRONMENT
+Teams may be provided with simulated APIs representing retail capabilities such as retrieving information and 
+executing transactions.
+Examples could include capabilities to:
+• Retrieve customer, order, product and inventory information
+• Calculate transportation options
+• Initiate or modify a return
+• Create an exchange
+• Issue a refund
+• Route merchandise
+• Modify selected product information
+The environment is intended to allow agents to take actions, not simply generate recommendations.
+Teams are not required to use every dataset or capability provided.

@@ -1,0 +1,102 @@
+--- Page 1 ---
+MCGILL RETAIL GEN AI HACKATHON · FALL 2026
+Build on AWS: Your Get-Started Guide
+The AWS services you can build with, and how to get started
+1 · Start building on AWS (free)
+The new AWS Free Tier — simpler and safer for experimenting on your own.
+1. Sign in with Google, GitHub, or Apple. For most new users, no credit card to start.
+2. Get $100 in free credits and build right away in your first project.
+3. Optionally paste the setup prompt into a coding agent to wire everything up.
+4. On a paid plan, set a spend limit (from $20/mo). Hit it and the project pauses, no surprise bills.
+Start: aws.amazon.com/free · About: AWS blog
+2 · The tools you saw
+Tool
+What it is
+Link
+Amazon Bedrock
+Many top models (Nova, Claude, Llama, Mistral) via one API.
+Knowledge Bases + Guardrails.
+https://aws.amazon.com/
+bedrock/
+Bedrock AgentCore
+Runtime, memory, gateway, identity, observability to run
+agents at scale. Any framework.
+https://aws.amazon.com/
+bedrock/agentcore/
+Strands Agents
+SDK
+Open-source (Python/TypeScript). A working agent in a few
+lines. A fast on-ramp.
+https://strandsagents.com
+/
+Kiro
+AWS agentic IDE. Spec-driven: prompt to spec to code. Free
+tier (50 credits); paid from $20/mo.
+https://kiro.dev/
+Jump straight to agents: AgentCore CLI quickstart
+3 · Watch
+[Channel] AWS Developers on YouTube — your keep-learning home —
+https://www.youtube.com/@awsdevelopers
+[Strands] How AI agents really work (11:06) — Ch.1 of the free 'Building AI Agent Harnesses with Strands Agents'
+course — https://www.youtube.com/watch?v=ZpXWGjISMs8&list=PLDzwjhH-4yhU&index=1
+[Kiro] Introducing Kiro, an agentic IDE (2:46) — https://www.youtube.com/watch?v=lYuxyp8lp_U
+[Kiro] Kiro in 60 seconds (1:14) — https://www.youtube.com/watch?v=BIuakTF6NMs
+[Kiro+AgentCore] AI-driven development lifecycle (blog how-to) —
+https://aws.amazon.com/blogs/machine-learning/ai-driven-development-lifecycle-using-amazon-bedrock-agentcore/
+4 · Keep learning (free)
+Resource
+What you get
+Link
+
+
+--- Page 2 ---
+AWS Student
+Rewards
+Verified students: 12 months of Skill Builder Premium
+(900+ courses, hands-on labs), AWS credits, and a
+certification exam voucher. Via AWS Builder Center.
+https://builder.aws.com/learn/stude
+nts
+AWS Skill Builder
+1,000+ free resources; GenAI & agents learning plans;
+SimuLearn.
+https://skillbuilder.aws/
+GenAI learning path
+Curated courses on generative AI + Amazon Bedrock
+(Knowledge Bases, Agents, Guardrails).
+https://aws.amazon.com/training/le
+arn-about/generative-ai/
+AI Practitioner cert
+Achievable first AWS certification for your resume.
+https://aws.amazon.com/certificatio
+n/certified-ai-practitioner/
+Cloud Credits for
+Research
+Student awards up to $5,000 in AWS credits (faculty
+sponsor applies).
+https://aws.amazon.com/governme
+nt-education/research-and-technic
+al-computing/cloud-credit-for-resea
+rch/
+5 · At the finals (Oct 15-16)
+Your AWS environment
+ One AWS account per finalist team
+ AWS services at no charge for the event
+ Activated the morning of Oct 15
+The account is wiped at the end of Oct 16.
+Nothing survives. Keep code on GitHub and
+data/notes on your laptops as you go.
+Mentors & jury
+ 5 AWS Solutions Architects on site for the full two
+days
+ Ask about architecture, service choice, cost,
+security, debugging
+ We guide and unblock you — we do not code your
+solution
+ Senior AWS leaders on the jury (Manon Yelle,
+Lisa Richardson): how well you use AWS is an
+important factor in your score
+Build tip: aim for a real agent, not just a chatbot — show reasoning and action (L2 to L3). Lean into AWS services
+and be ready to show and explain how you used them.
+Presented by Vincent Rioux · Senior Solutions Architect, AWS Canada · Questions welcome in English or French
+AI transparency: Amazon Quick was used to accelerate research and preparation for this workshop.

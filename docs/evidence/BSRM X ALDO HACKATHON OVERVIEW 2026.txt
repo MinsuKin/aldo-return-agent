@@ -1,0 +1,117 @@
+--- Page 1 ---
+BS R M  X A LD O  R E T A I L  G E N  A I
+H A C K A T H O N
+FALL 2026
+OVERVIEW
+
+
+--- Page 2 ---
+THEME: Rethinking returns with agentic AI
+Based on the use case provided by ALDO Group, in Phase 1 , your team will explain the
+proposed solution and develop a live demo in the Live Final Phase. 
+FRAMING:
+Data policy: Organizers will not share proprietary data. Teams must use public datasets
+and/or synthetic data they generate. Keep datasets small but sufficient to demonstrate
+behavior. Respect ToS; no scraping behind logins.
+Agentic expectation: Show autonomous loops (plan →  tool calls →  observe →
+reflect →  next action), plus safety checks and grounded explanations (cite the
+source row/field, doc, or rule).
+AWS Platforms: Amazon Bedrock, Strands Agents SDK, Lambda, etc. AWS Mentors
+will be available to coach how to best use AWS tools.
+WELCOME TO THE 2026 ALDO X BSRM RETAIL GEN AI HACKATHON
+POWERED BY AWS & THE DATA SPHERE LAB 
+
+--- Page 3 ---
+HACKATHON
+PHASES 
+PHASE 1  IDEATION 
+VIRTUAL : SEPTEMBER 23 TO OCTOBER 4 
+L I V E  F I N A L  H A C K A T H O N
+OCTOBER 15  & 16 :  WITH ALDO GROUP
+AND AWS MENTORS FOR 10 FINALIST
+TEAMS
+TH TH
+FINAL PRESENTATION
+OCTOBER 16   AFTERNOON: PITCH YOUR
+FINAL PROPOSAL IN 8 MINUTES WITH
+PROTOTYPE BEFORE A JURY PANEL 
+TH
+
+
+--- Page 4 ---
+IDEATION: 
+🗓  September 23rd to October 4th 
+🚀 Wednesday, September 23rd :  LAUNCH 
+Kick off the Ideation . Read  the Phase 1
+Instructions and the criteria by which you'll
+be judged.
+📆 AWS Expert-Led Training Workshop.
+Virtual workshop.
+Wednesday September 30th 5:30PM –
+6:30PM 
+⏰ Sunday October 4th - 4 PM EST 
+IDEATION DEADLINE
+Time's up! Make sure to submit your Ideation
+proposal.
+🏅 Friday October 9th - 6 PM EST
+FINALIST REVEAL
+We'll announce the Top 10 finalist teams via
+email, chosen based on our predefined
+criteria.
+L I V E  H A C K A T H O N  F I N A L :
+🗓  T h u r s d a y ,  O c t o b e r  1 5 t h  
+🍳  1 0 : 0 0  A M  -  K i c k o f f  &  S w a g :
+S t a r t  y o u r  d a y  w i t h  a  w e l c o m e  b r e a k f a s t  a n d
+g e t  y o u r  h a c k a t h o n  S W A G .
+👩‍💻 👨‍💻  H A C K I N G  C O M M E N C E S
+A f t e r  a  q u i c k  r u n d o w n  o f  t h e  h a c k a t h o n
+g u i d e l i n e s ,  d i v e  r i g h t  i n t o  h a c k i n g  i n  y o u r
+d e s i g n a t e d  a r e a s  o n  2  f l o o r  o f  B r o n f m a n  B l d g .
+n d
+🌐  A W S  A c c e s s  a n d  M e n t o r i n g
+E a c h  f i n a l i s t  t e a m  r e c e i v e s  A W S  a c c e s s ,  a n d
+A L D O  &  A W S  e x p e r t s / m e n t o r s  a r e  a v a i l a b l e  f o r
+c o n s u l t a t i o n .
+🍱  1 2  P M  -  F u e l  U p :
+L u n c h  b o x e s  a n d  b e v e r a g e s  a r e  a v a i l a b l e  f o r  a l l
+f i n a l i s t  t e a m s .
+🎤  C h e c k  i n  w i t h  M e n t o r s  3 : 3 0  P M
+D o n ' t  m i s s  t h e  c h a n c e  t o  m a k e  s u r e  y o u  a r e  o n
+t r a c k
+🍕  5  P M  -  R e c h a r g e :
+T a k e  a  b r e a k  w i t h  p i z z a  a n d  r e f r e s h m e n t s ,  t h e n
+g e t  b a c k  t o  f i n a l i z i n g  y o u r  t r a n s f o r m a t i v e
+s o l u t i o n s .  B u i l d i n g  c l o s e s  a t  9 P M .
+FINAL SHOWCASE:
+🗓 Friday October 16th 
+🍳 Morning (8AM) - Hack to the Finish Line:
+Enjoy breakfast and keep working!
+👩‍💻👨‍💻 MENTOR CHECK IN: morning
+Receive valuable insights during check-ins with
+mentors from the ALDO Team and AWS mentors 
+🍱 12 PM - Sustain & Maintain:
+Lunch boxes and beverages are at the ready for all
+finalist teams.
+11: 00 AM – 2:30 PM – TEST YOUR DEMO & PRACTICE
+⏰ 2 PM – HACKING CONCLUDES
+Keyboards down! Prepare for the final
+presentations.
+🎙  2: 30 PM – 4:30 PM – JUDGEMENT HOUR:
+Present your solutions to an expert jury panel.
+Make it count!
+🏆 5 PM – 6 PM - The Grand Finale:
+Winner Announcements & Prize Ceremony: See
+if your team takes home the glory!
+Closing Cocktail & Appetizers: Let's toast to
+innovation and collaborative brilliance!
+
+--- Page 5 ---
+PRIZE MONEY
+1  PLACEST
+$6000
+2  PLACEND
+$3000
+3  PLACERD
+$1500
+TWO SPECIAL PRIZES
+$750 EA
