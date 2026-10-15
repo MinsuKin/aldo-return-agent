@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "policy_id": "DEMO-POLICY-CA",
+  "version": "2026.10-demo",
+  "label": "Demo assumption, not official ALDO policy",
+  "window_days": 30,
+  "window_inclusive": true,
+  "authority_refund_limit_cents": 25000,
+  "currency": "CAD",
+  "option_types": [
+    "exchange_ship_from_dc",
+    "exchange_ship_from_store",
+    "exchange_store_pickup",
+    "return_in_store",
+    "return_mail"
+  ],
+  "rules": [
+    {
+      "rule_id": "final_sale.no_return",
+      "decision": "ineligible",
+      "description": "Final-sale item returned for a non-defect reason"
+    },
+    {
+      "rule_id": "final_sale.defect_review",
+      "decision": "needs_review",
+      "description": "Final-sale item with a quality or damage reason"
+    },
+    {
+      "rule_id": "qty.exceeds_remaining",
+      "decision": "ineligible",
+      "description": "Requested quantity exceeds purchased minus returned or reserved"
+    },
+    {
+      "rule_id": "window.missing_delivery_date",
+      "decision": "needs_review",
+      "description": "No delivered_at on file"
+    },
+    {
+      "rule_id": "window.expired",
+      "decision": "ineligible",
+      "description": "More than 30 days after delivery"
+    },
+    {
+      "rule_id": "window.ok",
+      "decision": "eligible",
+      "description": "Within 30 days after delivery, inclusive"
+    },
+    {
+      "rule_id": "condition.unknown",
+      "decision": "needs_information",
+      "description": "Item condition not stated"
+    },
+    {
+      "rule_id": "condition.worn",
+      "decision": "ineligible",
+      "description": "Worn item with a non-defect reason"
+    },
+    {
+      "rule_id": "authority.refund_limit",
+      "decision": "needs_review",
+      "description": "Refund above CAD 250.00"
+    },
+    {
+      "rule_id": "final_sale.unknown",
+      "decision": "note",
+      "description": "final_sale flag is null; not treated as false"
+    }
+  ],
+  "source": "synthetic"
+}

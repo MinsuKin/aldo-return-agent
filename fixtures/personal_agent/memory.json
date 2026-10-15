@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "label": "Synthetic demo memory: generic retailer labels, not real purchase history",
+  "owners": [
+    {
+      "owner_id": "DEMO-CUST-AVA",
+      "display_name": "Ava",
+      "size_system": "US_W",
+      "typical_size": "7.5",
+      "source": "synthetic",
+      "memory": [
+        {
+          "memory_id": "PM-1",
+          "retailer": "Retailer A (synthetic)",
+          "item": "running shoe",
+          "size": "7.5",
+          "outcome": "kept",
+          "source": "synthetic"
+        },
+        {
+          "memory_id": "PM-2",
+          "retailer": "Retailer B (synthetic)",
+          "item": "loafer",
+          "size": "7.5",
+          "outcome": "kept",
+          "source": "synthetic"
+        },
+        {
+          "memory_id": "PM-3",
+          "retailer": "Retailer C (synthetic)",
+          "item": "sneaker",
+          "size": "8.0",
+          "outcome": "returned_too_big",
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "owner_id": "DEMO-CUST-BEN",
+      "display_name": "Ben",
+      "size_system": "US_M",
+      "typical_size": "10.0",
+      "source": "synthetic",
+      "memory": [
+        {
+          "memory_id": "PM-1",
+          "retailer": "Retailer A (synthetic)",
+          "item": "oxford shoe",
+          "size": "10.0",
+          "outcome": "kept",
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "owner_id": "DEMO-CUST-CHLOE",
+      "display_name": "Chloe",
+      "size_system": "US_W",
+      "typical_size": "7.5",
+      "source": "synthetic",
+      "memory": [
+        {
+          "memory_id": "PM-1",
+          "retailer": "Retailer B (synthetic)",
+          "item": "ballet flat",
+          "size": "7.5",
+          "outcome": "kept",
+          "source": "synthetic"
+        }
+      ]
+    }
+  ]
+}

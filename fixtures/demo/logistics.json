@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "logistics_id": "DEMO-LOGISTICS-CA",
+  "currency": "CAD",
+  "exchange_ship_fee_cents": 0,
+  "exchange_pickup_fee_cents": 0,
+  "in_store_return": {
+    "rate_id": "DEMO-RATE-INSTORE",
+    "fee_cents": 0,
+    "refund_when": "drop_off"
+  },
+  "mail_return": {
+    "rate_id": "DEMO-RATE-MAIL",
+    "fee_cents": 595,
+    "refund_eta_days_after_dropoff": 10
+  },
+  "exchange_ship": {
+    "rate_id": "DEMO-RATE-XSHIP",
+    "fee_cents": 0
+  },
+  "exchange_pickup": {
+    "rate_id": "DEMO-RATE-XPICKUP",
+    "fee_cents": 0
+  },
+  "source": "synthetic",
+  "label": "Demo assumption, not official ALDO rates"
+}

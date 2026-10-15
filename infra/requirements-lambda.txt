@@ -1,0 +1,5 @@
+boto3==1.43.114
+pydantic==2.14.1
+aws-lambda-powertools==3.36.0
+tzdata==2025.2
+strands-agents==1.61.0

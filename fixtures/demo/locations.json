@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "locations": [
+    {
+      "location_id": "DEMO-DC-QC",
+      "type": "DC",
+      "name": "ALDO Demo Distribution Centre",
+      "city": "Montreal",
+      "region": "QC",
+      "pickup_ready_days": null,
+      "ship_days": 4,
+      "source": "synthetic"
+    },
+    {
+      "location_id": "DEMO-STORE-MTL-01",
+      "type": "STORE",
+      "name": "ALDO Demo Store Montreal",
+      "city": "Montreal",
+      "region": "QC",
+      "pickup_ready_days": 1,
+      "ship_days": 3,
+      "source": "synthetic"
+    },
+    {
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "type": "STORE",
+      "name": "ALDO Demo Store Laval",
+      "city": "Laval",
+      "region": "QC",
+      "pickup_ready_days": 1,
+      "ship_days": 3,
+      "source": "synthetic"
+    },
+    {
+      "location_id": "DEMO-STORE-TOR-01",
+      "type": "STORE",
+      "name": "ALDO Demo Store Toronto",
+      "city": "Toronto",
+      "region": "ON",
+      "pickup_ready_days": 1,
+      "ship_days": 3,
+      "source": "synthetic"
+    }
+  ]
+}

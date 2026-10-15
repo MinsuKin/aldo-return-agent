@@ -1,0 +1,684 @@
+{
+  "schema_version": 1,
+  "title": "Agentic Returns Gateway impact model: fit-related returns, ALDO_CA",
+  "script": "scripts/build_impact_model.py",
+  "currency": "CAD",
+  "currency_note": "CAD assumed for ALDO_CA, unconfirmed",
+  "slide_summary": {
+    "currency_note": "CAD assumed for ALDO_CA, unconfirmed",
+    "headline_numbers": [
+      {
+        "key": "fit_lines",
+        "label": "Size-related return lines (Too small + Too big)",
+        "value": 13317,
+        "unit": "lines",
+        "tag": "measured",
+        "display": "13,317",
+        "basis": "21.48% of 61,998 completed ALDO_CA return lines, 2025-02-01 to 2026-01-31. Lines, not customers."
+      },
+      {
+        "key": "annual_net_value_base",
+        "label": "Annual net value, post-purchase exchange (base case)",
+        "value": 11575434,
+        "unit": "CAD_cents",
+        "tag": "pending_measurement",
+        "display": "CAD 115,754.34",
+        "basis": "Range CAD 40,912.80 (low) to CAD 193,525.62 (high). Rests on assumed 10/20/30% exchange conversion and a placeholder agent cost (pending_measurement)."
+      },
+      {
+        "key": "prevention_value_base",
+        "label": "Pre-purchase prevention what-if (base case)",
+        "value": 5060460,
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "display": "CAD 50,604.60",
+        "basis": "5% of the measured size-related lines prevented. Range CAD 0.00 (0%) to CAD 101,209.20 (10%). Pilot hypothesis, separate lever, not additive."
+      }
+    ],
+    "key_assumptions": [
+      "Exchange conversion of size-related lines 10/20/30% and prevention before purchase 0/5/10% (low/base/high, assumed). Both are assumptions to validate in a pilot.",
+      "Value per converted or retained case CAD 54.00 and avoided return cost CAD 22.00 (assumed, synthetic unit economics from handoff section 15).",
+      "Repeat-return reduction on converted cases 0/5/10% (assumed).",
+      "Agent cost per run CAD 0.5000 is a placeholder (pending_measurement) until the live eval.",
+      "Fit lines are return lines, not customers."
+    ]
+  },
+  "tag_legend": {
+    "measured": "Counted or summed directly from the provided CSV files.",
+    "derived": "Calculated from measured numbers and/or assumptions with the formula shown.",
+    "assumed": "An input chosen by the team, or a what-if result built only from such inputs and a measured baseline. It is not observed in ALDO data and must be validated in a pilot.",
+    "pending_measurement": "Placeholder until the live eval measures it (docs/eval/results.json)."
+  },
+  "agent_cost_status": "pending_measurement",
+  "agent_cost_note": "Agent cost per run is a deliberately conservative placeholder of CAD 0.5000, tagged pending_measurement (file not found: `docs/eval/results.json`). It is not a measurement. Run the live eval, then re-run `python3.12 scripts/build_impact_model.py` so the cost becomes derived from measured tokens. The agent cost and annual net value are provisional until then.",
+  "window": {
+    "start": "2025-02-01",
+    "end": "2026-01-31",
+    "days": 365,
+    "tag": "derived"
+  },
+  "filter": {
+    "text": "store_banner = 'ALDO_CA' AND last return status = 'RETURN_COMPLETED' AND return_creation_date in 2025-02-01..2026-01-31; fit line = reason equals 'too small' or 'too big' after strip, lower-case, whitespace collapse and removal of the 'return.page.reasons.' prefix",
+    "banner": "ALDO_CA",
+    "last_return_status": "RETURN_COMPLETED",
+    "date_field": "return_creation_date",
+    "fit_reasons": [
+      "Too small",
+      "Too big"
+    ]
+  },
+  "returns_window": {
+    "total_return_lines": {
+      "label": "Return lines in scope",
+      "value": 61998,
+      "unit": "lines",
+      "tag": "measured",
+      "display": "61,998",
+      "note": "One line is one CSV row. The source has duplicate (order, SKU) groups, so a line is not guaranteed to be an independent return unit."
+    },
+    "fit_lines": {
+      "label": "Fit-reason lines (Too small + Too big)",
+      "value": 13317,
+      "unit": "lines",
+      "tag": "measured",
+      "display": "13,317",
+      "note": "Return lines, not customers."
+    },
+    "fit_lines_too_small": {
+      "label": "Fit lines: Too small",
+      "value": 5840,
+      "unit": "lines",
+      "tag": "measured",
+      "display": "5,840"
+    },
+    "fit_lines_too_big": {
+      "label": "Fit lines: Too big",
+      "value": 7477,
+      "unit": "lines",
+      "tag": "measured",
+      "display": "7,477"
+    },
+    "fit_share_of_lines": {
+      "label": "Fit lines as share of all lines in scope",
+      "value": 21.48,
+      "unit": "percent",
+      "tag": "derived",
+      "display": "21.48%",
+      "note": "Not an exchange conversion rate."
+    },
+    "fit_refund_sum": {
+      "label": "Refund amount of fit lines, sum",
+      "value": 115005058,
+      "unit": "CAD_cents",
+      "tag": "measured",
+      "display": "CAD 1,150,050.58",
+      "note": "Column summed as provided. Context for the funnel, not an input to the annual-value formula and not a realized loss. Line versus transaction grain is unconfirmed."
+    },
+    "fit_refund_median": {
+      "label": "Refund amount of fit lines, median",
+      "value": 7999,
+      "unit": "CAD_cents",
+      "tag": "measured",
+      "display": "CAD 79.99"
+    },
+    "distinct_return_numbers_in_scope": {
+      "label": "Distinct return numbers in scope",
+      "value": 49404,
+      "unit": "returns",
+      "tag": "measured",
+      "display": "49,404",
+      "note": "Several lines can share one return number."
+    },
+    "distinct_return_numbers_fit": {
+      "label": "Distinct return numbers with a fit line",
+      "value": 11300,
+      "unit": "returns",
+      "tag": "measured",
+      "display": "11,300"
+    }
+  },
+  "scale": {
+    "days_in_window": {
+      "label": "Calendar days in window",
+      "value": 365,
+      "unit": "days",
+      "tag": "derived",
+      "display": "365"
+    },
+    "days_with_lines": {
+      "label": "Days with at least one line",
+      "value": 365,
+      "unit": "days",
+      "tag": "measured",
+      "display": "365"
+    },
+    "lines_per_day_mean": {
+      "label": "Lines per day, mean",
+      "value": 169.86,
+      "unit": "lines_per_day",
+      "tag": "measured",
+      "display": "169.86",
+      "note": "Mean over all calendar days in the window (days without lines count as 0)."
+    },
+    "lines_per_day_p95": {
+      "label": "Lines per day, p95",
+      "value": 450.8,
+      "unit": "lines_per_day",
+      "tag": "measured",
+      "display": "450.80",
+      "note": "95th percentile of the daily counts, linear interpolation between closest ranks."
+    },
+    "lines_per_day_max": {
+      "label": "Lines per day, busiest day",
+      "value": 638,
+      "unit": "lines_per_day",
+      "tag": "measured",
+      "display": "638"
+    },
+    "peak_to_mean_ratio": {
+      "label": "Peak multiplier (p95 / mean)",
+      "value": 2.65,
+      "unit": "ratio",
+      "tag": "derived",
+      "display": "2.65x"
+    }
+  },
+  "exchange_evidence": {
+    "confirmed_all_stores": {
+      "label": "CONFIRMED in-store exchanges, all stores in file",
+      "value": 42565,
+      "unit": "rows",
+      "tag": "measured",
+      "display": "42,565",
+      "note": "Replacement sale recorded inside the return transaction."
+    },
+    "assumed_all_stores": {
+      "label": "ASSUMED in-store exchanges, all stores in file",
+      "value": 14946,
+      "unit": "rows",
+      "tag": "measured",
+      "display": "14,946",
+      "note": "Inferred when a separate in-store sale followed within five minutes. Never merge with CONFIRMED."
+    },
+    "confirmed_aldo_ca_stores": {
+      "label": "CONFIRMED in-store exchanges, stores attributed to ALDO_CA",
+      "value": 12853,
+      "unit": "rows",
+      "tag": "derived",
+      "display": "12,853",
+      "note": "The exchange file has no banner column and covers several banners. Attribution maps Return store to the banner seen for the same in-store return location in the returns file."
+    },
+    "assumed_aldo_ca_stores": {
+      "label": "ASSUMED in-store exchanges, stores attributed to ALDO_CA",
+      "value": 4802,
+      "unit": "rows",
+      "tag": "derived",
+      "display": "4,802"
+    },
+    "rows_other_banners": {
+      "label": "Exchange rows in stores attributed to other banners",
+      "value": 39504,
+      "unit": "rows",
+      "tag": "derived",
+      "display": "39,504"
+    },
+    "rows_unmapped_store": {
+      "label": "Exchange rows whose store could not be attributed to a banner",
+      "value": 352,
+      "unit": "rows",
+      "tag": "derived",
+      "display": "352"
+    },
+    "units_in_window": {
+      "label": "Exchanged units (sum of Exchange QTY) in window",
+      "value": 57511,
+      "unit": "units",
+      "tag": "measured",
+      "display": "57,511"
+    }
+  },
+  "formula": "annual_net_value = fit_lines x exchange_conversion x value_per_converted_case\n                 + fit_lines x exchange_conversion x repeat_return_reduction x avoided_second_return_cost\n                 - total_requests x agent_cost_per_run",
+  "scenarios": {
+    "columns": [
+      "low",
+      "base",
+      "high"
+    ],
+    "inputs": {
+      "exchange_conversion_pct": {
+        "label": "Exchange conversion of fit-reason lines",
+        "unit": "percent",
+        "tag": "assumed",
+        "values": {
+          "low": 10,
+          "base": 20,
+          "high": 30
+        },
+        "display": {
+          "low": "10%",
+          "base": "20%",
+          "high": "30%"
+        },
+        "note": "Share of fit-reason lines that become exchanges. Assumption to validate in a pilot."
+      },
+      "repeat_return_reduction_pct": {
+        "label": "Repeat-return reduction on converted cases",
+        "unit": "percent",
+        "tag": "assumed",
+        "values": {
+          "low": 0,
+          "base": 5,
+          "high": 10
+        },
+        "display": {
+          "low": "0%",
+          "base": "5%",
+          "high": "10%"
+        },
+        "note": "Share of converted cases where a second return is avoided thanks to the fit insight."
+      },
+      "value_per_converted_case": {
+        "label": "Incremental value per converted case",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 5400,
+          "base": 5400,
+          "high": 5400
+        },
+        "display": {
+          "low": "CAD 54.00",
+          "base": "CAD 54.00",
+          "high": "CAD 54.00"
+        },
+        "note": "Handoff section 15 synthetic unit economics: exchange (-28) minus refund (-82) = +54. Incremental economic value, not gross margin."
+      },
+      "avoided_second_return_cost": {
+        "label": "Avoided second-return cost",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 2200,
+          "base": 2200,
+          "high": 2200
+        },
+        "display": {
+          "low": "CAD 22.00",
+          "base": "CAD 22.00",
+          "high": "CAD 22.00"
+        },
+        "note": "Reverse logistics 12 + handling 10 (design section 12, handoff section 15)."
+      },
+      "fit_lines": {
+        "label": "Fit-reason lines (window)",
+        "unit": "lines",
+        "tag": "measured",
+        "values": {
+          "low": 13317,
+          "base": 13317,
+          "high": 13317
+        },
+        "display": {
+          "low": "13,317",
+          "base": "13,317",
+          "high": "13,317"
+        }
+      },
+      "total_requests": {
+        "label": "Agent runs charged (total return lines in window)",
+        "unit": "runs",
+        "tag": "derived",
+        "values": {
+          "low": 61998,
+          "base": 61998,
+          "high": 61998
+        },
+        "display": {
+          "low": "61,998",
+          "base": "61,998",
+          "high": "61,998"
+        },
+        "note": "Conservative: one run is charged for every return line in scope, not only fit-reason lines."
+      },
+      "agent_cost_per_run": {
+        "label": "Agent cost per run",
+        "unit": "CAD_per_run",
+        "tag": "pending_measurement",
+        "values": {
+          "low": 0.5,
+          "base": 0.5,
+          "high": 0.5
+        },
+        "display": {
+          "low": "CAD 0.5000",
+          "base": "CAD 0.5000",
+          "high": "CAD 0.5000"
+        },
+        "note": "Placeholder until the live eval measures it. Re-run this script after the eval."
+      }
+    },
+    "outputs": {
+      "converted_cases": {
+        "label": "Converted cases",
+        "unit": "cases",
+        "tag": "derived",
+        "values": {
+          "low": 1331.7,
+          "base": 2663.4,
+          "high": 3995.1
+        },
+        "display": {
+          "low": "1,332",
+          "base": "2,663",
+          "high": "3,995"
+        },
+        "note": "Fit lines x exchange conversion (expected value, rounded for display)."
+      },
+      "exchange_value": {
+        "label": "Exchange value",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "low": 7191180,
+          "base": 14382360,
+          "high": 21573540
+        },
+        "display": {
+          "low": "CAD 71,911.80",
+          "base": "CAD 143,823.60",
+          "high": "CAD 215,735.40"
+        },
+        "note": "Converted cases x incremental value per converted case."
+      },
+      "avoided_second_returns": {
+        "label": "Avoided second returns",
+        "unit": "cases",
+        "tag": "derived",
+        "values": {
+          "low": 0.0,
+          "base": 133.17,
+          "high": 399.51
+        },
+        "display": {
+          "low": "0",
+          "base": "133",
+          "high": "400"
+        },
+        "note": "Converted cases x repeat-return reduction."
+      },
+      "avoided_second_return_value": {
+        "label": "Avoided second-return value",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "low": 0,
+          "base": 292974,
+          "high": 878922
+        },
+        "display": {
+          "low": "CAD 0.00",
+          "base": "CAD 2,929.74",
+          "high": "CAD 8,789.22"
+        }
+      },
+      "gross_value": {
+        "label": "Gross annual value (before agent cost)",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "low": 7191180,
+          "base": 14675334,
+          "high": 22452462
+        },
+        "display": {
+          "low": "CAD 71,911.80",
+          "base": "CAD 146,753.34",
+          "high": "CAD 224,524.62"
+        }
+      },
+      "agent_cost_total": {
+        "label": "Agent cost (total requests x cost per run)",
+        "unit": "CAD_cents",
+        "tag": "pending_measurement",
+        "values": {
+          "low": 3099900,
+          "base": 3099900,
+          "high": 3099900
+        },
+        "display": {
+          "low": "CAD 30,999.00",
+          "base": "CAD 30,999.00",
+          "high": "CAD 30,999.00"
+        }
+      },
+      "annual_net_value": {
+        "label": "Annual net value",
+        "unit": "CAD_cents",
+        "tag": "pending_measurement",
+        "values": {
+          "low": 4091280,
+          "base": 11575434,
+          "high": 19352562
+        },
+        "display": {
+          "low": "CAD 40,912.80",
+          "base": "CAD 115,754.34",
+          "high": "CAD 193,525.62"
+        },
+        "note": "The 12-month window is used as the annual figure (no scaling)."
+      }
+    }
+  },
+  "prevention_what_if": {
+    "tag": "assumed",
+    "framing": "Pilot hypothesis against a measured baseline: sizing guidance before purchase could stop some size-related returns from happening at all. The baseline is measured; the prevention rates and unit values are assumptions to validate in a pilot. This is not a forecast.",
+    "columns": [
+      "low",
+      "base",
+      "high"
+    ],
+    "inputs": {
+      "baseline_fit_lines": {
+        "label": "Baseline: size-related return lines (Too small + Too big), window",
+        "unit": "lines",
+        "tag": "measured",
+        "values": {
+          "low": 13317,
+          "base": 13317,
+          "high": 13317
+        },
+        "display": {
+          "low": "13,317",
+          "base": "13,317",
+          "high": "13,317"
+        },
+        "note": "Measured, same window and base as the exchange scenarios."
+      },
+      "prevention_rate_pct": {
+        "label": "Share of size-related return lines prevented before purchase",
+        "unit": "percent",
+        "tag": "assumed",
+        "values": {
+          "low": 0,
+          "base": 5,
+          "high": 10
+        },
+        "display": {
+          "low": "0%",
+          "base": "5%",
+          "high": "10%"
+        },
+        "note": "Pilot hypothesis. Not observed in ALDO data."
+      },
+      "avoided_return_cost": {
+        "label": "Avoided return cost per prevented case",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 2200,
+          "base": 2200,
+          "high": 2200
+        },
+        "display": {
+          "low": "CAD 22.00",
+          "base": "CAD 22.00",
+          "high": "CAD 22.00"
+        },
+        "note": "Reverse logistics 12 + handling 10 (design section 12, handoff section 15)."
+      },
+      "retained_case_value": {
+        "label": "Value per retained case",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 5400,
+          "base": 5400,
+          "high": 5400
+        },
+        "display": {
+          "low": "CAD 54.00",
+          "base": "CAD 54.00",
+          "high": "CAD 54.00"
+        },
+        "note": "Handoff section 15 synthetic unit economics (exchange versus refund = +54). Incremental economic value, not gross margin."
+      }
+    },
+    "outputs": {
+      "prevented_lines": {
+        "label": "Prevented return lines",
+        "unit": "lines",
+        "tag": "assumed",
+        "values": {
+          "low": 0.0,
+          "base": 665.85,
+          "high": 1331.7
+        },
+        "display": {
+          "low": "0",
+          "base": "666",
+          "high": "1,332"
+        },
+        "note": "Baseline x prevention rate (expected value, rounded for display)."
+      },
+      "avoided_return_cost_value": {
+        "label": "Avoided return cost",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 0,
+          "base": 1464870,
+          "high": 2929740
+        },
+        "display": {
+          "low": "CAD 0.00",
+          "base": "CAD 14,648.70",
+          "high": "CAD 29,297.40"
+        },
+        "note": "Prevented lines x avoided return cost."
+      },
+      "retained_sale_value": {
+        "label": "Retained-sale value",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 0,
+          "base": 3595590,
+          "high": 7191180
+        },
+        "display": {
+          "low": "CAD 0.00",
+          "base": "CAD 35,955.90",
+          "high": "CAD 71,911.80"
+        },
+        "note": "Prevented lines x value per retained case."
+      },
+      "total_value": {
+        "label": "Annual value (what-if)",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 0,
+          "base": 5060460,
+          "high": 10120920
+        },
+        "display": {
+          "low": "CAD 0.00",
+          "base": "CAD 50,604.60",
+          "high": "CAD 101,209.20"
+        },
+        "note": "The 12-month window is used as the annual figure. No sizing-assistant operating cost is subtracted."
+      }
+    },
+    "formula": "annual_value = fit_lines x prevention_rate x (avoided_return_cost + value_per_retained_case)"
+  },
+  "caveats": [
+    "Fit lines are return lines, not customers. A customer can appear on several lines and some rows have no customer identifier (see the data profile), so customers cannot be counted from this file.",
+    "Exchange conversion rates (10, 20 and 30 percent) are assumptions to validate in a pilot. The share of fit-reason lines is not a conversion rate and must not be used as one.",
+    "CAD assumed for ALDO_CA, unconfirmed: the source files have no currency column.",
+    "Value per converted case (CAD 54) comes from the synthetic unit economics in handoff section 15 (CAD 100 order, cost 40, refund path -82 versus exchange path -28). It is incremental economic value, not accounting gross profit and not ALDO-measured.",
+    "Refund amounts are summed as provided. Whether the column is line or transaction grain is unconfirmed, so the sum is context for the funnel only and is not a realized loss or a revenue figure.",
+    "Total requests is set to the number of return lines in scope (one agent run per line). This is conservative because one return can have several lines and the agent would not run on every line.",
+    "The exchange file has no banner column. Store attribution to ALDO_CA is inferred from the returns file and is tagged derived. No exchange rate is computed: only about 26 percent of exchange rows match an original order (handoff section 5), so dividing by returns would be misleading.",
+    "CONFIRMED means the replacement sale is inside the return transaction. ASSUMED is inferred from a separate in-store sale within five minutes. The two are reported separately and no causal effect is claimed.",
+    "The window covers 12 months, so window totals are used as annual values without seasonality scaling.",
+    "Pre-purchase prevention is a pilot hypothesis, not a forecast. The baseline (size-related return lines) is measured; the prevention rates (0, 5, 10 percent) and both unit values are assumptions to validate in a pilot, so every what-if result is tagged assumed.",
+    "The prevention what-if is a separate lever and is not additive with the exchange-conversion scenarios: a prevented return cannot also be converted to an exchange. Do not add the two tables together.",
+    "Per prevented case the what-if adds the avoided return cost (CAD 22) and the retained-sale value (CAD 54). Both come from the synthetic unit economics, and part of the CAD 54 may already include return handling cost, so the sum may overstate. No sizing-assistant operating cost is subtracted.",
+    "The prevention baseline counts size-related lines from every return channel in the returns file. The share that pre-purchase guidance could reach is not measured."
+  ],
+  "reconciliation": [
+    {
+      "check": "ALDO_CA rows, all statuses and dates",
+      "script": 160059,
+      "cohort_profile": 160059,
+      "match": true,
+      "tag": "measured"
+    },
+    {
+      "check": "ALDO_CA RETURN_COMPLETED rows, all dates",
+      "script": 153739,
+      "cohort_profile": 153739,
+      "match": true,
+      "tag": "measured"
+    },
+    {
+      "check": "ALDO_CA fit-reason rows, all statuses and dates",
+      "script": 37210,
+      "cohort_profile": 37210,
+      "match": true,
+      "tag": "measured"
+    }
+  ],
+  "sources": {
+    "tag": "measured",
+    "returns_csv": {
+      "file": "dataset/OMS Data_Feb24-Jan26_new.csv",
+      "sha256": "76ebd5fb9cc7e16e13bb191ebdf1f5c916c295afe3289a6e913d800feb50d1a5",
+      "matches_data_profile": true,
+      "rows_read": 649745,
+      "malformed_rows": 0,
+      "unparseable_dates_in_scope": 0,
+      "unparseable_refund_amounts_in_fit_lines": 0
+    },
+    "exchanges_csv": {
+      "file": "dataset/McGill_Instore_return_exchanges.csv",
+      "sha256": "3f5255834922aa15b79cb28247883345ae1548ec9c4da9b1d871c75d241e8e5b",
+      "matches_data_profile": true,
+      "rows_read": 61934,
+      "rows_in_window": 57511,
+      "malformed_rows": 0,
+      "unparseable_dates": 0,
+      "unparseable_qty_in_window": 0,
+      "first_business_day": "2025-02-02",
+      "last_business_day": "2026-03-16",
+      "other_confidence_labels_in_window": []
+    },
+    "eval_results": {
+      "file": "docs/eval/results.json",
+      "status": "pending_measurement",
+      "reason": "file not found",
+      "sha256": null,
+      "field": null
+    }
+  }
+}

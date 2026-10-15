@@ -1,0 +1,89 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useA2aFeed } from "../hooks/useA2aFeed";
+import { str, pick } from "../lib/util";
+import { AldoPanel } from "./AldoPanel";
+import { PersonalAgentPanel } from "./PersonalAgentPanel";
+import { ActorBadge, TraceTimeline, type TraceGroup } from "./TraceTimeline";
+
+const ACTORS = ["personal_agent", "aldo_gateway", "aldo_agent", "system"] as const;
+
+/**
+ * Three columns at 1200 px and up (ALDO bot, A2A trace, ALDO Returns Agent); stacked below.
+ * The A2A feed is shared state: it drives the middle column and tells the others when to refresh.
+ */
+export function Workspace() {
+  const qc = useQueryClient();
+  const [paActive, setPaActive] = useState(false);
+  const [aldoActive, setAldoActive] = useState(false);
+  const [paKey, setPaKey] = useState(0);
+  const [aldoKey, setAldoKey] = useState(0);
+
+  const events = useA2aFeed(paActive || aldoActive);
+  const memoryVersion = useMemo(() => events.filter((e) => e.type === "memory_updated").length, [events]);
+  const confirmedCount = useMemo(() => events.filter((e) => e.type === "size_confirmed").length, [events]);
+  // The newest proposal ALDO bot recorded; the purchase card is rendered from the server's record of it.
+  const proposalId = useMemo(() => {
+    const last = events.filter((e) => e.type === "size_recommended").at(-1);
+    return last ? str(pick(last.payload, ["size_request_id"])) : undefined;
+  }, [events]);
+
+  // A confirmed purchase creates an order; refresh the order list as soon as it appears.
+  useEffect(() => {
+    if (confirmedCount > 0) void qc.invalidateQueries({ queryKey: ["orders"] });
+  }, [confirmedCount, qc]);
+
+  const groups: TraceGroup[] = useMemo(() => [{ key: "a2a", events }], [events]);
+  const restartPa = useCallback(() => setPaKey((k) => k + 1), []);
+  const restartAldo = useCallback(() => setAldoKey((k) => k + 1), []);
+
+  return (
+    <div className="workspace" data-testid="workspace">
+      <section className="column column-pa" aria-labelledby="col-pa-title">
+        <h2 id="col-pa-title" className="column-title">
+          ALDO bot, your personal agent
+        </h2>
+        <PersonalAgentPanel
+          key={paKey}
+          memoryVersion={memoryVersion}
+          proposalId={proposalId}
+          confirmedCount={confirmedCount}
+          onActive={setPaActive}
+          onRestart={restartPa}
+        />
+      </section>
+
+      <section className="column column-a2a" aria-labelledby="col-a2a-title">
+        <h2 id="col-a2a-title" className="column-title">
+          A2A trace
+        </h2>
+        <div className="card a2a-card">
+          <p className="card-sub muted">
+            The conversation between the two agents. Public fields only: ALDO bot&apos;s private memory never appears here.
+          </p>
+          <ul className="actor-legend" aria-label="Who sends each event">
+            {ACTORS.map((a) => (
+              <li key={a}>
+                <ActorBadge actor={a} />
+              </li>
+            ))}
+          </ul>
+          <TraceTimeline
+            groups={groups}
+            showActors
+            emptyText="No agent-to-agent events yet. Ask ALDO bot to buy a pair."
+            ariaLabel="Agent-to-agent event timeline"
+            testId="a2a-trace"
+          />
+        </div>
+      </section>
+
+      <section className="column column-aldo" aria-labelledby="col-aldo-title">
+        <h2 id="col-aldo-title" className="column-title">
+          ALDO Returns Agent
+        </h2>
+        <AldoPanel key={aldoKey} onActive={setAldoActive} onRestart={restartAldo} />
+      </section>
+    </div>
+  );
+}

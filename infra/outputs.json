@@ -1,0 +1,18 @@
+{
+  "AldoReturnsDemo": {
+    "AgentRuntimeExtraPolicyArn": "arn:aws:iam::010928197565:policy/aldo-returns-demo-agent-runtime-extra",
+    "ApiFunctionName": "aldo-returns-demo-api",
+    "ApiUrl": "https://0h0uzencv7.execute-api.us-east-1.amazonaws.com/",
+    "BucketName": "aldo-returns-demo-site-010928197565-us-east-1",
+    "CloudFrontUrl": "https://d38111d70jquli.cloudfront.net",
+    "CodeMode": "stub",
+    "DistributionId": "E3POAM2N1VI0WM",
+    "GatewayUrlParameterName": "/aldo-demo/gateway-url",
+    "PersonalAgentTableName": "aldo-personal-agent-demo",
+    "RuntimeArnParameter": "/aldo-demo/runtime-arn",
+    "SecretName": "aldo-demo/secrets",
+    "TableName": "aldo-returns-demo",
+    "WorkerFunctionName": "aldo-returns-demo-worker",
+    "WorkerRoleArn": "arn:aws:iam::010928197565:role/AldoReturnsDemo-WorkerFnServiceRole66434362-kXh5aQOVGG4h"
+  }
+}

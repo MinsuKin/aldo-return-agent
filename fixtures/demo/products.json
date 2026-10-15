@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "products": [
+    {
+      "sku": "DEMO-SKU-HERO-BLACK-060",
+      "product_name": "Stessy2.0",
+      "style": "DEMO-STYLE-HERO",
+      "size": "6.0",
+      "color": "BLACK",
+      "price_cents": 12999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-HERO-BLACK-065",
+      "product_name": "Stessy2.0",
+      "style": "DEMO-STYLE-HERO",
+      "size": "6.5",
+      "color": "BLACK",
+      "price_cents": 12999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-HERO-BLACK-070",
+      "product_name": "Stessy2.0",
+      "style": "DEMO-STYLE-HERO",
+      "size": "7.0",
+      "color": "BLACK",
+      "price_cents": 12999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-HERO-BLACK-075",
+      "product_name": "Stessy2.0",
+      "style": "DEMO-STYLE-HERO",
+      "size": "7.5",
+      "color": "BLACK",
+      "price_cents": 12999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-HERO-BLACK-080",
+      "product_name": "Stessy2.0",
+      "style": "DEMO-STYLE-HERO",
+      "size": "8.0",
+      "color": "BLACK",
+      "price_cents": 12999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-HERO-BLACK-085",
+      "product_name": "Stessy2.0",
+      "style": "DEMO-STYLE-HERO",
+      "size": "8.5",
+      "color": "BLACK",
+      "price_cents": 12999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-HERO-BLACK-090",
+      "product_name": "Stessy2.0",
+      "style": "DEMO-STYLE-HERO",
+      "size": "9.0",
+      "color": "BLACK",
+      "price_cents": 12999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-CONTRAST-BLACK-070",
+      "product_name": "Clementinne",
+      "style": "DEMO-STYLE-CONTRAST",
+      "size": "7.0",
+      "color": "BLACK",
+      "price_cents": 11999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-CONTRAST-BLACK-075",
+      "product_name": "Clementinne",
+      "style": "DEMO-STYLE-CONTRAST",
+      "size": "7.5",
+      "color": "BLACK",
+      "price_cents": 11999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-CONTRAST-BLACK-080",
+      "product_name": "Clementinne",
+      "style": "DEMO-STYLE-CONTRAST",
+      "size": "8.0",
+      "color": "BLACK",
+      "price_cents": 11999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-CONTRAST-BLACK-085",
+      "product_name": "Clementinne",
+      "style": "DEMO-STYLE-CONTRAST",
+      "size": "8.5",
+      "color": "BLACK",
+      "price_cents": 11999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-FINALSALE-TAN-080",
+      "product_name": "Krios",
+      "style": "DEMO-STYLE-FINALSALE",
+      "size": "8.0",
+      "color": "TAN",
+      "price_cents": 5999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-STD1-BLACK-100",
+      "product_name": "Harriot",
+      "style": "DEMO-STYLE-STD1",
+      "size": "10.0",
+      "color": "BLACK",
+      "price_cents": 8999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-STD2-BROWN-100",
+      "product_name": "Cherflex",
+      "style": "DEMO-STYLE-STD2",
+      "size": "10.0",
+      "color": "BROWN",
+      "price_cents": 8999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-BOOT-BLACK-100",
+      "product_name": "Goer",
+      "style": "DEMO-STYLE-BOOT",
+      "size": "10.0",
+      "color": "BLACK",
+      "price_cents": 28900,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-STD3-WHITE-070",
+      "product_name": "Lagoon",
+      "style": "DEMO-STYLE-STD3",
+      "size": "7.0",
+      "color": "WHITE",
+      "price_cents": 7999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-STD4-NAVY-075",
+      "product_name": "Verity",
+      "style": "DEMO-STYLE-STD4",
+      "size": "7.5",
+      "color": "NAVY",
+      "price_cents": 6999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-STD5-BLACK-080",
+      "product_name": "Dorenna",
+      "style": "DEMO-STYLE-STD5",
+      "size": "8.0",
+      "color": "BLACK",
+      "price_cents": 5999,
+      "currency": "CAD",
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-STD6-GREY-100",
+      "product_name": "Jellyicious",
+      "style": "DEMO-STYLE-STD6",
+      "size": "10.0",
+      "color": "GREY",
+      "price_cents": 7499,
+      "currency": "CAD",
+      "source": "synthetic"
+    }
+  ]
+}

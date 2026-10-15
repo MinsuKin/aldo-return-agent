@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "customers": [
+    {
+      "customer_id": "DEMO-CUST-AVA",
+      "display_name": "Ava",
+      "home_region": "QC",
+      "description": "Size exchange (hero order DEMO-1001), final-sale items, quantity boundary",
+      "source": "synthetic"
+    },
+    {
+      "customer_id": "DEMO-CUST-BEN",
+      "display_name": "Ben",
+      "home_region": "ON",
+      "description": "Return window boundaries (day 30 and 31), refund authority limit, mail-in return",
+      "source": "synthetic"
+    },
+    {
+      "customer_id": "DEMO-CUST-CHLOE",
+      "display_name": "Chloe",
+      "home_region": "QC",
+      "description": "Target of cross-customer access attempts, missing delivery date, too-big contrast order",
+      "source": "synthetic"
+    }
+  ]
+}

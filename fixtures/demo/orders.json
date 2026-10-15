@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "orders": [
+    {
+      "order_id": "DEMO-1001",
+      "customer_id": "DEMO-CUST-AVA",
+      "banner": "ALDO_CA",
+      "currency": "CAD",
+      "channel": "web",
+      "ordered_at": "2026-09-30",
+      "delivered_at": "2026-10-04",
+      "source": "synthetic",
+      "lines": [
+        {
+          "line_id": "DEMO-1001-L1",
+          "sku": "DEMO-SKU-HERO-BLACK-070",
+          "product_name": "Stessy2.0",
+          "style": "DEMO-STYLE-HERO",
+          "size": "7.0",
+          "color": "BLACK",
+          "purchased_qty": 1,
+          "returned_or_reserved_qty": 0,
+          "unit_paid_cents": 12999,
+          "final_sale": false,
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "order_id": "DEMO-1002",
+      "customer_id": "DEMO-CUST-AVA",
+      "banner": "ALDO_CA",
+      "currency": "CAD",
+      "channel": "web",
+      "ordered_at": "2026-10-02",
+      "delivered_at": "2026-10-06",
+      "source": "synthetic",
+      "lines": [
+        {
+          "line_id": "DEMO-1002-L1",
+          "sku": "DEMO-SKU-FINALSALE-TAN-080",
+          "product_name": "Krios",
+          "style": "DEMO-STYLE-FINALSALE",
+          "size": "8.0",
+          "color": "TAN",
+          "purchased_qty": 1,
+          "returned_or_reserved_qty": 0,
+          "unit_paid_cents": 5999,
+          "final_sale": true,
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "order_id": "DEMO-1003",
+      "customer_id": "DEMO-CUST-BEN",
+      "banner": "ALDO_CA",
+      "currency": "CAD",
+      "channel": "web",
+      "ordered_at": "2026-09-10",
+      "delivered_at": "2026-09-16",
+      "source": "synthetic",
+      "lines": [
+        {
+          "line_id": "DEMO-1003-L1",
+          "sku": "DEMO-SKU-STD1-BLACK-100",
+          "product_name": "Harriot",
+          "style": "DEMO-STYLE-STD1",
+          "size": "10.0",
+          "color": "BLACK",
+          "purchased_qty": 1,
+          "returned_or_reserved_qty": 0,
+          "unit_paid_cents": 8999,
+          "final_sale": false,
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "order_id": "DEMO-1004",
+      "customer_id": "DEMO-CUST-BEN",
+      "banner": "ALDO_CA",
+      "currency": "CAD",
+      "channel": "web",
+      "ordered_at": "2026-09-09",
+      "delivered_at": "2026-09-15",
+      "source": "synthetic",
+      "lines": [
+        {
+          "line_id": "DEMO-1004-L1",
+          "sku": "DEMO-SKU-STD2-BROWN-100",
+          "product_name": "Cherflex",
+          "style": "DEMO-STYLE-STD2",
+          "size": "10.0",
+          "color": "BROWN",
+          "purchased_qty": 1,
+          "returned_or_reserved_qty": 0,
+          "unit_paid_cents": 8999,
+          "final_sale": false,
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "order_id": "DEMO-1005",
+      "customer_id": "DEMO-CUST-BEN",
+      "banner": "ALDO_CA",
+      "currency": "CAD",
+      "channel": "web",
+      "ordered_at": "2026-10-05",
+      "delivered_at": "2026-10-09",
+      "source": "synthetic",
+      "lines": [
+        {
+          "line_id": "DEMO-1005-L1",
+          "sku": "DEMO-SKU-BOOT-BLACK-100",
+          "product_name": "Goer",
+          "style": "DEMO-STYLE-BOOT",
+          "size": "10.0",
+          "color": "BLACK",
+          "purchased_qty": 1,
+          "returned_or_reserved_qty": 0,
+          "unit_paid_cents": 28900,
+          "final_sale": false,
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "order_id": "DEMO-1006",
+      "customer_id": "DEMO-CUST-CHLOE",
+      "banner": "ALDO_CA",
+      "currency": "CAD",
+      "channel": "web",
+      "ordered_at": "2026-10-01",
+      "delivered_at": "2026-10-05",
+      "source": "synthetic",
+      "lines": [
+        {
+          "line_id": "DEMO-1006-L1",
+          "sku": "DEMO-SKU-STD3-WHITE-070",
+          "product_name": "Lagoon",
+          "style": "DEMO-STYLE-STD3",
+          "size": "7.0",
+          "color": "WHITE",
+          "purchased_qty": 1,
+          "returned_or_reserved_qty": 0,
+          "unit_paid_cents": 7999,
+          "final_sale": false,
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "order_id": "DEMO-1007",
+      "customer_id": "DEMO-CUST-CHLOE",
+      "banner": "ALDO_CA",
+      "currency": "CAD",
+      "channel": "web",
+      "ordered_at": "2026-10-12",
+      "delivered_at": null,
+      "source": "synthetic",
+      "lines": [
+        {
+          "line_id": "DEMO-1007-L1",
+          "sku": "DEMO-SKU-STD4-NAVY-075",
+          "product_name": "Verity",
+          "style": "DEMO-STYLE-STD4",
+          "size": "7.5",
+          "color": "NAVY",
+          "purchased_qty": 1,
+          "returned_or_reserved_qty": 0,
+          "unit_paid_cents": 6999,
+          "final_sale": false,
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "order_id": "DEMO-1008",
+      "customer_id": "DEMO-CUST-AVA",
+      "banner": "ALDO_CA",
+      "currency": "CAD",
+      "channel": "web",
+      "ordered_at": "2026-10-03",
+      "delivered_at": "2026-10-07",
+      "source": "synthetic",
+      "lines": [
+        {
+          "line_id": "DEMO-1008-L1",
+          "sku": "DEMO-SKU-STD5-BLACK-080",
+          "product_name": "Dorenna",
+          "style": "DEMO-STYLE-STD5",
+          "size": "8.0",
+          "color": "BLACK",
+          "purchased_qty": 2,
+          "returned_or_reserved_qty": 1,
+          "unit_paid_cents": 5999,
+          "final_sale": false,
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "order_id": "DEMO-1009",
+      "customer_id": "DEMO-CUST-CHLOE",
+      "banner": "ALDO_CA",
+      "currency": "CAD",
+      "channel": "web",
+      "ordered_at": "2026-10-04",
+      "delivered_at": "2026-10-08",
+      "source": "synthetic",
+      "lines": [
+        {
+          "line_id": "DEMO-1009-L1",
+          "sku": "DEMO-SKU-CONTRAST-BLACK-080",
+          "product_name": "Clementinne",
+          "style": "DEMO-STYLE-CONTRAST",
+          "size": "8.0",
+          "color": "BLACK",
+          "purchased_qty": 1,
+          "returned_or_reserved_qty": 0,
+          "unit_paid_cents": 11999,
+          "final_sale": false,
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "order_id": "DEMO-1010",
+      "customer_id": "DEMO-CUST-BEN",
+      "banner": "ALDO_CA",
+      "currency": "CAD",
+      "channel": "web",
+      "ordered_at": "2026-10-06",
+      "delivered_at": "2026-10-10",
+      "source": "synthetic",
+      "lines": [
+        {
+          "line_id": "DEMO-1010-L1",
+          "sku": "DEMO-SKU-STD6-GREY-100",
+          "product_name": "Jellyicious",
+          "style": "DEMO-STYLE-STD6",
+          "size": "10.0",
+          "color": "GREY",
+          "purchased_qty": 1,
+          "returned_or_reserved_qty": 0,
+          "unit_paid_cents": 7499,
+          "final_sale": false,
+          "source": "synthetic"
+        }
+      ]
+    }
+  ]
+}
