@@ -11,6 +11,15 @@ export const POLL_INTERVAL_MS = 800;
 export const MAX_MESSAGE_CHARS = 1000;
 
 /**
+ * DEMO_NOW calendar date (America/Toronto) of the fixtures. Only used to word dates as "Today" or
+ * "Tomorrow" in the phone; the server stays authoritative for every date it returns.
+ */
+export const DEMO_TODAY: string = env.VITE_DEMO_TODAY ?? "2026-10-16";
+
+/** The "out for delivery" moment after a purchase is confirmed, before delivery is simulated (addendum 11.1 D10). */
+export const DELIVERY_DELAY_MS: number = Number(env.VITE_DELIVERY_DELAY_MS ?? "5000");
+
+/**
  * Assumed Bedrock list prices, USD per million tokens. Only used for the run-metrics
  * footer when a run does not report its own cost. Labelled "assumed price" in the UI.
  */

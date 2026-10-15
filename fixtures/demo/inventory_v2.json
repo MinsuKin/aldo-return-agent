@@ -1,0 +1,877 @@
+{
+  "schema_version": 1,
+  "base": [
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-080",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-080",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-080",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-080",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-085",
+      "location_id": "DEMO-DC-QC",
+      "atp": 3,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-085",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-085",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-085",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-090",
+      "location_id": "DEMO-DC-QC",
+      "atp": 4,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-090",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-090",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-090",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-095",
+      "location_id": "DEMO-DC-QC",
+      "atp": 3,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-095",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-095",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-095",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-100",
+      "location_id": "DEMO-DC-QC",
+      "atp": 5,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-100",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-100",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-100",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-105",
+      "location_id": "DEMO-DC-QC",
+      "atp": 4,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-105",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-105",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-105",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-110",
+      "location_id": "DEMO-DC-QC",
+      "atp": 3,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-110",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-110",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-110",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-115",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-115",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-115",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-115",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-120",
+      "location_id": "DEMO-DC-QC",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-120",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-120",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BLACK-120",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-080",
+      "location_id": "DEMO-DC-QC",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-080",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-080",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-080",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-085",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-085",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-085",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-085",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-090",
+      "location_id": "DEMO-DC-QC",
+      "atp": 3,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-090",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-090",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-090",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-095",
+      "location_id": "DEMO-DC-QC",
+      "atp": 4,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-095",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-095",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-095",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-100",
+      "location_id": "DEMO-DC-QC",
+      "atp": 4,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-100",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-100",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-100",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-105",
+      "location_id": "DEMO-DC-QC",
+      "atp": 3,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-105",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-105",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-105",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-110",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-110",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-110",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-110",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-115",
+      "location_id": "DEMO-DC-QC",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-115",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-115",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-115",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-120",
+      "location_id": "DEMO-DC-QC",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-120",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-120",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-BROWN-120",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-080",
+      "location_id": "DEMO-DC-QC",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-080",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-080",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-080",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-085",
+      "location_id": "DEMO-DC-QC",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-085",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-085",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-085",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-090",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-090",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-090",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-090",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-095",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-095",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-095",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-095",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-100",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-100",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-100",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-100",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-105",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-105",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-105",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-105",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-110",
+      "location_id": "DEMO-DC-QC",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-110",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-110",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-110",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-115",
+      "location_id": "DEMO-DC-QC",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-115",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-115",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-115",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-120",
+      "location_id": "DEMO-DC-QC",
+      "atp": 1,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-120",
+      "location_id": "DEMO-STORE-MTL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-120",
+      "location_id": "DEMO-STORE-LAVAL-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-MEN001-TAN-120",
+      "location_id": "DEMO-STORE-TOR-01",
+      "atp": 0,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-NEW01-BLACK-100",
+      "location_id": "DEMO-DC-QC",
+      "atp": 3,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-NEW02-TAN-105",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-NEW03-BROWN-100",
+      "location_id": "DEMO-DC-QC",
+      "atp": 3,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-NEW04-BLACK-110",
+      "location_id": "DEMO-DC-QC",
+      "atp": 4,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-NEW05-WHITE-100",
+      "location_id": "DEMO-DC-QC",
+      "atp": 3,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-NEW06-BROWN-095",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-NEW07-BLACK-105",
+      "location_id": "DEMO-DC-QC",
+      "atp": 3,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-NEW08-NAVY-100",
+      "location_id": "DEMO-DC-QC",
+      "atp": 3,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-NEW09-BROWN-110",
+      "location_id": "DEMO-DC-QC",
+      "atp": 2,
+      "version": 1,
+      "source": "synthetic"
+    },
+    {
+      "sku": "DEMO-SKU-NEW10-GREY-105",
+      "location_id": "DEMO-DC-QC",
+      "atp": 4,
+      "version": 1,
+      "source": "synthetic"
+    }
+  ],
+  "variants": {
+    "default": {
+      "description": "Base stock for the men's style and David's collection",
+      "overrides": []
+    },
+    "dc_stockout": {
+      "description": "Men 001 BLACK 9.5: DC 0, Laval store 1 (Montreal 0 and Toronto 1 stay as in base)",
+      "overrides": [
+        {
+          "sku": "DEMO-SKU-MEN001-BLACK-095",
+          "location_id": "DEMO-DC-QC",
+          "atp": 0
+        },
+        {
+          "sku": "DEMO-SKU-MEN001-BLACK-095",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "atp": 1
+        }
+      ]
+    },
+    "all_stockout": {
+      "description": "Men 001 BLACK 9.5: 0 at every location",
+      "overrides": [
+        {
+          "sku": "DEMO-SKU-MEN001-BLACK-095",
+          "location_id": "DEMO-DC-QC",
+          "atp": 0
+        },
+        {
+          "sku": "DEMO-SKU-MEN001-BLACK-095",
+          "location_id": "DEMO-STORE-MTL-01",
+          "atp": 0
+        },
+        {
+          "sku": "DEMO-SKU-MEN001-BLACK-095",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "atp": 0
+        },
+        {
+          "sku": "DEMO-SKU-MEN001-BLACK-095",
+          "location_id": "DEMO-STORE-TOR-01",
+          "atp": 0
+        }
+      ]
+    }
+  }
+}

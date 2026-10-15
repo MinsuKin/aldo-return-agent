@@ -52,8 +52,11 @@ def test_every_documented_event_type_is_accepted_and_the_pivot_types_are_present
     expected = {"run_started", "tool_call", "tool_result", "decision", "quote_created", "approval_received",
                 "transaction_created", "case_created", "assistant_message", "run_completed", "warning",
                 "size_assist_requested", "fit_signal_shared", "size_requested", "size_recommended",
-                "size_confirmed", "memory_updated"}
-    assert set(trace.EVENT_TYPES) == expected
+                "size_confirmed", "memory_updated",
+                # domain v2 (addendum 11.4) and memory_consulted (addendum 12.3)
+                "reviews_shared", "handoff_to_returns", "handback", "store_notified", "benefit_applied", "delivered",
+                "memory_consulted"}
+    assert set(trace.EVENT_TYPES) == expected and len(trace.EVENT_TYPES) == len(expected)
     run_id = make_run()
     for event_type in trace.EVENT_TYPES:
         trace.emit(run_id, event_type, {"x": 1})
@@ -78,9 +81,23 @@ def test_actor_keyword_is_stored_and_returned(ddb):
         trace.emit(run_id, "decision", {"summary": actor}, actor=actor)
     page = trace.list_events(run_id)
     assert [e["actor"] for e in page.events] == list(trace.ACTORS)
-    assert trace.ACTORS == ("personal_agent", "aldo_gateway", "aldo_agent", "system")
+    # domain v2 adds the simulated store desk ("ALDO Store Desk" in the UI) after the original four
+    assert trace.ACTORS == ("personal_agent", "aldo_gateway", "aldo_agent", "system", "aldo_store")
     trace.emit(run_id, "decision", {"summary": "default"})
-    assert trace.list_events(run_id, after=4).events[0]["actor"] == "aldo_agent"
+    assert trace.list_events(run_id, after=len(trace.ACTORS)).events[0]["actor"] == "aldo_agent"
+
+
+def test_the_store_desk_actor_and_the_v2_event_types_work_on_a_run_stream_too(ddb):
+    run_id = make_run()
+    for event_type in ("reviews_shared", "handoff_to_returns", "handback", "store_notified", "benefit_applied", "delivered",
+                       "memory_consulted"):
+        trace.emit(run_id, event_type, {"x": 1}, actor="aldo_store" if event_type == "store_notified" else "system")
+    page = trace.list_events(run_id)
+    assert [(e["type"], e["actor"]) for e in page.events][3] == ("store_notified", "aldo_store")
+    assert page.events[-1]["type"] == "memory_consulted"
+    with pytest.raises(DomainError) as exc:
+        trace.emit(run_id, "store_notified", {}, actor="aldo_store_desk")
+    assert exc.value.code == ErrorCode.VALIDATION_ERROR
 
 
 def test_emit_on_a_missing_run_is_not_found_and_creates_nothing(ddb):

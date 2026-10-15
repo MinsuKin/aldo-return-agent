@@ -7,12 +7,19 @@ the reset variant's inventory overrides. ``reset`` deletes every runtime partiti
 (``store.RUNTIME_PREFIXES``: conversations, runs, policy checks, quotes, transactions, cases,
 audit, size requests, the write-back outbox and the orders the agent-to-agent purchase created)
 and then writes the fixture items again, which also restores inventory and order lines.
+
+Fixtures v2 (PIVOT_ADDENDUM 11.3) are additive: ``customers_v2.json``, ``orders_v2.json``,
+``products_v2.json`` and ``inventory_v2.json`` are merged behind the base records when they exist
+(an older bundle without them still loads), and ``reviews.json`` holds the synthetic product
+reviews (``load_reviews``). References are checked across the merged records: order to customer,
+line to sku, inventory to location and sku, review to style.
 """
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -32,6 +39,14 @@ FIXTURE_FILES: tuple[str, ...] = (
     "logistics.json",
     "policy.json",
 )
+#: Fixtures v2 (``customers_v2.json``, ``orders_v2.json``, ``products_v2.json``, ``inventory_v2.json``) are
+#: merged behind the base records when they exist; a missing v2 file is not an error. The reviews are separate.
+REVIEWS_FILE = "reviews.json"
+#: Member tier of a customer record that has none (the three base personas).
+DEFAULT_TIER = "none"
+#: Review ids start with ``DEMO-`` like every other id; ``REV-INJECT-`` marks the adversarial
+#: review that the prompt-injection checks look up by name (PIVOT_ADDENDUM 11.3).
+REVIEW_ID_PREFIXES: tuple[str, ...] = (DEMO_ID_PREFIX, "REV-INJECT-")
 
 #: Same tuple as ``store.RUNTIME_PREFIXES`` (the addendum calls it ``fixtures.RUNTIME_PREFIXES``).
 RUNTIME_PREFIXES = store.RUNTIME_PREFIXES
@@ -56,6 +71,7 @@ class FixtureBundle:
     logistics: dict[str, Any]
     policy: dict[str, Any]
     directory: Path = field(default_factory=Path)
+    reviews: list[dict[str, Any]] = field(default_factory=list)
 
 
 # ------------------------------------------------------------------------------ loading
@@ -113,29 +129,152 @@ def _require_size(record: Mapping[str, Any], where: str) -> None:
         raise _fixture_error(f"{where} size must be a string with one decimal")
 
 
+def _optional(directory: Path, name: str) -> Any | None:
+    """Parsed JSON of an additive file, or ``None`` when it does not exist (a broken file still raises)."""
+    return _read_json(directory / name) if (directory / name).is_file() else None
+
+
+def _merged(directory: Path, base: list[dict[str, Any]], v2_name: str, key: str) -> list[dict[str, Any]]:
+    """``base`` followed by the records under ``key`` of the additive file ``v2_name`` (if present)."""
+    extra = _optional(directory, v2_name)
+    return list(base) if extra is None else [*base, *_collection(extra, key, v2_name)]
+
+
+def _unique(values: list[Any], what: str) -> None:
+    seen: set[Any] = set()
+    for value in values:
+        if value in seen:
+            raise _fixture_error(f"duplicate {what}: {value}")
+        seen.add(value)
+
+
+def _whole(value: Any, minimum: int = 0) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= minimum
+
+
+def _check_customer(record: Mapping[str, Any], location_ids: set[str], tiers: Any) -> None:
+    """Optional v2 attributes: ``tier`` (a key of policy.json ``tiers``), spend, travel minutes, label."""
+    where = f"customer {record.get('customer_id')}"
+    if "tier" in record:
+        tier = record["tier"]
+        if not isinstance(tier, str) or not tier or (isinstance(tiers, dict) and tier not in tiers):
+            raise _fixture_error(f"{where} tier must be one of the policy.json tiers")
+    if "annual_spend_cents" in record and not _whole(record["annual_spend_cents"]):
+        raise _fixture_error(f"{where} annual_spend_cents must be whole cents")
+    if "travel_minutes" in record:
+        travel = record["travel_minutes"]
+        if not isinstance(travel, dict) or not all(
+            loc in location_ids and _whole(minutes) for loc, minutes in travel.items()
+        ):
+            raise _fixture_error(f"{where} travel_minutes must map location ids to whole minutes")
+    if "location_label" in record:
+        label = record["location_label"]
+        if not isinstance(label, str) or not label.strip():
+            raise _fixture_error(f"{where} location_label must be a non-empty string")
+
+
+def _check_aliases(products: list[dict[str, Any]]) -> None:
+    """Optional product ``aliases``: distinct non-empty strings, and no alias shared by two styles."""
+    owner: dict[str, str] = {}
+    for record in products:
+        aliases = record.get("aliases")
+        if aliases is None:
+            continue
+        where = f"product {record.get('sku')}"
+        if not isinstance(aliases, list) or not aliases or not all(isinstance(a, str) and a.strip() for a in aliases):
+            raise _fixture_error(f"{where} aliases must be a non-empty list of strings")
+        folded = [a.strip().casefold() for a in aliases]
+        if len(set(folded)) != len(folded):
+            raise _fixture_error(f"{where} aliases must be distinct")
+        for alias in folded:
+            if owner.setdefault(alias, record["style"]) != record["style"]:
+                raise _fixture_error(f"alias '{alias}' belongs to two styles")
+
+
+def _check_review(review: Mapping[str, Any], style_ids: set[str]) -> None:
+    where = f"review {review.get('review_id')}"
+    review_id = review.get("review_id")
+    if not isinstance(review_id, str) or not review_id.startswith(REVIEW_ID_PREFIXES):
+        raise _fixture_error(f"{where} id must start with one of {', '.join(REVIEW_ID_PREFIXES)}")
+    if review.get("source") != "synthetic":
+        raise _fixture_error(f"{where} must have source 'synthetic'")
+    if review.get("style_id") not in style_ids:
+        raise _fixture_error(f"{where} refers to an unknown style")
+    rating = review.get("rating")
+    if not _whole(rating, 1) or rating > 5:
+        raise _fixture_error(f"{where} rating must be a whole number from 1 to 5")
+    for name in ("title", "text"):
+        if not isinstance(review.get(name), str) or not review[name].strip():
+            raise _fixture_error(f"{where} needs a non-empty {name}")
+    language = review.get("language")
+    if not isinstance(language, str) or len(language) != 2 or not language.islower():
+        raise _fixture_error(f"{where} language must be a two-letter lower-case code")
+    if not isinstance(review.get("verified_purchase"), bool):
+        raise _fixture_error(f"{where} verified_purchase must be true or false")
+    if not _whole(review.get("helpful_votes")):
+        raise _fixture_error(f"{where} helpful_votes must be a whole number")
+    try:
+        date.fromisoformat(review.get("created_at"))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        raise _fixture_error(f"{where} created_at must be a YYYY-MM-DD date") from None
+
+
 def load_bundle(fixtures_dir: Path | str | None = None) -> FixtureBundle:
-    """Read and validate the seven fixture files."""
+    """Read and validate the seven fixture files, merge the v2 files and attach the reviews.
+
+    The base records keep their order and the additive files follow them. The result is a new
+    set of lists (the JSON cache is never modified), so callers may keep the bundle.
+    """
     directory = _demo_dir(fixtures_dir)
     raw = {name: _read_json(directory / name) for name in FIXTURE_FILES}
 
-    customers = _collection(raw["customers.json"], "customers", "customers.json")
-    orders = _collection(raw["orders.json"], "orders", "orders.json")
-    products = _collection(raw["products.json"], "products", "products.json")
+    customers = _merged(directory, _collection(raw["customers.json"], "customers", "customers.json"), "customers_v2.json", "customers")
+    orders = _merged(directory, _collection(raw["orders.json"], "orders", "orders.json"), "orders_v2.json", "orders")
+    products = _merged(directory, _collection(raw["products.json"], "products", "products.json"), "products_v2.json", "products")
     locations = _collection(raw["locations.json"], "locations", "locations.json")
     inventory = raw["inventory.json"]
-    base = _collection(inventory, "base", "inventory.json")
+    base = _merged(directory, _collection(inventory, "base", "inventory.json"), "inventory_v2.json", "base")
     variants = inventory.get("variants")
-    if not isinstance(variants, dict) or set(variants) != set(VARIANTS):
+    if (
+        not isinstance(variants, dict)
+        or set(variants) != set(VARIANTS)
+        or not all(isinstance(v, dict) for v in variants.values())
+    ):
         raise _fixture_error(f"inventory.json variants must be exactly {list(VARIANTS)}")
+    extra_inventory = _optional(directory, "inventory_v2.json")
+    if extra_inventory is not None:
+        extra_variants = extra_inventory.get("variants")
+        if (
+            not isinstance(extra_variants, dict)
+            or not set(extra_variants) <= set(VARIANTS)
+            or not all(isinstance(v, dict) for v in extra_variants.values())
+        ):
+            raise _fixture_error(f"inventory_v2.json variants must be among {list(VARIANTS)}")
+        variants = {
+            name: {
+                **variants[name],
+                "overrides": [
+                    *(variants[name].get("overrides") or []),
+                    *((extra_variants.get(name) or {}).get("overrides") or []),
+                ],
+            }
+            for name in VARIANTS
+        }
     logistics, policy = raw["logistics.json"], raw["policy.json"]
+    if not isinstance(policy, dict) or not isinstance(logistics, dict):
+        raise _fixture_error("policy.json and logistics.json must be JSON objects")
 
-    for record in customers:
-        _require_demo(record, ("customer_id",), f"customer {record.get('customer_id')}")
     for record in locations:
         _require_demo(record, ("location_id",), f"location {record.get('location_id')}")
+    location_ids = {loc["location_id"] for loc in locations}
+    tiers = policy.get("tiers")
+    for record in customers:
+        _require_demo(record, ("customer_id",), f"customer {record.get('customer_id')}")
+        _check_customer(record, location_ids, tiers)
     for record in products:
         _require_demo(record, ("sku", "style"), f"product {record.get('sku')}")
         _require_size(record, f"product {record.get('sku')}")
+    _check_aliases(products)
     for order in orders:
         _require_demo(order, ("order_id", "customer_id"), f"order {order.get('order_id')}")
         lines = order.get("lines")
@@ -150,8 +289,14 @@ def load_bundle(fixtures_dir: Path | str | None = None) -> FixtureBundle:
         raise _fixture_error("policy.json and logistics.json must have source 'synthetic'")
 
     customer_ids = {c["customer_id"] for c in customers}
-    location_ids = {loc["location_id"] for loc in locations}
     skus = {p["sku"] for p in products}
+    styles = {p["style"] for p in products}
+    _unique([c["customer_id"] for c in customers], "customer")
+    _unique([loc["location_id"] for loc in locations], "location")
+    _unique([p["sku"] for p in products], "sku")
+    _unique([o["order_id"] for o in orders], "order")
+    _unique([line["line_id"] for o in orders for line in o["lines"]], "order line")
+    _unique([(r["sku"], r["location_id"]) for r in base], "inventory row")
     for order in orders:
         if order["customer_id"] not in customer_ids:
             raise _fixture_error(f"order {order['order_id']} has an unknown customer")
@@ -161,6 +306,11 @@ def load_bundle(fixtures_dir: Path | str | None = None) -> FixtureBundle:
     for row in base:
         if row["sku"] not in skus or row["location_id"] not in location_ids:
             raise _fixture_error(f"inventory row {row['sku']}/{row['location_id']} is dangling")
+
+    reviews = _load_reviews(directory)
+    for review in reviews:
+        _check_review(review, styles)
+    _unique([r["review_id"] for r in reviews], "review")
 
     return FixtureBundle(
         customers=customers,
@@ -172,7 +322,14 @@ def load_bundle(fixtures_dir: Path | str | None = None) -> FixtureBundle:
         logistics=logistics,
         policy=policy,
         directory=directory,
+        reviews=reviews,
     )
+
+
+def _load_reviews(directory: Path) -> list[dict[str, Any]]:
+    """Records of ``reviews.json`` (``[]`` when the file does not exist); shape checked, not content."""
+    data = _optional(directory, REVIEWS_FILE)
+    return [] if data is None else _collection(data, "reviews", REVIEWS_FILE)
 
 
 # -------------------------------------------------------------------------- item building
@@ -208,7 +365,8 @@ def build_items(bundle: FixtureBundle, variant: str = "default") -> list[dict[st
 
     for customer in bundle.customers:
         pk, sk = store.customer_key(customer["customer_id"])
-        items.append({**customer, "pk": pk, "sk": sk})
+        # tier, annual_spend_cents, travel_minutes and location_label ride along when the record has them
+        items.append({"tier": DEFAULT_TIER, **customer, "pk": pk, "sk": sk})
 
     for location in bundle.locations:
         pk, sk = store.location_key(location["location_id"])
@@ -277,18 +435,59 @@ def reset(variant: str = "default", fixtures_dir: Path | str | None = None) -> R
 # --------------------------------------------------------------------- reference lookups
 
 
+def _tier_labels() -> dict[str, str]:
+    """``{tier: label}`` from ``policy.json`` ``tiers`` (``{}`` for a policy file without tiers)."""
+    tiers = load_policy_json().get("tiers")
+    if not isinstance(tiers, dict):
+        return {}
+    return {
+        name: config["label"]
+        for name, config in tiers.items()
+        if isinstance(config, dict) and isinstance(config.get("label"), str)
+    }
+
+
 def persona_list() -> list[dict[str, str]]:
-    """The demo personas, straight from ``customers.json`` (no table read)."""
+    """The demo personas, straight from ``customers.json`` and ``customers_v2.json`` (no table read).
+
+    Every row carries the member ``tier`` (``none`` when the record has none), its ``tier_label``
+    from ``policy.json`` ``tiers`` and the ``location_label`` ("" when the record has none).
+    Base customers come first, then the v2 customers, in file order.
+    """
     directory = _demo_dir()
-    customers = _collection(_read_json(directory / "customers.json"), "customers", "customers.json")
-    return [
-        {
-            "customer_id": c["customer_id"],
-            "display_name": c["display_name"],
-            "description": c.get("description", ""),
-        }
-        for c in customers
-    ]
+    customers = _merged(
+        directory,
+        _collection(_read_json(directory / "customers.json"), "customers", "customers.json"),
+        "customers_v2.json",
+        "customers",
+    )
+    labels = _tier_labels()
+    rows: list[dict[str, str]] = []
+    for c in customers:
+        tier = c["tier"] if isinstance(c.get("tier"), str) and c["tier"] else DEFAULT_TIER
+        default_label = "Member" if tier == DEFAULT_TIER else f"{tier.capitalize()} member"
+        rows.append(
+            {
+                "customer_id": c["customer_id"],
+                "display_name": c["display_name"],
+                "description": c.get("description", ""),
+                "tier": tier,
+                "tier_label": labels.get(tier, default_label),
+                "location_label": c.get("location_label", ""),
+            }
+        )
+    return rows
+
+
+def load_reviews(style_id: str | None = None, fixtures_dir: Path | str | None = None) -> list[dict[str, Any]]:
+    """The synthetic product reviews of ``reviews.json`` in file order, for one style when given.
+
+    Each call returns fresh copies, so a caller can add fields (for example ``flags``) without
+    touching the cache. A bundle without ``reviews.json`` or a style without reviews gives ``[]``.
+    The review text is UNTRUSTED data (one fixture review is an indirect prompt injection).
+    """
+    records = _load_reviews(_demo_dir(fixtures_dir))
+    return [dict(r) for r in records if style_id is None or r.get("style_id") == style_id]
 
 
 def load_policy_json() -> dict[str, Any]:

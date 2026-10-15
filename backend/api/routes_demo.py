@@ -29,7 +29,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 def register(api: Api) -> None:
     @api.get("/demo/personas", auth=PUBLIC)
     def personas(req: Request) -> dict[str, Any]:
-        return {"personas": fixtures.persona_list()}
+        return {"personas": [_persona_row(persona) for persona in fixtures.persona_list()]}
 
     @api.post("/demo/sessions", auth=PUBLIC)
     def create_session(req: Request) -> dict[str, Any]:
@@ -74,6 +74,23 @@ def register(api: Api) -> None:
             raise DomainError(ErrorCode.NOT_FOUND, "The impact model is not available.") from None
         json.loads(text)  # a broken document fails loudly (500) instead of reaching the UI
         return Reply(raw_json=text)
+
+
+def _persona_row(persona: dict[str, Any]) -> dict[str, Any]:
+    """A persona with the member tier shown in the phone: ``tier``, ``tier_label``, ``location_label``.
+
+    ``fixtures.persona_list`` supplies them; a row without them (older fixtures) is the plain
+    ``none`` member with no location label, so the keys are always there for the UI.
+    """
+    tier = persona.get("tier") if isinstance(persona.get("tier"), str) and persona.get("tier") else "none"
+    label = persona.get("tier_label")
+    location = persona.get("location_label")
+    return {
+        **persona,
+        "tier": tier,
+        "tier_label": label if isinstance(label, str) and label else ("Member" if tier == "none" else tier.capitalize()),
+        "location_label": location if isinstance(location, str) else "",
+    }
 
 
 def impact_json_path() -> Path:

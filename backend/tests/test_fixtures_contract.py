@@ -33,12 +33,14 @@ def hero_atp(size: str) -> dict[str, int]:
 
 
 def test_bundle_counts_match_the_contract(bundle):
-    assert len(bundle.customers) == 3
+    """The loaded bundle is the base files plus fixtures v2 (John, David, DEMO-3001); the base counts are unchanged."""
+    assert len(bundle.customers) == 5
     assert {c["customer_id"]: c["home_region"] for c in bundle.customers} == {
-        "DEMO-CUST-AVA": "QC", "DEMO-CUST-BEN": "ON", "DEMO-CUST-CHLOE": "QC"}
-    assert len(bundle.orders) == 10
-    assert [o["order_id"] for o in bundle.orders] == [f"DEMO-{n}" for n in range(1001, 1011)]
-    assert all(len(o["lines"]) == 1 for o in bundle.orders)
+        "DEMO-CUST-AVA": "QC", "DEMO-CUST-BEN": "ON", "DEMO-CUST-CHLOE": "QC",
+        "DEMO-CUST-JOHN": "QC", "DEMO-CUST-DAVID": "NB"}
+    assert len(bundle.orders) == 11
+    assert [o["order_id"] for o in bundle.orders] == [f"DEMO-{n}" for n in range(1001, 1011)] + ["DEMO-3001"]
+    assert all(len(o["lines"]) == 1 for o in bundle.orders if o["order_id"] != "DEMO-3001")
     assert [loc["location_id"] for loc in bundle.locations] == list(LOCATIONS)
     hero_contrast_rows = [r for r in bundle.inventory_base if "HERO" in r["sku"] or "CONTRAST" in r["sku"]]
     assert len(hero_contrast_rows) == 44  # (7 hero + 4 contrast sizes) x 4 locations
@@ -79,6 +81,8 @@ def test_order_table_matches_the_binding_values(bundle):
     today = clock.demo_today()
     assert today == date(2026, 10, 16) and today.strftime("%A") == "Friday"
     for order in bundle.orders:
+        if order["order_id"] not in expected:  # DEMO-3001 (fixtures v2) is checked in test_fixtures_v2.py
+            continue
         customer, sku, size, cents, final_sale, offset = expected[order["order_id"]]
         line = order["lines"][0]
         assert (order["customer_id"], line["sku"], line["size"], line["unit_paid_cents"], line["final_sale"]) == (
@@ -120,8 +124,8 @@ def test_seed_demo_script_resets_the_table_and_reports_counts(ddb, capsys):
     store.put_item({"pk": "RUN#STALE", "sk": "META"})
     assert module.main(["--variant", "dc_stockout", "--create-table"]) == 0  # the table already exists: left alone
     out = capsys.readouterr().out
-    assert "variant: dc_stockout" in out and "deleted: 1 runtime items" in out and "written: 98 fixture items" in out
-    assert "customers: 3" in out and "orders: 10" in out and "inventory: 52" in out
+    assert "variant: dc_stockout" in out and "deleted: 1 runtime items" in out and "written: 266 fixture items" in out
+    assert "customers: 5" in out and "orders: 11" in out and "inventory: 170" in out
     assert store.get_item(("RUN#STALE", "META")) is None
     assert hero_atp("7.5")["DEMO-DC-QC"] == 0
     assert module.main(["--variant", "default"]) == 0
@@ -258,8 +262,8 @@ def test_seed_writes_fixture_items_only_and_never_deletes(ddb):
     store.put_item({"pk": "RUN#KEEP", "sk": "META"})
     summary = fixtures.seed("default")
     assert summary.deleted == 0 and summary.variant == "default"
-    assert summary.counts["customers"] == 3 and summary.counts["orders"] == 10 and summary.counts["order_lines"] == 10
-    assert summary.counts["locations"] == 4 and summary.counts["products"] == 19 and summary.counts["inventory"] == 52
+    assert summary.counts["customers"] == 5 and summary.counts["orders"] == 11 and summary.counts["order_lines"] == 20
+    assert summary.counts["locations"] == 4 and summary.counts["products"] == 56 and summary.counts["inventory"] == 170
     assert summary.written == sum(summary.counts.values())
     assert store.get_item(("RUN#KEEP", "META")) is not None
     assert store.get_item(("ORDER#DEMO-1001", "LINE#DEMO-1001-L1"))["unit_paid_cents"] == 12999
@@ -349,9 +353,13 @@ def test_gsi_lookups_the_services_depend_on(ddb):
 
 def test_persona_list_comes_from_the_file(aws_env):
     personas = fixtures.persona_list()
-    assert [p["customer_id"] for p in personas] == ["DEMO-CUST-AVA", "DEMO-CUST-BEN", "DEMO-CUST-CHLOE"]
-    assert all(set(p) == {"customer_id", "display_name", "description"} for p in personas)
-    assert [p["display_name"] for p in personas] == ["Ava", "Ben", "Chloe"]
+    assert [p["customer_id"] for p in personas] == [
+        "DEMO-CUST-AVA", "DEMO-CUST-BEN", "DEMO-CUST-CHLOE", "DEMO-CUST-JOHN", "DEMO-CUST-DAVID"]
+    assert all(
+        set(p) == {"customer_id", "display_name", "description", "tier", "tier_label", "location_label"}
+        for p in personas
+    )
+    assert [p["display_name"] for p in personas] == ["Ava", "Ben", "Chloe", "John", "David"]
 
 
 def test_location_ids_follow_the_file(aws_env):

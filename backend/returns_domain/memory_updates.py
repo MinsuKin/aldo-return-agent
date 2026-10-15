@@ -6,6 +6,9 @@ gateway's ``build_memory_update`` / ``enqueue_memory_update`` / ``flush_outbox``
 * An exchange creates a PROVISIONAL update (``outcome = exchange_created``, ``provisional``
   true): at that moment ALDO cannot know the owner keeps the pair. Only a later pickup
   (``exchange_completed_kept``) sends ``provisional`` false.
+* A colour exchange (same size, a reason that is not a fit reason) is a ``PREFERENCE`` update with
+  ``fit_feedback = "size_ok"``: the owner kept the size and only changed the colour (D11).
+  Every other update has exactly the fields of addendum 5.4.
 * The payload carries no typical size, hint, other retailer or event (C3). ``owner_ref`` is the
   synthetic persona id; it goes only to the owner's own agent endpoint and into no trace event.
 * ``update_id = derived_id("MU-", transaction_id, outcome, n=6)``, so a replayed transaction
@@ -20,20 +23,44 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Any, Mapping
 
-from . import store, trace
+from . import policy, store, trace
 from .errors import DomainError, ErrorCode
+from .taxonomy import parse_reason_category
 
-REASONS: tuple[str, ...] = ("TOO_SMALL", "TOO_BIG", "OTHER")
+REASONS: tuple[str, ...] = ("TOO_SMALL", "TOO_BIG", "OTHER", "PREFERENCE")
 OUTCOMES: tuple[str, ...] = ("exchange_created", "exchange_completed_kept")
+#: A colour exchange keeps the size, which tells the owner's agent the size was right.
+PREFERENCE_REASON = "PREFERENCE"
+FIT_FEEDBACK_SIZE_OK = "size_ok"
 SOURCE = "ALDO_CA"
+#: A bundle return (several lines, one shipment) sends ONE update with an ``items`` list.
+RETURN_OUTCOME = "return_created"
+MAX_BUNDLE_ITEMS = 10
 MAX_ATTEMPTS = 5
 MAX_ERROR_CHARS = 200
 PENDING_GSI_PK = store.gsi1_outbox_pending("x")[0]
 
 
-def reason_for(size_direction: str | None, original_size: str, new_size: str) -> str:
-    """``TOO_SMALL`` / ``TOO_BIG`` from the policy check's size direction, else from the sizes
-    (a larger replacement means the pair was too small), else ``OTHER``."""
+def _is_non_fit_reason(reason_category: object) -> bool:
+    """A real reason category that is not a fit problem (None or an unknown value is neither)."""
+    try:
+        return not policy.is_fit_reason(parse_reason_category(reason_category))
+    except DomainError:
+        return False
+
+
+def reason_for(
+    size_direction: str | None,
+    original_size: str,
+    new_size: str,
+    reason_category: str | None = None,
+) -> str:
+    """``PREFERENCE`` for a same-size exchange whose return reason is not a fit reason (a colour
+    exchange: the size was right), else ``TOO_SMALL`` / ``TOO_BIG`` from the policy check's size
+    direction, else from the sizes (a larger replacement means the pair was too small), else
+    ``OTHER``. ``reason_category`` is the policy check's reason (None when unknown)."""
+    if _is_non_fit_reason(reason_category) and store.size_str(original_size) == store.size_str(new_size):
+        return PREFERENCE_REASON
     if size_direction == "too_small":
         return "TOO_SMALL"
     if size_direction == "too_big":
@@ -76,31 +103,95 @@ def build_update(
         raise DomainError(ErrorCode.VALIDATION_ERROR, "txn needs a transaction_id")
     if not isinstance(customer_id, str) or not customer_id:
         raise DomainError(ErrorCode.VALIDATION_ERROR, "customer_id is required")
-    return {
+    sizes = (store.size_str(original_size), store.size_str(new_size))
+    if reason == PREFERENCE_REASON and sizes[0] != sizes[1]:
+        raise DomainError(
+            ErrorCode.VALIDATION_ERROR,
+            "a PREFERENCE update keeps the size (original_size and new_size must be equal)",
+        )
+    update = {
         "update_id": store.derived_id("MU-", transaction_id, outcome, n=6),
         "owner_ref": customer_id,
         "order_id": order_id,
         "style_id": line["style"],
         "product_name": line["product_name"],
         "color": line["color"],
-        "original_size": store.size_str(original_size),
-        "new_size": store.size_str(new_size),
+        "original_size": sizes[0],
+        "new_size": sizes[1],
         "reason": reason,
         "outcome": outcome,
         "provisional": provisional,
         "source": SOURCE,
         "ts": store.now_iso(),
     }
+    if reason == PREFERENCE_REASON:
+        update["fit_feedback"] = FIT_FEEDBACK_SIZE_OK  # the size was right: only the colour changed
+    return update
+
+
+def build_bundle_update(
+    *, customer_id: str, order_id: str, transaction_id: str, items: list[Mapping[str, Any]]
+) -> dict[str, Any]:
+    """The write-back of a BUNDLE return (domain v2 phase 2): ONE small update for all its lines.
+
+    ``items`` are ``{"style_id", "product_name", "color", "size", "reason"}`` (one per line, at
+    most ten); the update's own ``reason`` is the items' common reason or ``OTHER`` when they
+    differ. ``outcome`` is ``return_created`` and ``provisional`` is true (the parcel has not
+    arrived). There is no ``fit_feedback``, no original/new size and no typical size or other
+    retailer (C3). ``update_id`` is derived from the transaction, so a replay is the same update.
+    """
+    if not isinstance(transaction_id, str) or not transaction_id:
+        raise DomainError(ErrorCode.VALIDATION_ERROR, "a bundle update needs a transaction_id")
+    if not isinstance(customer_id, str) or not customer_id:
+        raise DomainError(ErrorCode.VALIDATION_ERROR, "customer_id is required")
+    if not items or len(items) > MAX_BUNDLE_ITEMS:
+        raise DomainError(ErrorCode.VALIDATION_ERROR, f"a bundle update has 1 to {MAX_BUNDLE_ITEMS} items")
+    body: list[dict[str, Any]] = []
+    for item in items:
+        reason = item["reason"]
+        if reason not in REASONS:
+            raise DomainError(ErrorCode.VALIDATION_ERROR, f"reason must be one of: {', '.join(REASONS)}")
+        body.append(
+            {
+                "style_id": item["style_id"],
+                "product_name": item["product_name"],
+                "color": item["color"],
+                "size": store.size_str(item["size"]),
+                "reason": reason,
+            }
+        )
+    reasons = {entry["reason"] for entry in body}
+    return {
+        "update_id": store.derived_id("MU-", transaction_id, RETURN_OUTCOME, n=6),
+        "owner_ref": customer_id,
+        "order_id": order_id,
+        "reason": reasons.pop() if len(reasons) == 1 else "OTHER",
+        "outcome": RETURN_OUTCOME,
+        "provisional": True,
+        "source": SOURCE,
+        "ts": store.now_iso(),
+        "items": body,
+    }
 
 
 def update_from_txn_item(
     txn_item: Mapping[str, Any], *, outcome: str = "exchange_created", provisional: bool | None = None
 ) -> dict[str, Any] | None:
-    """Update for a stored ``TXN#`` item, or None when the transaction is not an exchange.
+    """Update for a stored ``TXN#`` item, or None when the transaction is not an exchange
+    (or a bundle return, which carries ``memory_items``; see ``build_bundle_update``).
 
     Uses the snapshot ``execution.execute`` stores on the item (customer, order, sizes, product,
     style, colour, reason), so a later pickup builds the same body without more lookups.
     """
+    if txn_item.get("memory_items") and str(txn_item.get("option_type", "")).startswith("return_"):
+        if outcome != "exchange_created":  # a return has no pickup completion
+            return None
+        return build_bundle_update(
+            customer_id=txn_item["customer_id"],
+            order_id=txn_item["order_id"],
+            transaction_id=txn_item["transaction_id"],
+            items=txn_item["memory_items"],
+        )
     if not str(txn_item.get("option_type", "")).startswith("exchange_"):
         return None
     return build_update(

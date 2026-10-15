@@ -47,15 +47,18 @@ def propose(ctx: PersonalRunContext, **overrides: Any) -> dict[str, Any]:
 # ------------------------------------------------------------------------------- the toolset
 
 
-def test_exactly_four_tools_in_the_documented_order(repo: MemoryRepo) -> None:
+def test_exactly_six_tools_in_the_documented_order(repo: MemoryRepo) -> None:
     built = tools.build_tools(make_ctx(repo))
     assert [t.tool_name for t in built] == [
         "recall_size_memory",
         "ask_aldo_size_assist",
+        "read_product_reviews",
         "send_size_decision",
+        "hand_off_to_returns",
         "record_decision",
     ]
     assert tuple(t.tool_name for t in built) == tools.TOOL_NAMES
+    assert len(built) == 6
 
 
 def test_no_tool_takes_or_returns_identity_or_credentials(repo: MemoryRepo) -> None:
@@ -77,6 +80,9 @@ def test_tool_schemas_match_the_contract(repo: MemoryRepo) -> None:
     }
     assert specs["send_size_decision"]["properties"]["confidence"]["enum"] == ["low", "medium", "high"]
     assert specs["record_decision"]["required"] == ["summary"]
+    assert specs["read_product_reviews"]["required"] == ["style_id"] and set(specs["read_product_reviews"]["properties"]) == {"style_id"}
+    # the order id is optional: without it the return workflow looks up the owner's recent delivered orders
+    assert specs["hand_off_to_returns"].get("required", []) == [] and set(specs["hand_off_to_returns"]["properties"]) == {"order_id"}
 
 
 def test_send_size_decision_is_described_as_a_proposal_not_an_order(repo: MemoryRepo) -> None:

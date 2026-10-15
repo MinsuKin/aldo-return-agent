@@ -18,7 +18,8 @@ from personal_agent.memory import MemoryRepo
 from personal_agent.tools import PersonalRunContext
 from returns_domain import gateway, store, trace
 
-from .scripted import ScriptedModel, tool_results
+from .canned import load_assist, load_reviews
+from .scripted import ScriptedModel, john_policy, tool_results
 
 AVA, BEN = "DEMO-CUST-AVA", "DEMO-CUST-BEN"
 MESSAGE = "Order me the ALDO Stessy heels for the wedding Saturday."
@@ -173,11 +174,80 @@ def test_dc_stockout_leaves_only_the_montreal_store_options(both: MemoryRepo) ->
     assert {o["location_name"] for o in options} == {"ALDO Demo Store Montreal"}
 
 
-def test_a_us_m_owner_is_refused_by_the_gateway_with_a_clear_error(both: MemoryRepo) -> None:
+def test_a_us_m_owner_sends_us_m_and_the_gateway_now_serves_it(both: MemoryRepo) -> None:
     ctx = new_context(both, owner=BEN)
     assert ctx.size_system == "US_M"
     result = tools.tool_ask_aldo_size_assist(ctx, "Stessy")
-    assert result["ok"] is False and result["error"]["code"] == "VALIDATION_ERROR"
+    assert result["ok"] is True and result["data"]["product_name"]  # the gateway accepts both size systems (demo v2)
+    assert store.get_item(store.sizereq_key(result["data"]["size_request_id"]))["size_system"] == "US_M"
+
+
+JOHN = "DEMO-CUST-JOHN"
+JOHN_MESSAGE = "I loved the ALDO Men 001 in black but the store did not have my size. Please buy them for me."
+
+
+def test_johns_whole_purchase_against_the_real_gateway(both: MemoryRepo, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Memory + the real fit signal + the real reviews (one is the injection) -> a 9.5 proposal, nothing ordered."""
+    monkeypatch.setenv("GATEWAY_TRANSPORT", "local")
+    monkeypatch.setattr(runner, "build_model", lambda model_id: ScriptedModel(john_policy()))
+    stock = lambda: int(store.get_item(store.inventory_key("DEMO-SKU-MEN001-BLACK-095", "DEMO-STORE-LAVAL-01"))["atp"])
+    before = stock()
+    result = runner.run(
+        {"run_id": "PRUN-JOHN01", "conv_id": "PCONV-JOHN01", "customer_id": JOHN, "message": JOHN_MESSAGE, "agent": "personal"},
+        repo=both,
+    )
+    assert result["status"] == "completed", result
+    assert result["metrics"]["reviews_read"] is True and result["metrics"]["reviews_flagged"] == 1
+    events = both.list_events(JOHN, "PRUN-JOHN01")["events"]
+    ask = next(e for e in events if e["type"] == "tool_result" and e["payload"]["tool"] == "ask_aldo_size_assist")["payload"]
+    assert ask["evidence"]["signal"] == "runs_large" and ask["evidence"]["style"]
+    request_id = ask["evidence"]["size_request_id"]
+    read = next(e for e in events if e["type"] == "tool_result" and e["payload"]["tool"] == "read_product_reviews")["payload"]
+    assert read["ok"] is True and read["evidence"]["n_reviews"] == 16 and read["evidence"]["n_flagged"] == 1
+
+    record = store.get_item(store.sizereq_key(request_id))
+    assert (record["status"], record["proposed_size"], record["size_system"]) == ("proposed", "9.5", "US_M")
+    assert record["offered"][record["proposed_option_id"]]["type"] == "store_pickup"
+    assert record["offered"][record["proposed_option_id"]]["location_id"] == "DEMO-STORE-LAVAL-01"
+    for leak in ("Retailer", "boot", "10.5", "10.0", "ignore", "order size 6"):
+        assert leak not in record["rationale_public"], leak
+    assert list(store.scan_keys(("ORDER#DEMO-A2A-",))) == [] and stock() == before  # nothing is ordered yet
+
+    stream = trace.list_a2a_events(JOHN).events
+    assert [e["type"] for e in stream] == [
+        "size_assist_requested", "fit_signal_shared", "size_requested", "reviews_shared", "size_recommended",
+    ]
+    assert stream[3]["actor"] == "aldo_gateway" and stream[3]["payload"]["n_flagged"] == 1
+    public = str(stream).lower()
+    assert "ignore all previous" not in public and "retailer" not in public and JOHN.lower() not in public
+
+    order = gateway.confirm_purchase(JOHN, request_id)  # the owner's click
+    assert order.order_id.startswith("DEMO-A2A-") and stock() == before - 1
+    gateway.simulate_delivery(JOHN, order.order_id)
+    assert [e["type"] for e in trace.list_a2a_events(JOHN).events][-2:] == ["size_confirmed", "delivered"]
+
+
+def test_the_canned_mens_answer_is_still_what_the_real_gateway_says(both: MemoryRepo) -> None:
+    """The canned data was written by the real gateway; this stops it drifting from the fixtures."""
+    from returns_domain import auth
+
+    token = auth.sign_token(JOHN, scope="delegated_gateway", actor="personal_agent")
+    real = gateway.size_assist(
+        auth.verify_claims(token.token, "delegated_gateway"),
+        {"intent": "size_assist", "product_query": "ALDO Men 001", "color": "BLACK", "size_system": "US_M", "deadline_date": None, "channel_pref": None},
+    ).model_dump(mode="json")
+    canned = load_assist("men001")
+    for key in ("style_id", "product_name", "color", "price_cents", "currency", "fit_signal", "sizes", "question"):
+        assert real[key] == canned[key], key
+
+
+@pytest.mark.parametrize("variant,style", [("men001", "DEMO-STYLE-MEN001"), ("default", "DEMO-STYLE-HERO"), ("runs_large", "DEMO-STYLE-CONTRAST")])
+def test_the_canned_reviews_are_still_what_the_real_gateway_says(both: MemoryRepo, variant: str, style: str) -> None:
+    from returns_domain import auth
+
+    token = auth.sign_token(JOHN, scope="delegated_gateway", actor="personal_agent")
+    real = gateway.get_reviews(auth.verify_claims(token.token, "delegated_gateway"), {"style_id": style, "limit": 20})
+    assert real.model_dump(mode="json") == load_reviews(variant)
 
 
 def test_a_session_token_cannot_drive_the_gateway_client(both: MemoryRepo) -> None:

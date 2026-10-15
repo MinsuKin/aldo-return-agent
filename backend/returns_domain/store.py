@@ -146,6 +146,17 @@ def outbox_key(update_id: str) -> Key:
     return (f"A2AOUT#{_part(update_id, 'update_id')}", "META")
 
 
+# Domain v2 (PIVOT_ADDENDUM 11.4)
+def storenote_key(transaction_id: str) -> Key:
+    """Simulated store-desk notice written in the same transaction as an in-store exchange or return."""
+    return (f"STORENOTE#{_part(transaction_id, 'transaction_id')}", "META")
+
+
+def benefit_key(customer_id: str, period: str) -> Key:
+    """Monthly benefit ledger of one customer: ``BENEFIT#{customer_id}#{yyyy-mm}`` (domain v2 phase 2)."""
+    return (f"BENEFIT#{_part(customer_id, 'customer_id')}#{_part(period, 'period')}", "META")
+
+
 def gsi1_order(cid: str, ordered_at: str, oid: str) -> tuple[str, str]:
     return (f"CUST#{_part(cid, 'customer_id')}", f"ORDER#{_part(ordered_at, 'ordered_at')}#{_part(oid, 'order_id')}")
 
@@ -177,7 +188,10 @@ FIXTURE_PREFIXES: tuple[str, ...] = ("CUST#", "ORDER#", "PRODUCT#", "LOC#", "INV
 #: Everything a demo run creates; ``fixtures.reset`` deletes every item whose pk starts with one
 #: of these. ``ORDER#DEMO-A2A-`` are the orders the agent-to-agent purchase creates at runtime
 #: (fixture orders are ``ORDER#DEMO-1001`` ...) and their lines share the pk; ``A2AOUT#`` is the
-#: write-back outbox and ``RUN#`` also covers the per-owner A2A streams. G-27, contracts.md F.7.
+#: write-back outbox and ``RUN#`` also covers the per-owner A2A streams; ``STORENOTE#`` are the
+#: store-desk notices of in-store exchanges and returns (domain v2); ``BENEFIT#`` is the monthly
+#: member-perk ledger (a reset must clear it, or the free shipping stays consumed).
+#: G-27, contracts.md F.7.
 RUNTIME_PREFIXES: tuple[str, ...] = (
     "CONV#",
     "RUN#",
@@ -190,6 +204,8 @@ RUNTIME_PREFIXES: tuple[str, ...] = (
     "AUDIT#",
     "SIZEREQ#",
     "A2AOUT#",
+    "STORENOTE#",
+    "BENEFIT#",
     "ORDER#DEMO-A2A-",
 )
 

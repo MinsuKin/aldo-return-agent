@@ -3,7 +3,8 @@
 Registered WITHOUT the ``/api`` prefix (the resolver strips it), like every route of the API Lambda:
 
 * ``POST /personal-agent/conversations``                      session token -> ``201 {"conv_id"}``
-* ``POST /personal-agent/conversations/<conv>/messages``       session token -> ``202 {"run_id", "conv_id"}``
+* ``GET  /personal-agent/conversations/<conv>``                session token -> ``200 {conv_id, mode, returns_order_id}``
+* ``POST /personal-agent/conversations/<conv>/messages``       session token -> ``202 {run_id, conv_id, agent, mode}``
 * ``GET  /personal-agent/memory``                              session token -> ``200 OwnerMemory``
 * ``GET  /personal-agent/runs/<run>/events?after=n``           session token -> ``200 {run_id, status, events, next_after}``
 * ``POST /personal-agent/memory-updates``                      HMAC ``X-ALDO-Signature`` ONLY (no bearer)
@@ -14,13 +15,25 @@ customer id comes only from the verified token. ``memory-updates`` takes no bear
 signature is the hex HMAC-SHA256 of the RAW body under the write-back key
 (``auth.verify_writeback_signature``) and is checked BEFORE the body is parsed.
 
-``POST .../messages`` validates 1..1000 characters, allows one active run per conversation
-(409 ``RUN_IN_PROGRESS``, enforced by a lease in the personal-agent table), creates the run and
-starts it through the injected ``enqueue(payload)`` (the API wires the worker; the payload is
-``{"agent": "personal", "run_id", "conv_id", "customer_id", "message", "kind": "customer"}``).
+``POST .../messages`` validates 1..1000 characters (no server marker on any line), allows one
+active run per conversation (409 ``RUN_IN_PROGRESS``) and routes by the conversation's MODE:
+
+* ``bot`` (default): ALDO bot's purchase workflow. The run is created in the personal-agent table
+  (lease there) and started through the injected ``enqueue(payload)``; the payload is ``{"agent":
+  "personal", "run_id", "conv_id", "customer_id", "message", "kind": "customer"}``. Answer
+  ``202 {run_id, conv_id, agent: "personal", mode: "bot"}``.
+* ``returns``: after ALDO bot's ``hand_off_to_returns``. The message goes straight to the return
+  workflow (``api.returns_chat``): the ALDO-side conversation of the order is created or
+  continued, the stored triggering text is forwarded once and then each new message, and a normal
+  customer run is started (kind ``customer``, the order selected, the trusted memory context in
+  the payload). Answer ``202 {run_id, conv_id, agent: "returns", mode: "returns"}``. The mode goes
+  back to ``bot`` when that run reports ``transaction_created`` or ``case_created`` (the worker
+  does it) or when the owner sends a message starting with "cancel" or "back to bot"; the A2A
+  stream then shows ``handback``. A "cancel" message is answered by ALDO bot like any other.
 
 Errors use the contracts.md C.1 body ``{"error": {"code", "message", "retryable", "request_id"}}``;
 this module renders them itself so it also works in an app without the API's global middleware.
+User-facing texts speak of ALDO bot only (addendum 12.1).
 """
 
 from __future__ import annotations
@@ -41,11 +54,18 @@ from personal_agent.log import logger
 from returns_domain import auth
 from returns_domain.errors import DomainError, ErrorCode
 
+from . import returns_chat
+from .routes_returns import checked_text
+
 MAX_BODY_BYTES = 16 * 1024
 GENERIC_ERROR = "Something went wrong on our side. Please try again."
 BUSY_MESSAGE = "ALDO bot is still working on your last message. Wait for it to finish."
 ENQUEUE_FAILED = "ALDO bot could not start. Please try again."
 SIGNATURE_HEADER = "x-aldo-signature"
+AGENT_PERSONAL = "personal"
+AGENT_RETURNS = "returns"
+MODE_BOT = "bot"
+MODE_RETURNS = "returns"
 
 _PATH_PARAM = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 _INT_QUERY = re.compile(r"^\d{1,9}$")
@@ -151,13 +171,7 @@ def _message_text(body: dict[str, Any]) -> str:
     text = body.get("text")
     if not isinstance(text, str):
         raise DomainError(ErrorCode.VALIDATION_ERROR, "text is required")
-    text = text.strip()
-    limit = settings.max_message_chars()
-    if not 1 <= len(text) <= limit:
-        raise DomainError(ErrorCode.VALIDATION_ERROR, f"text must be 1 to {limit} characters")
-    if text.lower().startswith("[server]"):
-        raise DomainError(ErrorCode.VALIDATION_ERROR, "text must not start with [server]")
-    return text
+    return checked_text(text)  # 1..limit characters, no server marker on any line
 
 
 # ------------------------------------------------------------------------------ the router
@@ -168,16 +182,20 @@ def build_router(
     enqueue: Enqueue | None = None,
     before_memory_read: BeforeMemoryRead | None = None,
     repo_provider: Callable[[], memory.MemoryRepo] | None = None,
+    returns: returns_chat.ReturnsChat | None = None,
 ) -> Router:
     """A fresh router with its collaborators bound (one router per resolver).
 
-    ``enqueue`` starts a run in the worker (default: ``worker.enqueue.enqueue_async``).
+    ``enqueue`` starts a run in the worker (default: ``worker.enqueue.enqueue_async``); it starts
+    ALDO bot's runs and, through ``returns``, the return workflow's runs after a hand-off.
     ``before_memory_read(owner_id)`` runs before ``GET /memory`` so pending write-backs can be
     delivered first (failures are logged and ignored). ``repo_provider`` returns the repository.
+    ``returns`` is the ALDO-side half of the single chat (default: ``ReturnsChat`` on ``enqueue``).
     """
     router = Router()
     start_run = enqueue or default_enqueue
     get_repo = repo_provider or memory.get_repo
+    chat = returns or returns_chat.ReturnsChat(lambda payload: start_run(payload), lambda: get_repo())
 
     def guarded(handler: Callable[..., Response]) -> Callable[..., Response]:
         @functools.wraps(handler)
@@ -207,6 +225,21 @@ def build_router(
             raise DomainError(ErrorCode.NOT_FOUND, "no ALDO bot profile for this customer")
         return _json(201, {"conv_id": repo.create_conversation(owner)}, request_id)
 
+    @router.get("/personal-agent/conversations/<conv>")
+    @guarded
+    def get_conversation(request_id: str, conv: str) -> Response:
+        owner = owner_id()
+        conversation = get_repo().get_conversation(owner, _path_param(conv))  # NOT_FOUND for a foreign one
+        return _json(
+            200,
+            {
+                "conv_id": conversation["conv_id"],
+                "mode": conversation["mode"],
+                "returns_order_id": conversation["returns_order_id"],
+            },
+            request_id,
+        )
+
     @router.post("/personal-agent/conversations/<conv>/messages")
     @guarded
     def post_message(request_id: str, conv: str) -> Response:
@@ -214,7 +247,21 @@ def build_router(
         conv_id = _path_param(conv)
         text = _message_text(_json_object(_raw_body(router), required=True))
         repo = get_repo()
-        repo.get_conversation(owner, conv_id)  # NOT_FOUND also covers another owner's conversation
+        conversation = repo.get_conversation(owner, conv_id)  # NOT_FOUND also covers another owner's conversation
+        if conversation["mode"] == MODE_RETURNS:
+            # One chat, one run at a time: ALDO bot's own run may still be writing its last sentence
+            # and the return workflow may still be working on the previous message.
+            if repo.lease_active(owner, conv_id) or chat.return_run_active(conversation):
+                raise DomainError(ErrorCode.RUN_IN_PROGRESS, BUSY_MESSAGE)
+            if not returns_chat.is_cancel(text):
+                run_id = chat.forward(owner, conv_id, conversation, text)
+                return _json(
+                    202,
+                    {"run_id": run_id, "conv_id": conv_id, "agent": AGENT_RETURNS, "mode": MODE_RETURNS},
+                    request_id,
+                )
+            # "cancel" / "back to bot": the return ends here and ALDO bot answers the message itself.
+            chat.cancel(owner, conv_id, conversation)
         run_id = memory.new_run_id()
         if not repo.try_acquire_lease(owner, conv_id, run_id):
             raise DomainError(ErrorCode.RUN_IN_PROGRESS, BUSY_MESSAGE)
@@ -237,7 +284,9 @@ def build_router(
             )
             _undo_start(repo, owner, conv_id, run_id)
             raise DomainError(ErrorCode.UPSTREAM_TIMEOUT, ENQUEUE_FAILED, retryable=True) from None
-        return _json(202, {"run_id": run_id, "conv_id": conv_id}, request_id)
+        return _json(
+            202, {"run_id": run_id, "conv_id": conv_id, "agent": AGENT_PERSONAL, "mode": MODE_BOT}, request_id
+        )
 
     @router.get("/personal-agent/memory")
     @guarded

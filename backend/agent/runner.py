@@ -5,9 +5,11 @@ Steps (all mandatory, in this order):
 1. ``runs.mark_agent_started`` (conditional): a duplicate invocation returns ``duplicate``.
 2. ``run_started`` event.
 3. Rehydrate the conversation from DynamoDB (``conversations.load_messages``).
-4. Build the Strands agent: ``BedrockModel(model_id, region_name, max_tokens)`` and NOTHING
-   else (Sonnet and Opus 5.5 reject temperature, top_p, top_k and toolChoice other than auto,
-   spike.md 0.1), ``SequentialToolExecutor`` (G-11), the ten tools, the round-limit hooks and
+4. Build the Strands agent: ``BedrockModel(model_id, region_name, max_tokens)`` plus the two
+   prompt-caching flags (``PROMPT_CACHE_OPTIONS``) and NOTHING else (Sonnet and Opus 5.5 reject
+   temperature, top_p, top_k and toolChoice other than auto, spike.md 0.1). The system prompt
+   gets the trusted OWNER CONTEXT section rendered from the payload's ``memory_context``
+   (``owner_context``). Then ``SequentialToolExecutor`` (G-11), the ten tools, the round-limit hooks and
    a retry strategy of at most 2 model attempts (the Strands default of 6 attempts with up
    to 240 s back-off would delay the fallback by minutes, G-07).
 5. The user turn is a list of content blocks: the text (customer text, or a server-authored
@@ -29,13 +31,14 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from strands import Agent, ModelRetryStrategy
-from strands.models import BedrockModel
+from strands.models import BedrockModel, CacheConfig
 from strands.tools.executors import SequentialToolExecutor
 from strands.types.exceptions import ModelThrottledException
 
 from returns_domain import config
 from returns_domain.errors import DomainError, ErrorCode
 
+from . import owner_context
 from .context import RUN_KINDS, RoundLimitExceeded, RunContext
 from .envelope import emit_event
 from .hooks import RunHooks
@@ -48,6 +51,12 @@ from .tools import build_tools
 BEDROCK_REGION = "us-east-1"
 MAX_OUTPUT_TOKENS = 2048
 MODEL_MAX_ATTEMPTS = 2
+#: Bedrock prompt caching of the system prompt, the tool specs and the growing conversation (about 8K
+#: tokens resent in every model round). In strands 1.61.0 the flags ``cache_prompt`` and ``cache_tools``
+#: are deprecated (UserWarning on every request) in favour of ``cache_config``, which does the same and
+#: also moves a cache point along the messages. Live probe: cache reads of 8006 tokens from the second call
+#: on, for Sonnet 5.5, next to id, region and max_tokens and nothing else.
+PROMPT_CACHE_OPTIONS: dict[str, Any] = {"cache_config": CacheConfig(strategy="auto", tools_ttl=True)}
 
 CUSTOMER_ERROR_TEXT = "Something went wrong on our side. Please try again."
 EMPTY_REPLY_TEXT = (
@@ -74,13 +83,18 @@ REQUOTE_TEXT = (
 
 def make_model(model_id: str) -> BedrockModel:
     """The only place a Bedrock model is built. No sampling parameters, no structured output."""
-    return BedrockModel(model_id=model_id, region_name=BEDROCK_REGION, max_tokens=MAX_OUTPUT_TOKENS)
+    return BedrockModel(
+        model_id=model_id, region_name=BEDROCK_REGION, max_tokens=MAX_OUTPUT_TOKENS, **PROMPT_CACHE_OPTIONS
+    )
 
 
 def make_agent(ctx: RunContext, model: Any, messages: list[dict[str, Any]]) -> Agent:
     return Agent(
         model=model,
-        system_prompt=build_system_prompt(max_rounds=ctx.max_rounds),
+        system_prompt=build_system_prompt(
+            max_rounds=ctx.max_rounds,
+            owner_context=owner_context.render_clean(ctx.memory_context) if ctx.memory_context else None,
+        ),
         tools=build_tools(ctx),
         messages=messages,
         tool_executor=SequentialToolExecutor(),
@@ -122,14 +136,31 @@ def context_from_payload(payload: Any, services: Services | None = None) -> RunC
         run_id=_identifier(payload, "run_id", required=True) or "",
         conv_id=_identifier(payload, "conv_id", required=True) or "",
         customer_id=_identifier(payload, "customer_id", required=True) or "",
-        order_id=_identifier(payload, "order_id", required=False),
+        # The API sends the order the owner is returning as ``order_id``; ``selected_order_id`` is accepted too.
+        order_id=_identifier(payload, "order_id", required=False)
+        or _identifier(payload, "selected_order_id", required=False),
         kind=kind,
         max_rounds=config.get_settings().max_rounds,
         quote_id=quote_id,
         option_id=option_id,
         approval_id=_identifier(payload, "approval_id", required=False),
+        memory_context=_memory_context(payload),
         services=services or Services(),
     )
+
+
+def _memory_context(payload: Mapping[str, Any]) -> dict[str, Any] | None:
+    """The validated ``memory_context`` of the payload, or None. Optional: it never fails a run."""
+    raw = payload.get("memory_context")
+    if raw is None:
+        return None
+    try:
+        clean = owner_context.sanitize(raw)
+    except Exception:  # noqa: BLE001 - a broken optional field must not stop the return
+        clean = None
+    if clean is None:
+        logger.warning("memory_context_ignored")
+    return clean
 
 
 def build_user_content(ctx: RunContext, payload: Mapping[str, Any]) -> list[dict[str, str]]:
@@ -302,6 +333,8 @@ def _add_usage(ctx: RunContext, agent: Any) -> None:
     usage = getattr(getattr(agent, "event_loop_metrics", None), "accumulated_usage", None) or {}
     ctx.input_tokens += int(usage.get("inputTokens", 0) or 0)
     ctx.output_tokens += int(usage.get("outputTokens", 0) or 0)
+    ctx.cache_read_tokens += int(usage.get("cacheReadInputTokens", 0) or 0)
+    ctx.cache_write_tokens += int(usage.get("cacheWriteInputTokens", 0) or 0)
 
 
 def _hard_stop(ctx: RunContext, agent: Any) -> _Outcome:
@@ -358,6 +391,8 @@ def _finish(ctx: RunContext, outcome: _Outcome) -> dict[str, Any]:
         "tool_count": ctx.tool_calls,
         "input_tokens": ctx.input_tokens,
         "output_tokens": ctx.output_tokens,
+        "cache_read_tokens": ctx.cache_read_tokens,
+        "cache_write_tokens": ctx.cache_write_tokens,
         "total_latency_ms": ctx.elapsed_ms(),
         "model_id_used": ctx.model_id,
         "fallback_used": ctx.fallback_used,

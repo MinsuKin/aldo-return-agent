@@ -230,7 +230,7 @@ def test_the_local_server_is_the_deployed_handler(ddb, personal_table, monkeypat
     monkeypatch.setenv("DEMO_ADMIN_KEY", ADMIN_KEY)
     with serving(entry.handler) as url:
         status, headers, body = fetch(f"{url}/api/demo/personas")
-        assert status == 200 and len(body["personas"]) == 3
+        assert status == 200 and len(body["personas"]) == 5
         assert headers["Cache-Control"] == "no-store" and headers["X-Request-Id"]
         status, _, session = fetch(f"{url}/api/demo/sessions", method="POST", body={"customer_id": AVA})
         assert status == 200
@@ -270,7 +270,7 @@ def test_moto_mode_serves_a_complete_offline_demo():
             memory = fetch(f"{url}/api/personal-agent/memory", headers=bearer)[2]
             assert memory["typical_size"] == "7.5"
             status, _, card = fetch(f"{url}/.well-known/agent-card.json")
-            assert status == 200 and card["name"] == "ALDO Fit Gateway"
+            assert status == 200 and card["name"] == "ALDO bot"
             reset = fetch(
                 f"{url}/api/demo/reset", method="POST", body={"variant": "dc_stockout"},
                 headers={"X-Demo-Admin": local_api.LOCAL_ADMIN_KEY},

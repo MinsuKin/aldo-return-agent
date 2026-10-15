@@ -52,8 +52,15 @@ def test_personas_are_public_and_carry_no_personal_data(client, seeded):
     reply = client.get("/api/demo/personas")
     assert reply.status == 200
     personas = reply.json["personas"]
-    assert {p["customer_id"] for p in personas} == {AVA, BEN, CHLOE}
-    assert all(set(p) == {"customer_id", "display_name", "description"} for p in personas)
+    assert {p["customer_id"] for p in personas} == {AVA, BEN, CHLOE, "DEMO-CUST-JOHN", "DEMO-CUST-DAVID"}
+    assert all(
+        set(p) == {"customer_id", "display_name", "description", "tier", "tier_label", "location_label"}
+        for p in personas
+    )
+    tiers = {p["customer_id"]: (p["tier"], p["tier_label"]) for p in personas}
+    assert tiers["DEMO-CUST-JOHN"] == ("silver", "Silver member")
+    assert tiers["DEMO-CUST-DAVID"] == ("platinum", "Platinum member")
+    assert tiers[AVA] == ("none", "Member")
 
 
 def test_session_issues_a_session_scoped_token_with_the_profile(client, seeded):
@@ -405,7 +412,8 @@ from .flows import make_quote  # noqa: E402
 
 
 def run_partitions() -> set[str]:
-    return {pk for pk, _ in store.scan_keys(("RUN#",))}
+    """Run partitions only: the owner's A2A stream (``RUN#A2A-<customer>``) is not a run."""
+    return {pk for pk, _ in store.scan_keys(("RUN#",)) if not pk.startswith("RUN#A2A-")}
 
 
 def new_conversation(client, customer_id: str = AVA, order_id: str | None = None) -> str:

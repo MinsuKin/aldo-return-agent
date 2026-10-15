@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from returns_domain import clock, policy
+from returns_domain import clock, fixtures, policy
 from returns_domain.errors import DomainError
 from returns_domain.policy import Decision
 
@@ -39,6 +39,10 @@ CATEGORIES = [
     "UNKNOWN",
 ]
 NON_FIT_CATEGORIES = [c for c in CATEGORIES if c != "FIT_SIZE"]
+#: Addendum D5 written as data, independent of policy.py: the reasons that allow an exchange.
+EXCHANGE_REASONS = ["FIT_SIZE", "EXPECTATION", "CHANGE_OF_MIND"]
+PREFERENCE_CATEGORIES = [c for c in EXCHANGE_REASONS if c != "FIT_SIZE"]
+RETURNS_ONLY_CATEGORIES = [c for c in CATEGORIES if c not in EXCHANGE_REASONS]
 
 
 # ------------------------------------------------------------------------------- helpers
@@ -422,6 +426,42 @@ def test_refund_authority_limit(unit_cents: int, decision: str):
         assert list(result.allowed_option_types) == []
 
 
+@pytest.mark.parametrize(
+    ("limit", "unit_cents", "decision"),
+    [
+        (None, 25000, "eligible"),  # the default stays CAD 250.00
+        (None, 25001, "needs_review"),
+        (25000, 25001, "needs_review"),  # none / silver
+        (75000, 28900, "eligible"),  # platinum: the DEMO-1005 boot is within authority
+        (75000, 75000, "eligible"),  # exactly the limit is within authority
+        (75000, 75001, "needs_review"),
+        (0, 1, "needs_review"),
+        (0, 0, "eligible"),
+    ],
+)
+def test_the_authority_limit_is_the_one_the_caller_passes(limit, unit_cents, decision):
+    result = run(line=make_line(unit_paid_cents=unit_cents), authority_limit_cents=limit)
+    assert result.decision == decision
+    assert result.facts["authority_limit_cents"] == (25000 if limit is None else limit)
+    if decision == "needs_review":
+        assert list(result.rule_ids) == ["authority.refund_limit"]
+        assert list(result.allowed_option_types) == []
+
+
+def test_the_limit_applies_to_an_explicit_refund_too_and_is_reported_in_the_facts():
+    assert run(refund_cents=60000, authority_limit_cents=75000).decision == "eligible"
+    assert run(refund_cents=60000, authority_limit_cents=Decimal("75000")).facts["authority_limit_cents"] == 75000
+    assert type(run(authority_limit_cents=Decimal("75000")).facts["authority_limit_cents"]) is int
+    # a higher limit never rescues another failed rule
+    assert run(delivered_at="2026-08-01", authority_limit_cents=75000).decision == "ineligible"
+    assert run(line=make_line(final_sale=True), authority_limit_cents=75000).decision == "ineligible"
+
+
+@pytest.mark.parametrize("bad", [-1, 750.0, 12.5, True, "75000", [75000]])
+def test_the_authority_limit_must_be_non_negative_integer_cents(bad: object):
+    expect_error("VALIDATION_ERROR", authority_limit_cents=bad)
+
+
 def test_refund_is_the_gross_price_times_the_quantity():
     line = make_line(purchased_qty=2, unit_paid_cents=13000)
     assert run(line=line, qty=1).decision == "eligible"
@@ -545,7 +585,8 @@ def _expected(case: Case) -> tuple[str, list[str], list[str], list[str]]:
     if decision != "eligible":
         allowed: list[str] = []
     else:
-        allowed = ALL_FIVE if case.reason == "FIT_SIZE" else RETURNS_ONLY
+        # Domain v2 (addendum D5): FIT_SIZE, EXPECTATION and CHANGE_OF_MIND also allow exchanges.
+        allowed = ALL_FIVE if case.reason in EXCHANGE_REASONS else RETURNS_ONLY
     return decision, rule_ids, missing, allowed
 
 
@@ -583,11 +624,63 @@ def test_fit_size_reason_allows_exchanges_and_returns():
     assert list(run(reason="FIT_SIZE").allowed_option_types) == ALL_FIVE
 
 
-@pytest.mark.parametrize("reason", NON_FIT_CATEGORIES)
+@pytest.mark.parametrize("reason", PREFERENCE_CATEGORIES)
+def test_preference_reasons_allow_exchanges_and_returns(reason: str):
+    """Domain v2 (addendum D5): a colour you do not like or a change of mind may be exchanged."""
+    result = run(reason=reason)
+    assert result.decision == "eligible"
+    assert list(result.allowed_option_types) == ALL_FIVE
+
+
+@pytest.mark.parametrize("reason", RETURNS_ONLY_CATEGORIES)
 def test_other_reasons_allow_returns_only(reason: str):
     result = run(reason=reason)
     assert result.decision == "eligible"
     assert list(result.allowed_option_types) == RETURNS_ONLY
+
+
+def test_the_exchange_reasons_constant_is_the_decision_d5_list():
+    assert list(policy.EXCHANGE_REASONS) == EXCHANGE_REASONS
+    assert list(policy.FIT_REASONS) == ["FIT_SIZE"]
+    assert [c for c in CATEGORIES if policy.is_fit_reason(c)] == ["FIT_SIZE"]
+    assert policy.is_fit_reason(policy.ReasonCategory.FIT_SIZE) and not policy.is_fit_reason("EXPECTATION")
+    assert policy.is_fit_reason("fit_size") and policy.is_fit_reason(" Fit-Size ")  # the taxonomy spellings
+    assert not policy.is_fit_reason(None) and not policy.is_fit_reason(5) and not policy.is_fit_reason("FIT_SIZE PLEASE")
+
+
+def test_exchange_reasons_follow_policy_json_with_a_constant_fallback(tmp_path, monkeypatch):
+    demo = tmp_path / "demo"
+    demo.mkdir()
+    monkeypatch.setenv("FIXTURES_DIR", str(tmp_path))
+
+    def write(content: object) -> None:
+        text = content if isinstance(content, str) else json.dumps(content)
+        (demo / "policy.json").write_text(text)
+        fixtures.clear_cache()  # the loader caches by file signature; never trust a same-size rewrite
+
+    write({"schema_version": 1, "exchange_reasons": ["FIT_SIZE", "EXPECTATION"]})
+    assert policy.exchange_reasons() == ("FIT_SIZE", "EXPECTATION")
+    assert list(run(reason="EXPECTATION").allowed_option_types) == ALL_FIVE
+    assert list(run(reason="CHANGE_OF_MIND").allowed_option_types) == RETURNS_ONLY  # no longer in the list
+
+    write({"exchange_reasons": ["fit_size", "FIT_SIZE", "Quality-Damage"]})  # the taxonomy parser normalises
+    assert policy.exchange_reasons() == ("FIT_SIZE", "QUALITY_DAMAGE")
+
+    for broken in (
+        {"exchange_reasons": []},
+        {"exchange_reasons": "FIT_SIZE"},
+        {"exchange_reasons": ["FIT_SIZE", "REFUND_EVERYTHING"]},  # one bad entry voids the whole list
+        {"exchange_reasons": [5]},
+        {"policy_id": "no key at all"},
+        "not json {",
+        [1, 2, 3],
+    ):
+        write(broken)
+        assert policy.exchange_reasons() == policy.EXCHANGE_REASONS, broken
+        assert list(run(reason="CHANGE_OF_MIND").allowed_option_types) == ALL_FIVE
+
+    (demo / "policy.json").unlink()  # a missing file is the fallback too
+    assert policy.exchange_reasons() == policy.EXCHANGE_REASONS
 
 
 @pytest.mark.parametrize(
@@ -635,7 +728,9 @@ def test_every_rule_id_can_be_produced_and_nothing_else():
 
 def test_policy_function_takes_no_free_text_parameter():
     parameters = list(inspect.signature(policy.evaluate).parameters)
-    assert parameters == ["order", "line", "qty", "reason_category", "condition", "refund_cents", "now"]
+    assert parameters == [
+        "order", "line", "qty", "reason_category", "condition", "refund_cents", "now", "authority_limit_cents"
+    ]
     for name in parameters:
         assert not any(word in name for word in ("text", "message", "note", "instruction", "prompt", "comment"))
 
@@ -768,6 +863,110 @@ def test_shipped_fixture_orders_produce_the_expected_decisions():
         result = policy.evaluate(stored_order, order["lines"][0], qty, reason, condition)
         assert result.decision == decision, (order_id, reason, qty, result)
         assert list(result.rule_ids) == rule_ids, (order_id, reason, qty, result)
+
+
+# ------------------------------------------------------------------------------ member tiers
+
+
+def use_policy_json(tmp_path, monkeypatch, content: object | None) -> None:
+    """Point the fixtures loader at a temp directory that holds ``content`` as policy.json (None: no file)."""
+    demo = tmp_path / "demo"
+    demo.mkdir(exist_ok=True)
+    monkeypatch.setenv("FIXTURES_DIR", str(tmp_path))
+    if content is not None:
+        (demo / "policy.json").write_text(content if isinstance(content, str) else json.dumps(content))
+    fixtures.clear_cache()
+
+
+def test_tiers_fall_back_to_the_demo_assumptions(tmp_path, monkeypatch):
+    use_policy_json(tmp_path, monkeypatch, None)
+    tiers = policy.load_tiers()
+    assert {name: (t["label"], t["authority_refund_limit_cents"]) for name, t in tiers.items()} == {
+        "none": ("Member", 25000),
+        "silver": ("Silver member", 25000),
+        "platinum": ("Platinum member", 75000),
+    }
+    assert policy.TIER_NONE == "none"
+
+
+@pytest.mark.parametrize(
+    ("stored", "tier", "label", "limit"),
+    [
+        (None, "none", "Member", 25000),
+        ("", "none", "Member", 25000),
+        ("   ", "none", "Member", 25000),
+        ("none", "none", "Member", 25000),
+        ("silver", "silver", "Silver member", 25000),
+        ("Silver", "silver", "Silver member", 25000),
+        (" PLATINUM ", "platinum", "Platinum member", 75000),
+        ("diamond", "none", "Member", 25000),  # a tier that does not exist is a plain member
+        (7, "none", "Member", 25000),
+        (["platinum"], "none", "Member", 25000),
+    ],
+)
+def test_tier_config_normalises_what_the_customer_record_holds(tmp_path, monkeypatch, stored, tier, label, limit):
+    use_policy_json(tmp_path, monkeypatch, None)
+    config = policy.tier_config(stored)
+    assert (config["tier"], config["label"], config["authority_refund_limit_cents"]) == (tier, label, limit)
+
+
+def test_policy_json_tiers_override_the_defaults_and_pass_other_keys_through(tmp_path, monkeypatch):
+    benefits = {"free_return_shipping": {"per_month": 1, "applies_to": ["return_mail"], "waives_fee": True}}
+    use_policy_json(
+        tmp_path,
+        monkeypatch,
+        {
+            "tiers": {
+                "silver": {"label": "Silver+", "authority_refund_limit_cents": 30000},
+                "platinum": {"label": "Platinum member", "authority_refund_limit_cents": 75000, "benefits": benefits},
+                "gold": {"label": "Gold member", "authority_refund_limit_cents": 50000},
+            }
+        },
+    )
+    tiers = policy.load_tiers()
+    assert tiers["silver"]["label"] == "Silver+" and tiers["silver"]["authority_refund_limit_cents"] == 30000
+    assert tiers["none"] == {"label": "Member", "authority_refund_limit_cents": 25000}  # untouched default
+    assert policy.tier_config("gold")["authority_refund_limit_cents"] == 50000
+    assert policy.tier_config("platinum")["benefits"] == benefits
+    policy.tier_config("platinum")["benefits"]["free_return_shipping"]["per_month"] = 99  # a caller's edit...
+    assert policy.tier_config("platinum")["benefits"]["free_return_shipping"]["per_month"] == 1  # ...is not cached
+
+
+@pytest.mark.parametrize(
+    "broken",
+    [
+        {"silver": {"label": "", "authority_refund_limit_cents": 30000}},
+        {"silver": {"label": "Silver", "authority_refund_limit_cents": -1}},
+        {"silver": {"label": "Silver", "authority_refund_limit_cents": True}},
+        {"silver": {"label": "Silver", "authority_refund_limit_cents": 300.5}},
+        {"silver": {"label": "Silver", "authority_refund_limit_cents": "30000"}},
+        {"silver": {"label": 5, "authority_refund_limit_cents": 30000}},
+        {"silver": "gold"},
+        {"": {"label": "Nothing", "authority_refund_limit_cents": 1}},
+        ["silver"],
+        "silver",
+    ],
+)
+def test_invalid_tier_entries_keep_the_defaults(tmp_path, monkeypatch, broken):
+    use_policy_json(tmp_path, monkeypatch, {"tiers": broken})
+    tiers = policy.load_tiers()
+    assert tiers["silver"] == {"label": "Silver member", "authority_refund_limit_cents": 25000}
+    assert set(tiers) == {"none", "silver", "platinum"}
+
+
+@pytest.mark.skipif(not (FIXTURES_DEMO / "policy.json").exists(), reason="demo fixtures not generated yet")
+def test_policy_v2_keys_of_the_shipped_fixture_match_the_constants():
+    fixture = json.loads((FIXTURES_DEMO / "policy.json").read_text())
+    if "exchange_reasons" not in fixture and "tiers" not in fixture:
+        pytest.skip("policy.json has no domain v2 keys yet (fixtures v2 stream)")
+    if "exchange_reasons" in fixture:
+        assert fixture["exchange_reasons"] == list(policy.EXCHANGE_REASONS)
+    if "tiers" in fixture:
+        shipped = {
+            name: {"label": tier["label"], "authority_refund_limit_cents": tier["authority_refund_limit_cents"]}
+            for name, tier in fixture["tiers"].items()
+        }
+        assert shipped == {name: dict(tier) for name, tier in policy.TIERS_DEFAULT.items()}
 
 
 @pytest.mark.skipif(not (FIXTURES_DEMO / "policy.json").exists(), reason="demo fixtures not generated yet")

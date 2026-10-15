@@ -50,8 +50,63 @@ def test_ben_and_chloe_have_one_short_memory_each(data: dict) -> None:
         assert entries[0]["outcome"] == "kept"
 
 
-def test_exactly_the_three_demo_personas(data: dict) -> None:
-    assert [o["owner_id"] for o in data["owners"]] == ["DEMO-CUST-AVA", "DEMO-CUST-BEN", "DEMO-CUST-CHLOE"]
+def test_the_regression_personas_and_the_two_demo_v2_personas(data: dict) -> None:
+    assert [o["owner_id"] for o in data["owners"]] == [
+        "DEMO-CUST-AVA", "DEMO-CUST-BEN", "DEMO-CUST-CHLOE", "DEMO-CUST-JOHN", "DEMO-CUST-DAVID",
+    ]
+
+
+def test_john_matches_the_demo_plan(data: dict) -> None:
+    john = owner(data, "DEMO-CUST-JOHN")
+    assert (john["display_name"], john["size_system"], john["typical_size"], john["source"]) == (
+        "John", "US_M", "10.0", "synthetic",
+    )
+    assert john["memory"] == [
+        {"memory_id": "PM-1", "retailer": "Retailer A (synthetic)", "item": "loafer", "size": "10.0", "outcome": "kept", "color": "BROWN", "source": "synthetic"},
+        {"memory_id": "PM-2", "retailer": "Retailer B (synthetic)", "item": "boot", "size": "10.5", "outcome": "returned_too_big", "color": "BLACK", "source": "synthetic"},
+        {"memory_id": "PM-3", "retailer": "Retailer C (synthetic)", "item": "sneaker", "size": "10.0", "outcome": "kept", "color": "WHITE", "source": "synthetic"},
+    ]
+
+
+def test_david_matches_the_demo_plan(data: dict) -> None:
+    david = owner(data, "DEMO-CUST-DAVID")
+    assert (david["display_name"], david["size_system"], david["typical_size"], david["source"]) == (
+        "David", "US_M", "11.0", "synthetic",
+    )
+    entries = david["memory"]
+    assert len(entries) == 3 and [e["memory_id"] for e in entries] == ["PM-1", "PM-2", "PM-3"]
+    assert [(e["size"], e["outcome"]) for e in entries if e["outcome"] == "returned_too_big"] == [("11.5", "returned_too_big")]
+    assert sum(e["outcome"] == "kept" and e["size"] == "11.0" for e in entries) == 2
+
+
+def test_the_demo_v2_personas_remember_the_colours_of_what_they_kept(data: dict) -> None:
+    """Addendum 12.3: the return workflow offers the colours the owner usually keeps first."""
+    john = {e["memory_id"]: e for e in owner(data, "DEMO-CUST-JOHN")["memory"]}
+    assert [(e["item"], e["color"], e["outcome"]) for e in john.values()] == [
+        ("loafer", "BROWN", "kept"), ("boot", "BLACK", "returned_too_big"), ("sneaker", "WHITE", "kept"),
+    ]
+    david = owner(data, "DEMO-CUST-DAVID")["memory"]
+    assert any(e["color"] == "TAN" and e["outcome"] == "kept" for e in david)  # David keeps one tan item
+
+
+def test_the_color_is_optional_and_a_string_when_present(tmp_path: Path, data: dict) -> None:
+    ava = owner(data, "DEMO-CUST-AVA")
+    assert all("color" not in entry for entry in ava["memory"])  # the regression personas have none
+    assert memory.load_fixture(FIXTURE)
+    for bad in ("", "  ", 5):
+        broken = json.loads(json.dumps(data))
+        broken["owners"][0]["memory"][0]["color"] = bad
+        path = tmp_path / "memory.json"
+        path.write_text(json.dumps(broken), encoding="utf-8")
+        with pytest.raises(DomainError) as caught:
+            memory.load_fixture(path)
+        assert caught.value.code == "INTERNAL_ERROR"
+
+
+def test_no_memory_label_mentions_aldo_for_any_persona(data: dict) -> None:
+    for entry in data["owners"]:
+        for item in entry["memory"]:
+            assert "aldo" not in (item["retailer"] + item["item"]).lower()
 
 
 def test_sizes_are_strings_with_one_decimal_and_every_record_is_synthetic(data: dict) -> None:

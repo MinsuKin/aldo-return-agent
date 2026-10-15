@@ -19,11 +19,11 @@
       {
         "key": "annual_net_value_base",
         "label": "Annual net value, post-purchase exchange (base case)",
-        "value": 11575434,
+        "value": 13157003,
         "unit": "CAD_cents",
-        "tag": "pending_measurement",
-        "display": "CAD 115,754.34",
-        "basis": "Range CAD 40,912.80 (low) to CAD 193,525.62 (high). Rests on assumed 10/20/30% exchange conversion and a placeholder agent cost (pending_measurement)."
+        "tag": "derived",
+        "display": "CAD 131,570.03",
+        "basis": "Range CAD 56,728.49 (low) to CAD 209,341.31 (high). Rests on assumed 10/20/30% exchange conversion and the measured agent cost per run."
       },
       {
         "key": "prevention_value_base",
@@ -33,14 +33,76 @@
         "tag": "assumed",
         "display": "CAD 50,604.60",
         "basis": "5% of the measured size-related lines prevented. Range CAD 0.00 (0%) to CAD 101,209.20 (10%). Pilot hypothesis, separate lever, not additive."
+      },
+      {
+        "key": "preference_exchange_value_base",
+        "label": "Preference-return exchange what-if, added to the fit scenarios (base case, gross)",
+        "value": 8770569,
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "display": "CAD 87,705.69",
+        "basis": "36,462 preference lines x 60% availability of the alternative colour x 10% conversion (both assumed) x CAD 38.99 per case, derived from the measured median refund, plus the avoided second-return value as in the fit scenarios. Range CAD 42,649.60 (5%) to CAD 135,168.28 (15%); floor CAD 7,550.55 if only the 3,139 lines with a specific reason count. Fit and preference lines never overlap: both levers together give CAD 219,275.72 net in the base case, agent cost counted once."
+      },
+      {
+        "key": "multi_line_return_share",
+        "label": "Return numbers with two or more lines",
+        "value": 19.06,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "19.06%",
+        "basis": "9,417 of 49,404 return numbers; they hold 22,011 of 61,998 lines (35.50%), up to 14 lines in one return. 99.19% of them contain two or more distinct SKUs."
+      },
+      {
+        "key": "agent_cost_per_run_measured",
+        "label": "Agent cost per run (measured)",
+        "value": 0.2449,
+        "unit": "CAD_per_run",
+        "tag": "derived",
+        "display": "CAD 0.2449",
+        "basis": "Mean of 6 live runs of the ALDO returns-agent scenarios at assumed model prices (prices in returns_domain.config): USD 0.1775 per run, converted at 1.38 CAD per USD (assumed, from returns_domain.config). Single scenarios range from CAD 0.0864 (H) to CAD 0.3956 (A)."
       }
     ],
     "key_assumptions": [
       "Exchange conversion of size-related lines 10/20/30% and prevention before purchase 0/5/10% (low/base/high, assumed). Both are assumptions to validate in a pilot.",
       "Value per converted or retained case CAD 54.00 and avoided return cost CAD 22.00 (assumed, synthetic unit economics from handoff section 15).",
       "Repeat-return reduction on converted cases 0/5/10% (assumed).",
-      "Agent cost per run CAD 0.5000 is a placeholder (pending_measurement) until the live eval.",
-      "Fit lines are return lines, not customers."
+      "Agent cost per run CAD 0.2449, measured on 6 live runs at assumed model prices (prices in returns_domain.config).",
+      "Fit lines are return lines, not customers.",
+      "Preference-return exchange: conversion 5/10/15% of preference lines where the alternative colour or style is in stock (60% availability), repeat-return reduction as in the fit scenarios, value per case derived from the measured median refund and the synthetic unit economics (all assumed, to validate in a pilot).",
+      "Fit and preference lines never overlap (one reason group per line), so the two levers can be added; the pre-purchase prevention what-if stays separate.",
+      "Agent load: a 12-hour active window and 15% of the busiest day in its busiest hour (assumed)."
+    ],
+    "slide_sentences": [
+      {
+        "slide": "Business impact",
+        "tag": "measured",
+        "text": "Of 61,998 completed ALDO_CA return lines between 2025-02-01 and 2026-01-31, 13,317 (21.5%) gave a size reason, Too small or Too big (measured)."
+      },
+      {
+        "slide": "Business impact",
+        "tag": "derived",
+        "text": "If 10%, 20% or 30% of those size-related lines became exchanges, annual net value would be about CAD 57,000, CAD 132,000 or CAD 209,000 after agent cost (derived: conversion rates assumed, agent cost measured)."
+      },
+      {
+        "slide": "Business impact",
+        "tag": "measured",
+        "text": "Another 36,462 lines (58.8%) carry a change-of-mind or not-as-expected reason, but 91% of them use the combined label 'Changed my mind / Other', which sits on 72.5% of in-store lines against 9.5% of other lines, so this group is an upper bound (measured)."
+      },
+      {
+        "slide": "Business impact",
+        "tag": "assumed",
+        "text": "Converting 5%, 10% or 15% of them to a colour or style exchange where the alternative is in stock (60% assumed) would add about CAD 43,000, CAD 88,000 or CAD 135,000 a year on top of the size-related exchanges (gross; the agent already runs on every line), or about CAD 8,000 in the base case if only the 3,139 lines with a specific reason count (assumed)."
+      },
+      {
+        "slide": "Scalability",
+        "tag": "derived",
+        "text": "Because 19.1% of return numbers hold two or more lines (35.5% of lines), one agent run per return number instead of per line lowers the yearly runs from 61,998 to 49,404; at a measured CAD 0.2449 per run (6 live runs at assumed model prices) the annual agent cost falls from about CAD 15,000 to about CAD 12,000 (derived: counts measured)."
+      },
+      {
+        "slide": "Scalability",
+        "tag": "assumed",
+        "text": "On the busiest day (638 lines) the agent would process about 35.5 million tokens, roughly 49,000 tokens per minute over a 12-hour window, with about 0.4 runs in flight on average in the busiest hour (15% of the day, assumed); check account quotas, request an increase before launch (assumed)."
+      }
     ]
   },
   "tag_legend": {
@@ -49,8 +111,8 @@
     "assumed": "An input chosen by the team, or a what-if result built only from such inputs and a measured baseline. It is not observed in ALDO data and must be validated in a pilot.",
     "pending_measurement": "Placeholder until the live eval measures it (docs/eval/results.json)."
   },
-  "agent_cost_status": "pending_measurement",
-  "agent_cost_note": "Agent cost per run is a deliberately conservative placeholder of CAD 0.5000, tagged pending_measurement (file not found: `docs/eval/results.json`). It is not a measurement. Run the live eval, then re-run `python3.12 scripts/build_impact_model.py` so the cost becomes derived from measured tokens. The agent cost and annual net value are provisional until then.",
+  "agent_cost_status": "measured",
+  "agent_cost_note": "Agent cost per run is CAD 0.2449, measured on 6 live runs at assumed model prices (prices in returns_domain.config). Source: `.agents/tasks/agentic-returns-gateway-p0-2026-10-15/eval-baseline-1/results.json` (field `est_cost_per_run_usd`). Tokens are measured by the live eval; the token prices are an assumption set in the eval config. The eval reports USD 0.1775 per run, converted at 1.38 CAD per USD (assumed; one source of truth: backend/returns_domain/config.py (USD_TO_CAD default)).",
   "window": {
     "start": "2025-02-01",
     "end": "2026-01-31",
@@ -181,6 +243,121 @@
       "unit": "ratio",
       "tag": "derived",
       "display": "2.65x"
+    },
+    "agent_runs_per_day_mean": {
+      "label": "Agent runs per day, mean",
+      "value": 169.86,
+      "unit": "runs_per_day",
+      "tag": "derived",
+      "display": "169.86",
+      "note": "One agent run per return line, the same basis as the agent cost model. Counting runs per return number instead would lower the volume by about 20%."
+    },
+    "agent_runs_per_day_p95": {
+      "label": "Agent runs per day, p95",
+      "value": 450.8,
+      "unit": "runs_per_day",
+      "tag": "derived",
+      "display": "450.80"
+    },
+    "agent_runs_per_day_max": {
+      "label": "Agent runs per day, busiest day",
+      "value": 638,
+      "unit": "runs_per_day",
+      "tag": "derived",
+      "display": "638"
+    },
+    "agent_active_window_hours": {
+      "label": "Active window of the busiest day",
+      "value": 12,
+      "unit": "hours",
+      "tag": "assumed",
+      "display": "12 h",
+      "note": "Assumption: the day's returns arrive over 12 hours."
+    },
+    "agent_busiest_hour_share_pct": {
+      "label": "Share of the busiest day that falls in its busiest hour",
+      "value": 15,
+      "unit": "percent",
+      "tag": "assumed",
+      "display": "15%",
+      "note": "Assumption (an even 12-hour spread would be 8.3%)."
+    },
+    "agent_runs_busiest_hour": {
+      "label": "Agent runs in the busiest hour of the busiest day",
+      "value": 95.7,
+      "unit": "runs",
+      "tag": "assumed",
+      "display": "95.70",
+      "note": "Busiest-day runs x busiest-hour share."
+    },
+    "agent_run_duration_s": {
+      "label": "Agent run duration (wall clock), mean of the scenario p50 latencies",
+      "value": 16.03,
+      "unit": "seconds",
+      "tag": "measured",
+      "display": "16.0 s",
+      "note": "Baseline eval, 6 scenarios, 6 runs; scenario p50 ranges from 10.4 s to 22.5 s. Reset and database reads are excluded."
+    },
+    "agent_input_tokens_per_run": {
+      "label": "Input tokens per run, mean",
+      "value": 54794,
+      "unit": "tokens",
+      "tag": "measured",
+      "display": "54,794",
+      "note": "Mean over the baseline eval scenarios; includes the prompt and tool specs resent on every model round."
+    },
+    "agent_output_tokens_per_run": {
+      "label": "Output tokens per run, mean",
+      "value": 871,
+      "unit": "tokens",
+      "tag": "measured",
+      "display": "871"
+    },
+    "agent_tokens_per_day_mean": {
+      "label": "Implied tokens per day, mean day",
+      "value": 9455205,
+      "unit": "tokens_per_day",
+      "tag": "derived",
+      "display": "9,455,205",
+      "note": "Runs per day x (input + output tokens per run)."
+    },
+    "agent_tokens_per_day_p95": {
+      "label": "Implied tokens per day, p95 day",
+      "value": 25094007,
+      "unit": "tokens_per_day",
+      "tag": "derived",
+      "display": "25,094,007"
+    },
+    "agent_tokens_per_day_max": {
+      "label": "Implied tokens per day, busiest day",
+      "value": 35514589,
+      "unit": "tokens_per_day",
+      "tag": "derived",
+      "display": "35,514,589"
+    },
+    "agent_tokens_per_minute_busiest_day": {
+      "label": "Tokens per minute on the busiest day over a 12-hour window",
+      "value": 49326,
+      "unit": "tokens_per_minute",
+      "tag": "assumed",
+      "display": "49,326",
+      "note": "Average over the window; about 98% of it is input. Compare with the account's on-demand quota for the model: check account quotas, request an increase before launch."
+    },
+    "agent_tokens_per_minute_busiest_hour": {
+      "label": "Tokens per minute in the busiest hour of the busiest day",
+      "value": 88786,
+      "unit": "tokens_per_minute",
+      "tag": "assumed",
+      "display": "88,786",
+      "note": "Busiest-hour runs x tokens per run / 60. Compare with the account's on-demand quota for the model: check account quotas, request an increase before launch."
+    },
+    "agent_concurrent_runs_busiest_hour": {
+      "label": "Concurrent agent runs in the busiest hour, average",
+      "value": 0.43,
+      "unit": "concurrent_runs",
+      "tag": "assumed",
+      "display": "0.43",
+      "note": "Little's law: runs per second x mean run duration. An average; bursts are higher. Not a load test."
     }
   },
   "exchange_evidence": {
@@ -343,18 +520,18 @@
       "agent_cost_per_run": {
         "label": "Agent cost per run",
         "unit": "CAD_per_run",
-        "tag": "pending_measurement",
+        "tag": "derived",
         "values": {
-          "low": 0.5,
-          "base": 0.5,
-          "high": 0.5
+          "low": 0.2449,
+          "base": 0.2449,
+          "high": 0.2449
         },
         "display": {
-          "low": "CAD 0.5000",
-          "base": "CAD 0.5000",
-          "high": "CAD 0.5000"
+          "low": "CAD 0.2449",
+          "base": "CAD 0.2449",
+          "high": "CAD 0.2449"
         },
-        "note": "Placeholder until the live eval measures it. Re-run this script after the eval."
+        "note": "Measured on 6 live runs at assumed model prices (prices in returns_domain.config)."
       }
     },
     "outputs": {
@@ -439,31 +616,31 @@
       "agent_cost_total": {
         "label": "Agent cost (total requests x cost per run)",
         "unit": "CAD_cents",
-        "tag": "pending_measurement",
+        "tag": "derived",
         "values": {
-          "low": 3099900,
-          "base": 3099900,
-          "high": 3099900
+          "low": 1518331,
+          "base": 1518331,
+          "high": 1518331
         },
         "display": {
-          "low": "CAD 30,999.00",
-          "base": "CAD 30,999.00",
-          "high": "CAD 30,999.00"
+          "low": "CAD 15,183.31",
+          "base": "CAD 15,183.31",
+          "high": "CAD 15,183.31"
         }
       },
       "annual_net_value": {
         "label": "Annual net value",
         "unit": "CAD_cents",
-        "tag": "pending_measurement",
+        "tag": "derived",
         "values": {
-          "low": 4091280,
-          "base": 11575434,
-          "high": 19352562
+          "low": 5672849,
+          "base": 13157003,
+          "high": 20934131
         },
         "display": {
-          "low": "CAD 40,912.80",
-          "base": "CAD 115,754.34",
-          "high": "CAD 193,525.62"
+          "low": "CAD 56,728.49",
+          "base": "CAD 131,570.03",
+          "high": "CAD 209,341.31"
         },
         "note": "The 12-month window is used as the annual figure (no scaling)."
       }
@@ -611,6 +788,1591 @@
     },
     "formula": "annual_value = fit_lines x prevention_rate x (avoided_return_cost + value_per_retained_case)"
   },
+  "return_reason_groups": {
+    "tag": "measured",
+    "framing": "All completed ALDO_CA return lines in the window, each in exactly one reason group. Counts, sums and medians come straight from the returns file; the grouping uses the product taxonomy.",
+    "mapping_source": "backend/returns_domain/taxonomy.py categorize() gives the category; CATEGORY_TO_GROUP in scripts/build_impact_model.py folds categories into groups. The fit group stays identical to the earlier definition (Too small and Too big only).",
+    "normalization": "strip, lower-case, whitespace collapse and removal of the 'return.page.reasons.' prefix",
+    "groups": {
+      "fit": {
+        "label": "Fit (Too small, Too big)",
+        "lines": {
+          "label": "Lines",
+          "value": 13317,
+          "unit": "lines",
+          "tag": "measured",
+          "display": "13,317"
+        },
+        "share_of_lines": {
+          "label": "Share of lines in scope",
+          "value": 21.48,
+          "unit": "percent",
+          "tag": "measured",
+          "display": "21.48%",
+          "note": "Ratio of two measured counts."
+        },
+        "refund_sum": {
+          "label": "Refund amount, sum",
+          "value": 115005058,
+          "unit": "CAD_cents",
+          "tag": "measured",
+          "display": "CAD 1,150,050.58",
+          "note": "Column summed as provided. Line versus transaction grain is unconfirmed."
+        },
+        "refund_median": {
+          "label": "Refund amount, median",
+          "value": 7999,
+          "unit": "CAD_cents",
+          "tag": "measured",
+          "display": "CAD 79.99"
+        },
+        "lines_in_store": {
+          "label": "Lines returned in store",
+          "value": 7077,
+          "unit": "lines",
+          "tag": "measured",
+          "display": "7,077"
+        },
+        "share_in_store": {
+          "label": "Share of the group returned in store",
+          "value": 53.14,
+          "unit": "percent",
+          "tag": "measured",
+          "display": "53.14%"
+        }
+      },
+      "preference": {
+        "label": "Preference (changed mind or idea, not as expected, colour)",
+        "lines": {
+          "label": "Lines",
+          "value": 36462,
+          "unit": "lines",
+          "tag": "measured",
+          "display": "36,462"
+        },
+        "share_of_lines": {
+          "label": "Share of lines in scope",
+          "value": 58.81,
+          "unit": "percent",
+          "tag": "measured",
+          "display": "58.81%",
+          "note": "Ratio of two measured counts."
+        },
+        "refund_sum": {
+          "label": "Refund amount, sum",
+          "value": 300655377,
+          "unit": "CAD_cents",
+          "tag": "measured",
+          "display": "CAD 3,006,553.77",
+          "note": "Column summed as provided. Line versus transaction grain is unconfirmed."
+        },
+        "refund_median": {
+          "label": "Refund amount, median",
+          "value": 7498,
+          "unit": "CAD_cents",
+          "tag": "measured",
+          "display": "CAD 74.98"
+        },
+        "lines_in_store": {
+          "label": "Lines returned in store",
+          "value": 32800,
+          "unit": "lines",
+          "tag": "measured",
+          "display": "32,800"
+        },
+        "share_in_store": {
+          "label": "Share of the group returned in store",
+          "value": 89.96,
+          "unit": "percent",
+          "tag": "measured",
+          "display": "89.96%"
+        }
+      },
+      "quality_damage": {
+        "label": "Quality or damage",
+        "lines": {
+          "label": "Lines",
+          "value": 2236,
+          "unit": "lines",
+          "tag": "measured",
+          "display": "2,236"
+        },
+        "share_of_lines": {
+          "label": "Share of lines in scope",
+          "value": 3.61,
+          "unit": "percent",
+          "tag": "measured",
+          "display": "3.61%",
+          "note": "Ratio of two measured counts."
+        },
+        "refund_sum": {
+          "label": "Refund amount, sum",
+          "value": 16985501,
+          "unit": "CAD_cents",
+          "tag": "measured",
+          "display": "CAD 169,855.01",
+          "note": "Column summed as provided. Line versus transaction grain is unconfirmed."
+        },
+        "refund_median": {
+          "label": "Refund amount, median",
+          "value": 6749,
+          "unit": "CAD_cents",
+          "tag": "measured",
+          "display": "CAD 67.49"
+        },
+        "lines_in_store": {
+          "label": "Lines returned in store",
+          "value": 1042,
+          "unit": "lines",
+          "tag": "measured",
+          "display": "1,042"
+        },
+        "share_in_store": {
+          "label": "Share of the group returned in store",
+          "value": 46.6,
+          "unit": "percent",
+          "tag": "measured",
+          "display": "46.60%"
+        }
+      },
+      "delivery_wrong_item": {
+        "label": "Delivery or wrong item",
+        "lines": {
+          "label": "Lines",
+          "value": 4393,
+          "unit": "lines",
+          "tag": "measured",
+          "display": "4,393"
+        },
+        "share_of_lines": {
+          "label": "Share of lines in scope",
+          "value": 7.09,
+          "unit": "percent",
+          "tag": "measured",
+          "display": "7.09%",
+          "note": "Ratio of two measured counts."
+        },
+        "refund_sum": {
+          "label": "Refund amount, sum",
+          "value": 30772550,
+          "unit": "CAD_cents",
+          "tag": "measured",
+          "display": "CAD 307,725.50",
+          "note": "Column summed as provided. Line versus transaction grain is unconfirmed."
+        },
+        "refund_median": {
+          "label": "Refund amount, median",
+          "value": 6299,
+          "unit": "CAD_cents",
+          "tag": "measured",
+          "display": "CAD 62.99"
+        },
+        "lines_in_store": {
+          "label": "Lines returned in store",
+          "value": 930,
+          "unit": "lines",
+          "tag": "measured",
+          "display": "930"
+        },
+        "share_in_store": {
+          "label": "Share of the group returned in store",
+          "value": 21.17,
+          "unit": "percent",
+          "tag": "measured",
+          "display": "21.17%"
+        }
+      },
+      "other": {
+        "label": "Other or unclear",
+        "lines": {
+          "label": "Lines",
+          "value": 5590,
+          "unit": "lines",
+          "tag": "measured",
+          "display": "5,590"
+        },
+        "share_of_lines": {
+          "label": "Share of lines in scope",
+          "value": 9.02,
+          "unit": "percent",
+          "tag": "measured",
+          "display": "9.02%",
+          "note": "Ratio of two measured counts."
+        },
+        "refund_sum": {
+          "label": "Refund amount, sum",
+          "value": 43311188,
+          "unit": "CAD_cents",
+          "tag": "measured",
+          "display": "CAD 433,111.88",
+          "note": "Column summed as provided. Line versus transaction grain is unconfirmed."
+        },
+        "refund_median": {
+          "label": "Refund amount, median",
+          "value": 7225,
+          "unit": "CAD_cents",
+          "tag": "measured",
+          "display": "CAD 72.25"
+        },
+        "lines_in_store": {
+          "label": "Lines returned in store",
+          "value": 1721,
+          "unit": "lines",
+          "tag": "measured",
+          "display": "1,721"
+        },
+        "share_in_store": {
+          "label": "Share of the group returned in store",
+          "value": 30.79,
+          "unit": "percent",
+          "tag": "measured",
+          "display": "30.79%"
+        }
+      }
+    },
+    "preference_composition": {
+      "combined_label_lines": {
+        "label": "Preference lines with the combined label 'Changed my mind / Other'",
+        "value": 33323,
+        "unit": "lines",
+        "tag": "measured",
+        "display": "33,323",
+        "note": "One label for change of mind and unspecified reasons."
+      },
+      "combined_label_share_of_preference": {
+        "label": "Combined label as share of the preference lines",
+        "value": 91.39,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "91.39%"
+      },
+      "specific_reason_lines": {
+        "label": "Preference lines with a specific reason (not as expected, changed idea, found something else, colour, advertised)",
+        "value": 3139,
+        "unit": "lines",
+        "tag": "measured",
+        "display": "3,139",
+        "note": "Preference lines without the combined label. Floor for the preference lever."
+      },
+      "store_lines": {
+        "label": "Lines returned in store (channel InStore)",
+        "value": 43570,
+        "unit": "lines",
+        "tag": "measured",
+        "display": "43,570"
+      },
+      "store_share_of_all_lines": {
+        "label": "Lines returned in store, share of all lines in scope",
+        "value": 70.28,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "70.28%"
+      },
+      "combined_label_lines_in_store": {
+        "label": "Lines with the combined label that were returned in store",
+        "value": 31574,
+        "unit": "lines",
+        "tag": "measured",
+        "display": "31,574"
+      },
+      "combined_label_share_of_store_lines": {
+        "label": "In-store lines that carry the combined label",
+        "value": 72.47,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "72.47%",
+        "note": "In store the label may be entered as a default, so it is weaker evidence of a taste-based return."
+      },
+      "combined_label_share_of_other_channel_lines": {
+        "label": "Lines from other channels (web, mail, call centre) that carry the combined label",
+        "value": 9.49,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "9.49%"
+      }
+    },
+    "mapping": [
+      {
+        "reason": "too big",
+        "lines": 7477,
+        "lines_in_store": 4153,
+        "taxonomy_category": "FIT_SIZE",
+        "group": "fit"
+      },
+      {
+        "reason": "too small",
+        "lines": 5840,
+        "lines_in_store": 2924,
+        "taxonomy_category": "FIT_SIZE",
+        "group": "fit"
+      },
+      {
+        "reason": "changed my mind / other",
+        "lines": 33305,
+        "lines_in_store": 31574,
+        "taxonomy_category": "CHANGE_OF_MIND",
+        "group": "preference",
+        "note": "Combined label: change of mind and unspecified reasons share one option. Counted as preference because the product taxonomy maps it to CHANGE_OF_MIND, so the preference group is an upper bound."
+      },
+      {
+        "reason": "not what i expected",
+        "lines": 2718,
+        "lines_in_store": 823,
+        "taxonomy_category": "EXPECTATION",
+        "group": "preference"
+      },
+      {
+        "reason": "changed idea",
+        "lines": 376,
+        "lines_in_store": 365,
+        "taxonomy_category": "CHANGE_OF_MIND",
+        "group": "preference"
+      },
+      {
+        "reason": "found something else",
+        "lines": 33,
+        "lines_in_store": 32,
+        "taxonomy_category": "CHANGE_OF_MIND",
+        "group": "preference"
+      },
+      {
+        "reason": "changed my mind / ot",
+        "lines": 18,
+        "lines_in_store": 0,
+        "taxonomy_category": "CHANGE_OF_MIND",
+        "group": "preference",
+        "note": "Truncated spelling of 'Changed my mind / Other' (see above)."
+      },
+      {
+        "reason": "not satisfied with the colour",
+        "lines": 7,
+        "lines_in_store": 4,
+        "taxonomy_category": "EXPECTATION",
+        "group": "preference"
+      },
+      {
+        "reason": "not as advertised",
+        "lines": 3,
+        "lines_in_store": 2,
+        "taxonomy_category": "EXPECTATION",
+        "group": "preference"
+      },
+      {
+        "reason": "ne répond pas aux at",
+        "lines": 2,
+        "lines_in_store": 0,
+        "taxonomy_category": "EXPECTATION",
+        "group": "preference"
+      },
+      {
+        "reason": "arrived in poor condition",
+        "lines": 1207,
+        "lines_in_store": 471,
+        "taxonomy_category": "QUALITY_DAMAGE",
+        "group": "quality_damage"
+      },
+      {
+        "reason": "manufacturer defect",
+        "lines": 844,
+        "lines_in_store": 498,
+        "taxonomy_category": "QUALITY_DAMAGE",
+        "group": "quality_damage"
+      },
+      {
+        "reason": "warranty",
+        "lines": 156,
+        "lines_in_store": 49,
+        "taxonomy_category": "QUALITY_DAMAGE",
+        "group": "quality_damage"
+      },
+      {
+        "reason": "defective",
+        "lines": 19,
+        "lines_in_store": 17,
+        "taxonomy_category": "QUALITY_DAMAGE",
+        "group": "quality_damage"
+      },
+      {
+        "reason": "poor quality",
+        "lines": 9,
+        "lines_in_store": 7,
+        "taxonomy_category": "QUALITY_DAMAGE",
+        "group": "quality_damage"
+      },
+      {
+        "reason": "arrived in poor cond",
+        "lines": 1,
+        "lines_in_store": 0,
+        "taxonomy_category": "QUALITY_DAMAGE",
+        "group": "quality_damage"
+      },
+      {
+        "reason": "lost in transit",
+        "lines": 2338,
+        "lines_in_store": 0,
+        "taxonomy_category": "DELIVERY",
+        "group": "delivery_wrong_item"
+      },
+      {
+        "reason": "wrong item delivered",
+        "lines": 887,
+        "lines_in_store": 312,
+        "taxonomy_category": "DELIVERY",
+        "group": "delivery_wrong_item"
+      },
+      {
+        "reason": "wrong size delivered",
+        "lines": 537,
+        "lines_in_store": 417,
+        "taxonomy_category": "DELIVERY",
+        "group": "delivery_wrong_item"
+      },
+      {
+        "reason": "return to sender",
+        "lines": 323,
+        "lines_in_store": 0,
+        "taxonomy_category": "DELIVERY",
+        "group": "delivery_wrong_item"
+      },
+      {
+        "reason": "arrived too late",
+        "lines": 301,
+        "lines_in_store": 199,
+        "taxonomy_category": "DELIVERY",
+        "group": "delivery_wrong_item"
+      },
+      {
+        "reason": "wrong item",
+        "lines": 7,
+        "lines_in_store": 2,
+        "taxonomy_category": "DELIVERY",
+        "group": "delivery_wrong_item"
+      },
+      {
+        "reason": "uncomfortable",
+        "lines": 3139,
+        "lines_in_store": 1613,
+        "taxonomy_category": "COMFORT",
+        "group": "other",
+        "note": "Comfort complaint, fit-adjacent but not a size reason and not a preference: other."
+      },
+      {
+        "reason": "return without merch",
+        "lines": 1868,
+        "lines_in_store": 0,
+        "taxonomy_category": "OTHER",
+        "group": "other",
+        "note": "Process reason, no product problem stated: other."
+      },
+      {
+        "reason": "return extension",
+        "lines": 456,
+        "lines_in_store": 0,
+        "taxonomy_category": "OTHER",
+        "group": "other",
+        "note": "Process reason, no product problem stated: other."
+      },
+      {
+        "reason": "return without merchandise",
+        "lines": 121,
+        "lines_in_store": 107,
+        "taxonomy_category": "OTHER",
+        "group": "other",
+        "note": "Process reason, no product problem stated: other."
+      },
+      {
+        "reason": "trop grand",
+        "lines": 3,
+        "lines_in_store": 0,
+        "taxonomy_category": "FIT_SIZE",
+        "group": "other",
+        "note": "French for 'too big'. Kept out of fit so that the fit group equals the earlier definition (Too small and Too big only): other."
+      },
+      {
+        "reason": "inconfortable",
+        "lines": 2,
+        "lines_in_store": 0,
+        "taxonomy_category": "COMFORT",
+        "group": "other",
+        "note": "French spelling of 'uncomfortable' (see above): other."
+      },
+      {
+        "reason": "gift return",
+        "lines": 1,
+        "lines_in_store": 1,
+        "taxonomy_category": "OTHER",
+        "group": "other",
+        "note": "Process reason, no product problem stated: other."
+      }
+    ],
+    "other_group_note": "Reasons placed in other because they are ambiguous or not a product problem: uncomfortable (3,139), return without merch (1,868), return extension (456), return without merchandise (121), trop grand (3), inconfortable (2), gift return (1).",
+    "monthly_channel_mix": [
+      {
+        "month": "2025-02",
+        "in_store_lines": 6016,
+        "other_channel_lines": 1571
+      },
+      {
+        "month": "2025-03",
+        "in_store_lines": 3291,
+        "other_channel_lines": 1361
+      },
+      {
+        "month": "2025-04",
+        "in_store_lines": 176,
+        "other_channel_lines": 1495
+      },
+      {
+        "month": "2025-05",
+        "in_store_lines": 181,
+        "other_channel_lines": 1609
+      },
+      {
+        "month": "2025-06",
+        "in_store_lines": 293,
+        "other_channel_lines": 1593
+      },
+      {
+        "month": "2025-07",
+        "in_store_lines": 311,
+        "other_channel_lines": 1676
+      },
+      {
+        "month": "2025-08",
+        "in_store_lines": 393,
+        "other_channel_lines": 1413
+      },
+      {
+        "month": "2025-09",
+        "in_store_lines": 3144,
+        "other_channel_lines": 1174
+      },
+      {
+        "month": "2025-10",
+        "in_store_lines": 4971,
+        "other_channel_lines": 1403
+      },
+      {
+        "month": "2025-11",
+        "in_store_lines": 6164,
+        "other_channel_lines": 1545
+      },
+      {
+        "month": "2025-12",
+        "in_store_lines": 10743,
+        "other_channel_lines": 2219
+      },
+      {
+        "month": "2026-01",
+        "in_store_lines": 7887,
+        "other_channel_lines": 1369
+      }
+    ],
+    "capture_gap": {
+      "months": [
+        "2025-04",
+        "2025-05",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ],
+      "in_store_lines_range": [
+        176,
+        393
+      ],
+      "in_store_lines_range_other_months": [
+        3144,
+        10743
+      ],
+      "other_channel_lines_range": [
+        1174,
+        2219
+      ],
+      "break_ratio": 8.0
+    },
+    "checks": [
+      {
+        "check": "Group lines sum to the return lines in scope",
+        "script": 61998,
+        "expected": 61998,
+        "match": true,
+        "tag": "measured"
+      },
+      {
+        "check": "Mapping rows sum to the return lines in scope",
+        "script": 61998,
+        "expected": 61998,
+        "match": true,
+        "tag": "measured"
+      },
+      {
+        "check": "Monthly channel mix sums to the return lines in scope",
+        "script": 61998,
+        "expected": 61998,
+        "match": true,
+        "tag": "measured"
+      },
+      {
+        "check": "Fit group lines equal the fit lines of the exchange scenarios (Too small + Too big)",
+        "script": 13317,
+        "expected": 13317,
+        "match": true,
+        "tag": "measured"
+      },
+      {
+        "check": "Fit group refund sum equals the fit refund sum",
+        "script": 115005058,
+        "expected": 115005058,
+        "match": true,
+        "tag": "measured"
+      },
+      {
+        "check": "Fit group refund median equals the fit refund median",
+        "script": 7999,
+        "expected": 7999,
+        "match": true,
+        "tag": "measured"
+      }
+    ]
+  },
+  "preference_exchange_lever": {
+    "tag": "assumed",
+    "framing": "What-if on a measured baseline: some returns driven by taste (colour, style, change of mind) could end as an in-store or mail exchange for another colour or style in the same price band instead of a refund. Baseline lines and the median refund are measured; availability, conversion and the unit economics are assumptions to validate in a pilot. Not a forecast.",
+    "additivity": "Additive by construction: each return line has exactly one reason group, so fit and preference lines never overlap and the two levers can be added. The combined rows add the gross values and subtract the agent cost once. The pre-purchase prevention what-if is a different lever and is not part of this total.",
+    "columns": [
+      "low",
+      "base",
+      "high"
+    ],
+    "inputs": {
+      "preference_lines": {
+        "label": "Preference lines (baseline, window)",
+        "unit": "lines",
+        "tag": "measured",
+        "values": {
+          "low": 36462,
+          "base": 36462,
+          "high": 36462
+        },
+        "display": {
+          "low": "36,462",
+          "base": "36,462",
+          "high": "36,462"
+        },
+        "note": "Reason group preference: change of mind or idea, not as expected, colour. Upper bound, see specific_reason_lines."
+      },
+      "specific_reason_lines": {
+        "label": "Preference lines with a specific reason (floor baseline)",
+        "unit": "lines",
+        "tag": "measured",
+        "values": {
+          "low": 3139,
+          "base": 3139,
+          "high": 3139
+        },
+        "display": {
+          "low": "3,139",
+          "base": "3,139",
+          "high": "3,139"
+        },
+        "note": "Preference lines without the combined label 'Changed my mind / Other'."
+      },
+      "median_refund_preference": {
+        "label": "Median refund of the preference lines (price of the typical returned item)",
+        "unit": "CAD_cents",
+        "tag": "measured",
+        "values": {
+          "low": 7498,
+          "base": 7498,
+          "high": 7498
+        },
+        "display": {
+          "low": "CAD 74.98",
+          "base": "CAD 74.98",
+          "high": "CAD 74.98"
+        },
+        "note": "Refund column as provided; line versus transaction grain is unconfirmed."
+      },
+      "alt_colour_availability_pct": {
+        "label": "Availability of the alternative colour or style (same price band, customer's size)",
+        "unit": "percent",
+        "tag": "assumed",
+        "values": {
+          "low": 60,
+          "base": 60,
+          "high": 60
+        },
+        "display": {
+          "low": "60%",
+          "base": "60%",
+          "high": "60%"
+        },
+        "note": "Assumption with no stock data behind it. Validate against ALDO inventory in a pilot."
+      },
+      "exchange_conversion_pct": {
+        "label": "Exchange conversion of preference lines where the alternative is available",
+        "unit": "percent",
+        "tag": "assumed",
+        "values": {
+          "low": 5,
+          "base": 10,
+          "high": 15
+        },
+        "display": {
+          "low": "5%",
+          "base": "10%",
+          "high": "15%"
+        },
+        "note": "Share that end as an exchange instead of a refund. Additional to the in-store exchanges that already happen. Assumption to validate in a pilot."
+      },
+      "repeat_return_reduction_pct": {
+        "label": "Repeat-return reduction on converted cases",
+        "unit": "percent",
+        "tag": "assumed",
+        "values": {
+          "low": 0,
+          "base": 5,
+          "high": 10
+        },
+        "display": {
+          "low": "0%",
+          "base": "5%",
+          "high": "10%"
+        },
+        "note": "Reused unchanged from the fit scenarios."
+      },
+      "item_cost_ratio_pct": {
+        "label": "Item cost as share of price",
+        "unit": "percent",
+        "tag": "assumed",
+        "values": {
+          "low": 40,
+          "base": 40,
+          "high": 40
+        },
+        "display": {
+          "low": "40%",
+          "base": "40%",
+          "high": "40%"
+        },
+        "note": "Handoff section 15 synthetic unit economics (cost 40 on a CAD 100 order)."
+      },
+      "net_extra_handling_per_exchange": {
+        "label": "Net extra handling of an exchange versus a refund",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 600,
+          "base": 600,
+          "high": 600
+        },
+        "display": {
+          "low": "CAD 6.00",
+          "base": "CAD 6.00",
+          "high": "CAD 6.00"
+        },
+        "note": "Exchange processing 10 + reshipping 8 minus refund processing 12 (handoff section 15)."
+      },
+      "value_per_converted_case": {
+        "label": "Incremental value per converted case (from the measured median refund)",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "low": 3899,
+          "base": 3899,
+          "high": 3899
+        },
+        "display": {
+          "low": "CAD 38.99",
+          "base": "CAD 38.99",
+          "high": "CAD 38.99"
+        },
+        "note": "(1 - item cost ratio) x median refund - net extra handling. The same formula at the synthetic CAD 100 order gives the CAD 54 used in the fit scenarios. Incremental economic value versus a refund, not gross margin."
+      },
+      "avoided_second_return_cost": {
+        "label": "Avoided second-return cost",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 2200,
+          "base": 2200,
+          "high": 2200
+        },
+        "display": {
+          "low": "CAD 22.00",
+          "base": "CAD 22.00",
+          "high": "CAD 22.00"
+        },
+        "note": "Reused unchanged from the fit scenarios."
+      },
+      "total_requests": {
+        "label": "Agent runs charged (total return lines in window)",
+        "unit": "runs",
+        "tag": "derived",
+        "values": {
+          "low": 61998,
+          "base": 61998,
+          "high": 61998
+        },
+        "display": {
+          "low": "61,998",
+          "base": "61,998",
+          "high": "61,998"
+        },
+        "note": "Same basis as the fit scenarios: the agent runs on every return line."
+      },
+      "agent_cost_per_run": {
+        "label": "Agent cost per run",
+        "unit": "CAD_per_run",
+        "tag": "derived",
+        "values": {
+          "low": 0.2449,
+          "base": 0.2449,
+          "high": 0.2449
+        },
+        "display": {
+          "low": "CAD 0.2449",
+          "base": "CAD 0.2449",
+          "high": "CAD 0.2449"
+        },
+        "note": "Same cost per run as the fit scenarios."
+      }
+    },
+    "outputs": {
+      "converted_cases": {
+        "label": "Converted cases",
+        "unit": "cases",
+        "tag": "assumed",
+        "values": {
+          "low": 1093.86,
+          "base": 2187.72,
+          "high": 3281.58
+        },
+        "display": {
+          "low": "1,094",
+          "base": "2,188",
+          "high": "3,282"
+        },
+        "note": "Preference lines x availability x conversion (expected value)."
+      },
+      "exchange_value": {
+        "label": "Exchange value",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 4264960,
+          "base": 8529920,
+          "high": 12794880
+        },
+        "display": {
+          "low": "CAD 42,649.60",
+          "base": "CAD 85,299.20",
+          "high": "CAD 127,948.80"
+        },
+        "note": "Converted cases x value per converted case."
+      },
+      "avoided_second_returns": {
+        "label": "Avoided second returns",
+        "unit": "cases",
+        "tag": "assumed",
+        "values": {
+          "low": 0.0,
+          "base": 109.39,
+          "high": 328.16
+        },
+        "display": {
+          "low": "0",
+          "base": "109",
+          "high": "328"
+        }
+      },
+      "avoided_second_return_value": {
+        "label": "Avoided second-return value",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 0,
+          "base": 240649,
+          "high": 721948
+        },
+        "display": {
+          "low": "CAD 0.00",
+          "base": "CAD 2,406.49",
+          "high": "CAD 7,219.48"
+        }
+      },
+      "gross_value": {
+        "label": "Gross annual value (before agent cost)",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 4264960,
+          "base": 8770569,
+          "high": 13516828
+        },
+        "display": {
+          "low": "CAD 42,649.60",
+          "base": "CAD 87,705.69",
+          "high": "CAD 135,168.28"
+        }
+      },
+      "agent_cost_total": {
+        "label": "Agent cost (total requests x cost per run)",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "low": 1518331,
+          "base": 1518331,
+          "high": 1518331
+        },
+        "display": {
+          "low": "CAD 15,183.31",
+          "base": "CAD 15,183.31",
+          "high": "CAD 15,183.31"
+        },
+        "note": "The same agent cost as the fit scenarios, charged once."
+      },
+      "annual_net_value_standalone": {
+        "label": "Annual net value if this were the only lever",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 2746629,
+          "base": 7252238,
+          "high": 11998497
+        },
+        "display": {
+          "low": "CAD 27,466.29",
+          "base": "CAD 72,522.38",
+          "high": "CAD 119,984.97"
+        },
+        "note": "Gross value minus the full agent cost, the same treatment as the fit scenarios."
+      },
+      "fit_gross_value": {
+        "label": "Fit scenarios: gross annual value (reference)",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "low": 7191180,
+          "base": 14675334,
+          "high": 22452462
+        },
+        "display": {
+          "low": "CAD 71,911.80",
+          "base": "CAD 146,753.34",
+          "high": "CAD 224,524.62"
+        },
+        "note": "From the fit scenarios above, unchanged."
+      },
+      "combined_gross_value": {
+        "label": "Fit + preference: gross annual value",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 11456140,
+          "base": 23445903,
+          "high": 35969290
+        },
+        "display": {
+          "low": "CAD 114,561.40",
+          "base": "CAD 234,459.03",
+          "high": "CAD 359,692.90"
+        },
+        "note": "Additive by construction: a line has exactly one reason group, so fit and preference lines never overlap."
+      },
+      "combined_annual_net_value": {
+        "label": "Fit + preference: annual net value",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 9937809,
+          "base": 21927572,
+          "high": 34450959
+        },
+        "display": {
+          "low": "CAD 99,378.09",
+          "base": "CAD 219,275.72",
+          "high": "CAD 344,509.59"
+        },
+        "note": "Combined gross minus the agent cost counted once (not once per lever)."
+      },
+      "gross_value_at_flat_fit_unit_value": {
+        "label": "Memo: gross value if the flat CAD 54 of the fit scenarios were used per converted case",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 5906844,
+          "base": 12054337,
+          "high": 18442480
+        },
+        "display": {
+          "low": "CAD 59,068.44",
+          "base": "CAD 120,543.37",
+          "high": "CAD 184,424.80"
+        },
+        "note": "For comparison only. The preference lever uses the lower value derived from its measured median."
+      },
+      "gross_value_specific_reasons_only": {
+        "label": "Floor: gross value if only the lines with a specific reason count",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 367169,
+          "base": 755055,
+          "high": 1163658
+        },
+        "display": {
+          "low": "CAD 3,671.69",
+          "base": "CAD 7,550.55",
+          "high": "CAD 11,636.58"
+        },
+        "note": "Same conversion, availability and unit value, baseline without the combined label."
+      }
+    },
+    "formula": "preference_gross_value = preference_lines x alt_colour_availability x exchange_conversion x value_per_converted_case\n                       + preference_lines x alt_colour_availability x exchange_conversion x repeat_return_reduction x avoided_second_return_cost\nvalue_per_converted_case = (1 - item_cost_ratio) x median_refund_of_preference_lines - net_extra_handling\nstandalone_net  = preference_gross_value - total_requests x agent_cost_per_run\ncombined_net    = fit_gross_value + preference_gross_value - total_requests x agent_cost_per_run   (agent cost counted once)"
+  },
+  "bundle_returns": {
+    "tag": "measured",
+    "metrics": {
+      "return_numbers": {
+        "label": "Distinct return numbers in scope",
+        "value": 49404,
+        "unit": "returns",
+        "tag": "measured",
+        "display": "49,404"
+      },
+      "return_lines": {
+        "label": "Return lines in scope",
+        "value": 61998,
+        "unit": "lines",
+        "tag": "measured",
+        "display": "61,998"
+      },
+      "lines_per_return_mean": {
+        "label": "Lines per return number, mean",
+        "value": 1.25,
+        "unit": "lines_per_return",
+        "tag": "measured",
+        "display": "1.25",
+        "note": "Return lines divided by distinct return numbers."
+      },
+      "lines_per_return_max": {
+        "label": "Lines per return number, maximum",
+        "value": 14,
+        "unit": "lines_per_return",
+        "tag": "measured",
+        "display": "14"
+      },
+      "returns_with_2plus_lines": {
+        "label": "Return numbers with two or more lines",
+        "value": 9417,
+        "unit": "returns",
+        "tag": "measured",
+        "display": "9,417"
+      },
+      "share_of_returns_with_2plus_lines": {
+        "label": "Share of return numbers with two or more lines",
+        "value": 19.06,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "19.06%"
+      },
+      "lines_in_multi_line_returns": {
+        "label": "Lines that sit in a multi-line return",
+        "value": 22011,
+        "unit": "lines",
+        "tag": "measured",
+        "display": "22,011"
+      },
+      "share_of_lines_in_multi_line_returns": {
+        "label": "Share of lines that sit in a multi-line return",
+        "value": 35.5,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "35.50%"
+      },
+      "multi_line_returns_with_distinct_skus_share": {
+        "label": "Multi-line returns that contain two or more distinct SKUs",
+        "value": 99.19,
+        "unit": "percent",
+        "tag": "measured",
+        "display": "99.19%",
+        "note": "Checks that extra lines are different items, not repeats of the same SKU (the source has duplicate order and SKU groups)."
+      }
+    },
+    "agent_runs_sensitivity": {
+      "columns": [
+        "per_return_number",
+        "per_line"
+      ],
+      "inputs": {
+        "agent_runs_per_year": {
+          "label": "Agent runs per year",
+          "unit": "runs",
+          "tag": "derived",
+          "values": {
+            "per_return_number": 49404,
+            "per_line": 61998
+          },
+          "display": {
+            "per_return_number": "49,404",
+            "per_line": "61,998"
+          },
+          "note": "One run per return number (bundled) versus one run per return line (the basis of the cost model)."
+        },
+        "agent_cost_per_run": {
+          "label": "Agent cost per run",
+          "unit": "CAD_per_run",
+          "tag": "derived",
+          "values": {
+            "per_return_number": 0.2449,
+            "per_line": 0.2449
+          },
+          "display": {
+            "per_return_number": "CAD 0.2449",
+            "per_line": "CAD 0.2449"
+          },
+          "note": "Assumes a multi-line run costs the same as the measured single-order runs. Not measured."
+        }
+      },
+      "outputs": {
+        "annual_agent_cost": {
+          "label": "Annual agent cost",
+          "unit": "CAD_cents",
+          "tag": "derived",
+          "values": {
+            "per_return_number": 1209904,
+            "per_line": 1518331
+          },
+          "display": {
+            "per_return_number": "CAD 12,099.04",
+            "per_line": "CAD 15,183.31"
+          }
+        },
+        "saving_versus_per_line": {
+          "label": "Annual agent cost saved versus one run per line",
+          "unit": "CAD_cents",
+          "tag": "derived",
+          "values": {
+            "per_return_number": 308427,
+            "per_line": 0
+          },
+          "display": {
+            "per_return_number": "CAD 3,084.27",
+            "per_line": "CAD 0.00"
+          }
+        }
+      }
+    },
+    "why_bundling_matters": "A customer who returns several items is one request, so one conversation, one quote, one shipment and one confirmation should cover all lines instead of one flow per line."
+  },
+  "agent_cost_sensitivity": {
+    "columns": [
+      "measured_mean",
+      "highest_measured_scenario"
+    ],
+    "inputs": {
+      "agent_cost_per_run": {
+        "label": "Agent cost per run",
+        "unit": "CAD_per_run",
+        "tag": "derived",
+        "values": {
+          "measured_mean": 0.2449,
+          "highest_measured_scenario": 0.3956
+        },
+        "display": {
+          "measured_mean": "CAD 0.2449",
+          "highest_measured_scenario": "CAD 0.3956"
+        }
+      },
+      "multiple_of_measured_mean": {
+        "label": "Cost per run as a multiple of the measured mean",
+        "unit": "ratio",
+        "tag": "derived",
+        "values": {
+          "measured_mean": 1.0,
+          "highest_measured_scenario": 1.62
+        },
+        "display": {
+          "measured_mean": "1.00x",
+          "highest_measured_scenario": "1.62x"
+        }
+      }
+    },
+    "outputs": {
+      "annual_agent_cost": {
+        "label": "Annual agent cost (total requests x cost per run)",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "measured_mean": 1518331,
+          "highest_measured_scenario": 2452641
+        },
+        "display": {
+          "measured_mean": "CAD 15,183.31",
+          "highest_measured_scenario": "CAD 24,526.41"
+        }
+      },
+      "annual_net_value_low": {
+        "label": "Annual net value, fit scenarios, low case",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "measured_mean": 5672849,
+          "highest_measured_scenario": 4738539
+        },
+        "display": {
+          "measured_mean": "CAD 56,728.49",
+          "highest_measured_scenario": "CAD 47,385.39"
+        }
+      },
+      "annual_net_value_base": {
+        "label": "Annual net value, fit scenarios, base case",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "measured_mean": 13157003,
+          "highest_measured_scenario": 12222693
+        },
+        "display": {
+          "measured_mean": "CAD 131,570.03",
+          "highest_measured_scenario": "CAD 122,226.93"
+        }
+      },
+      "annual_net_value_high": {
+        "label": "Annual net value, fit scenarios, high case",
+        "unit": "CAD_cents",
+        "tag": "derived",
+        "values": {
+          "measured_mean": 20934131,
+          "highest_measured_scenario": 19999821
+        },
+        "display": {
+          "measured_mean": "CAD 209,341.31",
+          "highest_measured_scenario": "CAD 199,998.21"
+        }
+      }
+    },
+    "tag": "derived",
+    "column_labels": {
+      "measured_mean": "Measured mean of 6 live runs",
+      "highest_measured_scenario": "Most expensive measured scenario (A)"
+    },
+    "previous_placeholder": {
+      "columns": [
+        "previous_placeholder"
+      ],
+      "inputs": {
+        "agent_cost_per_run": {
+          "label": "Agent cost per run",
+          "unit": "CAD_per_run",
+          "tag": "assumed",
+          "values": {
+            "previous_placeholder": 0.5
+          },
+          "display": {
+            "previous_placeholder": "CAD 0.5000"
+          }
+        },
+        "multiple_of_measured_mean": {
+          "label": "Cost per run as a multiple of the measured mean",
+          "unit": "ratio",
+          "tag": "derived",
+          "values": {
+            "previous_placeholder": 2.04
+          },
+          "display": {
+            "previous_placeholder": "2.04x"
+          }
+        }
+      },
+      "outputs": {
+        "annual_agent_cost": {
+          "label": "Annual agent cost (total requests x cost per run)",
+          "unit": "CAD_cents",
+          "tag": "assumed",
+          "values": {
+            "previous_placeholder": 3099900
+          },
+          "display": {
+            "previous_placeholder": "CAD 30,999.00"
+          }
+        },
+        "annual_net_value_low": {
+          "label": "Annual net value, fit scenarios, low case",
+          "unit": "CAD_cents",
+          "tag": "assumed",
+          "values": {
+            "previous_placeholder": 4091280
+          },
+          "display": {
+            "previous_placeholder": "CAD 40,912.80"
+          }
+        },
+        "annual_net_value_base": {
+          "label": "Annual net value, fit scenarios, base case",
+          "unit": "CAD_cents",
+          "tag": "assumed",
+          "values": {
+            "previous_placeholder": 11575434
+          },
+          "display": {
+            "previous_placeholder": "CAD 115,754.34"
+          }
+        },
+        "annual_net_value_high": {
+          "label": "Annual net value, fit scenarios, high case",
+          "unit": "CAD_cents",
+          "tag": "assumed",
+          "values": {
+            "previous_placeholder": 19352562
+          },
+          "display": {
+            "previous_placeholder": "CAD 193,525.62"
+          }
+        }
+      },
+      "tag": "assumed",
+      "note": "Placeholder of CAD 0.50 per run, used before the live eval and about 2.0x the measured mean. Kept as a stress test, and so that the earlier base-case annual net value stays visible."
+    },
+    "note": "Cost per run is the input that moves. The measured mean mixes full exchange flows with refusals and is not the production mix; the most expensive measured scenario is a conservative case."
+  },
+  "tier_perk_what_if": {
+    "tag": "assumed",
+    "framing": "Inputs and cost bounds only. No revenue, retention or loyalty uplift is claimed: the break-even only states how many extra retained orders, valued at the model's retained-case value, would pay for the perk.",
+    "columns": [
+      "low",
+      "base",
+      "high"
+    ],
+    "inputs": {
+      "shipping_fee_per_use": {
+        "label": "Return shipping fee waived per use",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 595,
+          "base": 595,
+          "high": 595
+        },
+        "display": {
+          "low": "CAD 5.95",
+          "base": "CAD 5.95",
+          "high": "CAD 5.95"
+        },
+        "note": "Source: fixtures/demo/logistics.json (mail_return.fee_cents); fixtures/demo/policy.json (tiers.platinum.benefits.free_return_shipping.per_month)."
+      },
+      "uses_per_member_per_year_min": {
+        "label": "Uses per member per year, minimum",
+        "unit": "uses",
+        "tag": "assumed",
+        "values": {
+          "low": 1,
+          "base": 1,
+          "high": 1
+        },
+        "display": {
+          "low": "1",
+          "base": "1",
+          "high": "1"
+        }
+      },
+      "uses_per_member_per_year_max": {
+        "label": "Uses per member per year, maximum",
+        "unit": "uses",
+        "tag": "assumed",
+        "values": {
+          "low": 12,
+          "base": 12,
+          "high": 12
+        },
+        "display": {
+          "low": "12",
+          "base": "12",
+          "high": "12"
+        },
+        "note": "1 free return shipping per calendar month x 12 months."
+      },
+      "platinum_share_pct": {
+        "label": "Platinum members per 100 customers",
+        "unit": "percent",
+        "tag": "assumed",
+        "values": {
+          "low": 1,
+          "base": 2,
+          "high": 3
+        },
+        "display": {
+          "low": "1%",
+          "base": "2%",
+          "high": "3%"
+        },
+        "note": "Assumption."
+      },
+      "platinum_members_per_10k_customers": {
+        "label": "Platinum members per 10,000 customers",
+        "unit": "members",
+        "tag": "assumed",
+        "values": {
+          "low": 100,
+          "base": 200,
+          "high": 300
+        },
+        "display": {
+          "low": "100",
+          "base": "200",
+          "high": "300"
+        }
+      },
+      "value_per_retained_order": {
+        "label": "Value per retained order (average retained-case value of the model)",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 5400,
+          "base": 5400,
+          "high": 5400
+        },
+        "display": {
+          "low": "CAD 54.00",
+          "base": "CAD 54.00",
+          "high": "CAD 54.00"
+        },
+        "note": "Reused from the prevention what-if (handoff section 15 synthetic unit economics)."
+      }
+    },
+    "outputs": {
+      "perk_cost_per_member_min": {
+        "label": "Perk cost per member per year, minimum uses",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 595,
+          "base": 595,
+          "high": 595
+        },
+        "display": {
+          "low": "CAD 5.95",
+          "base": "CAD 5.95",
+          "high": "CAD 5.95"
+        },
+        "note": "1 use x fee per use."
+      },
+      "perk_cost_per_member_max": {
+        "label": "Maximum perk cost per member per year",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 7140,
+          "base": 7140,
+          "high": 7140
+        },
+        "display": {
+          "low": "CAD 71.40",
+          "base": "CAD 71.40",
+          "high": "CAD 71.40"
+        },
+        "note": "12 uses x fee per use."
+      },
+      "perk_cost_per_10k_customers_min": {
+        "label": "Perk cost per 10,000 customers per year, minimum uses",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 59500,
+          "base": 119000,
+          "high": 178500
+        },
+        "display": {
+          "low": "CAD 595.00",
+          "base": "CAD 1,190.00",
+          "high": "CAD 1,785.00"
+        }
+      },
+      "perk_cost_per_10k_customers_max": {
+        "label": "Maximum perk cost per 10,000 customers per year",
+        "unit": "CAD_cents",
+        "tag": "assumed",
+        "values": {
+          "low": 714000,
+          "base": 1428000,
+          "high": 2142000
+        },
+        "display": {
+          "low": "CAD 7,140.00",
+          "base": "CAD 14,280.00",
+          "high": "CAD 21,420.00"
+        }
+      },
+      "break_even_orders_per_member_min": {
+        "label": "Break-even extra retained orders per member per year, minimum uses",
+        "unit": "orders",
+        "tag": "assumed",
+        "values": {
+          "low": 0.11,
+          "base": 0.11,
+          "high": 0.11
+        },
+        "display": {
+          "low": "0.11",
+          "base": "0.11",
+          "high": "0.11"
+        }
+      },
+      "break_even_orders_per_member_max": {
+        "label": "Break-even extra retained orders per member per year, maximum uses",
+        "unit": "orders",
+        "tag": "assumed",
+        "values": {
+          "low": 1.32,
+          "base": 1.32,
+          "high": 1.32
+        },
+        "display": {
+          "low": "1.32",
+          "base": "1.32",
+          "high": "1.32"
+        }
+      },
+      "break_even_orders_per_10k_customers_min": {
+        "label": "Break-even extra retained orders per 10,000 customers per year, minimum uses",
+        "unit": "orders",
+        "tag": "assumed",
+        "values": {
+          "low": 12,
+          "base": 23,
+          "high": 34
+        },
+        "display": {
+          "low": "12",
+          "base": "23",
+          "high": "34"
+        },
+        "note": "Rounded up to whole orders."
+      },
+      "break_even_orders_per_10k_customers_max": {
+        "label": "Break-even extra retained orders per 10,000 customers per year, maximum uses",
+        "unit": "orders",
+        "tag": "assumed",
+        "values": {
+          "low": 133,
+          "base": 265,
+          "high": 397
+        },
+        "display": {
+          "low": "133",
+          "base": "265",
+          "high": "397"
+        },
+        "note": "Rounded up to whole orders."
+      }
+    },
+    "formula": "max_perk_cost_per_member = fee_per_use x max_uses_per_year\nperk_cost_per_10k_customers = 10,000 x platinum_share x perk_cost_per_member\nbreak_even_extra_retained_orders = perk_cost / value_per_retained_order",
+    "input_sources": [
+      "fixtures/demo/logistics.json (mail_return.fee_cents)",
+      "fixtures/demo/policy.json (tiers.platinum.benefits.free_return_shipping.per_month)"
+    ]
+  },
   "caveats": [
     "Fit lines are return lines, not customers. A customer can appear on several lines and some rows have no customer identifier (see the data profile), so customers cannot be counted from this file.",
     "Exchange conversion rates (10, 20 and 30 percent) are assumptions to validate in a pilot. The share of fit-reason lines is not a conversion rate and must not be used as one.",
@@ -624,7 +2386,18 @@
     "Pre-purchase prevention is a pilot hypothesis, not a forecast. The baseline (size-related return lines) is measured; the prevention rates (0, 5, 10 percent) and both unit values are assumptions to validate in a pilot, so every what-if result is tagged assumed.",
     "The prevention what-if is a separate lever and is not additive with the exchange-conversion scenarios: a prevented return cannot also be converted to an exchange. Do not add the two tables together.",
     "Per prevented case the what-if adds the avoided return cost (CAD 22) and the retained-sale value (CAD 54). Both come from the synthetic unit economics, and part of the CAD 54 may already include return handling cost, so the sum may overstate. No sizing-assistant operating cost is subtracted.",
-    "The prevention baseline counts size-related lines from every return channel in the returns file. The share that pre-purchase guidance could reach is not measured."
+    "The prevention baseline counts size-related lines from every return channel in the returns file. The share that pre-purchase guidance could reach is not measured.",
+    "In-store lines fall to 176 to 393 a month in 2025-04, 2025-05, 2025-06, 2025-07, 2025-08 against 3,144 to 10,743 in the other months (a break of 8.0x between neighbouring months), while the other channels stay between 1,174 and 2,219 a month. The data validation report (caveat C2) shows the returns file misses most in-store returns for those months, so in-store volumes, and the reason mix that depends on them, are understated. This applies to every measured volume in this model, including the fit lines.",
+    "Return reason groups follow the product taxonomy (backend/returns_domain/taxonomy.py). 'Changed my mind / Other' mixes change of mind with unspecified reasons in one option and makes up 91.39% of the preference group, so the preference group is an upper bound on taste-based returns. The label sits on 72.47% of in-store lines against 9.49% of lines from other channels, so in store it may be a default entry. The preference lever therefore also shows a floor that counts only the 3,139 lines with a specific reason.",
+    "Comfort complaints, process reasons (return without merchandise, return extension, gift return) and one French spelling of 'too big' sit in the group other because they are ambiguous or not a product problem. The fit group is identical to the earlier definition (Too small and Too big only), and the five groups add up to all lines in scope.",
+    "The preference lever takes its value per converted case from the measured median refund of the preference lines and the synthetic unit economics of handoff section 15 (item cost 40 percent of price, net extra handling of an exchange CAD 6). At a CAD 100 order the formula returns the CAD 54 of the fit scenarios, which keep the flat CAD 54. The median refund stands in for the item price; line versus transaction grain is unconfirmed.",
+    "89.96% of the preference lines were returned in store, where the customer is already at the counter, so the lever assumes an exchange is offered there (by an associate or by ALDO bot); this is not tested. Stores already exchange today: the exchange file has 12,853 CONFIRMED and 4,802 ASSUMED in-store rows attributed to ALDO_CA in the window. The preference conversion rates (5, 10 and 15 percent) and the 60 percent availability of the alternative colour are assumptions to validate in a pilot: they are meant as additional to current in-store exchanges and are not calibrated against them, and no stock data supports the availability.",
+    "Fit and preference lines are disjoint by construction (one reason group per line), so the two levers are added in the combined rows with the agent cost counted once. The pre-purchase prevention what-if stays a separate lever and is not part of that total.",
+    "Bundle metrics count lines per return number in scope. 99.19% of the multi-line returns contain two or more distinct SKUs, so extra lines are normally different items. The baseline eval has no multi-line scenario, so the agent cost of a bundled run is not measured: one run per return number assumes it costs the same as a single-order run.",
+    "The measured agent cost is the mean of 6 live runs priced at assumed token prices and is not the production mix: single scenarios differ widely, and the agent cost sensitivity shows the most expensive measured scenario and the CAD 0.50 placeholder used before the live eval.",
+    "Agent-load numbers use return lines per day as runs per day, the mean of the scenario p50 wall-clock latencies as run duration, an assumed 12-hour active window and an assumed 15 percent busiest-hour share. Concurrency is an average (Little's law) and bursts are higher. This is not a load test. Compare with the account's on-demand quotas for the model: check account quotas, request an increase before launch. No quota numbers are stated.",
+    "Prompt caching is not modelled: the baseline eval carries no cache-read token counts, so no saving is claimed.",
+    "The tier perk block gives inputs and cost bounds only; no revenue, retention or loyalty uplift is claimed. The return shipping fee and the monthly allowance come from the demo fixtures; the Platinum share and the uses per member are assumptions."
   ],
   "reconciliation": [
     {
@@ -658,7 +2431,8 @@
       "rows_read": 649745,
       "malformed_rows": 0,
       "unparseable_dates_in_scope": 0,
-      "unparseable_refund_amounts_in_fit_lines": 0
+      "unparseable_refund_amounts_in_fit_lines": 0,
+      "unparseable_refund_amounts_in_scope": 0
     },
     "exchanges_csv": {
       "file": "dataset/McGill_Instore_return_exchanges.csv",
@@ -674,11 +2448,28 @@
       "other_confidence_labels_in_window": []
     },
     "eval_results": {
-      "file": "docs/eval/results.json",
-      "status": "pending_measurement",
-      "reason": "file not found",
-      "sha256": null,
-      "field": null
+      "file": ".agents/tasks/agentic-returns-gateway-p0-2026-10-15/eval-baseline-1/results.json",
+      "status": "measured",
+      "reason": null,
+      "sha256": "9310414b066c09b39457c248891928287e373ccee544983ac15a45d9a58d47d1",
+      "field": "est_cost_per_run_usd",
+      "mode": "live",
+      "runs_costed": 6
+    },
+    "taxonomy": {
+      "file": "backend/returns_domain/taxonomy.py",
+      "used_for": "mapping raw return reasons to categories (return_reason_groups)"
     }
+  },
+  "usd_to_cad": {
+    "label": "USD to CAD rate",
+    "value": 1.38,
+    "unit": "CAD_per_USD",
+    "tag": "assumed",
+    "display": "1.38",
+    "note": "Used only because the eval reports its cost in USD. One source of truth for the eval, the runtime metrics and this model: the USD_TO_CAD default in backend/returns_domain/config.py, parsed as text (fallback 1.40 with a printed warning if it cannot be found).",
+    "source": "backend/returns_domain/config.py (USD_TO_CAD default)",
+    "eval_file_rate": 1.38,
+    "matches_eval_file": true
   }
 }

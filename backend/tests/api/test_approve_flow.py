@@ -32,8 +32,12 @@ def txn_keys() -> list:
 
 
 def run_partitions() -> set[str]:
-    """Partition keys of every run in the table (events share their run's partition)."""
-    return {pk for pk, _ in store.scan_keys(("RUN#",))}
+    """Partition keys of every run in the table (events share their run's partition).
+
+    The owner's A2A stream (``RUN#A2A-<customer>``) is not a run: the quote and the transaction
+    mirror their events there, so it appears as soon as a quote exists.
+    """
+    return {pk for pk, _ in store.scan_keys(("RUN#",)) if not pk.startswith("RUN#A2A-")}
 
 
 def stock(option) -> int:

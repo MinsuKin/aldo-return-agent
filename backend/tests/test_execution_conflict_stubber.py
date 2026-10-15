@@ -163,7 +163,7 @@ def test_a_mixed_cancellation_with_a_real_condition_failure_is_not_retried(appro
     state = counting(monkeypatch, lambda n, ops, kw: mixed(ops, **kw))
     with pytest.raises(DomainError) as exc:
         execution.execute(AVA, approved_quote.quote_id)
-    assert state["ops"][0] == ["txn", "idem", "approval", "line", "inventory", "quote", "outbox"]
+    assert state["ops"][0] == ["txn", "idem", "approval", "line", "inventory", "quote", "outbox", "store_notice"]
     assert exc.value.code == ErrorCode.STOCK_CHANGED and state["calls"] == 1
 
 
@@ -190,14 +190,31 @@ def test_a_caller_that_validates_after_the_winner_committed_gets_the_winners_tra
 
 
 def test_the_commit_has_the_documented_labelled_operations(approved_quote, monkeypatch):
+    # a store pickup exchange: write-back outbox AND the store-desk notice ride in the same transaction
     state = counting(monkeypatch, lambda n, ops, kw: _REAL(ops, **kw))
     execution.execute(AVA, approved_quote.quote_id)
+    assert state["ops"] == [["txn", "idem", "approval", "line", "inventory", "quote", "outbox", "store_notice"]]
+
+
+def test_a_ship_exchange_has_the_outbox_but_no_store_notice(flow, monkeypatch):
+    hq = flow.hero_quote()
+    flow.approve(hq, "exchange_ship_from_dc")
+    state = counting(monkeypatch, lambda n, ops, kw: _REAL(ops, **kw))
+    execution.execute(AVA, hq.quote_id)
     assert state["ops"] == [["txn", "idem", "approval", "line", "inventory", "quote", "outbox"]]
 
 
 def test_return_commits_have_no_inventory_or_outbox_operation(flow, monkeypatch):
     hq = flow.hero_quote()
     flow.approve(hq, "return_in_store")
+    state = counting(monkeypatch, lambda n, ops, kw: _REAL(ops, **kw))
+    execution.execute(AVA, hq.quote_id)
+    assert state["ops"] == [["txn", "idem", "approval", "line", "quote", "store_notice"]]  # in store: the desk is told
+
+
+def test_a_mail_return_commit_is_the_five_original_operations(flow, monkeypatch):
+    hq = flow.hero_quote(types=("return_mail", "exchange_store_pickup"))
+    flow.approve(hq, "return_mail")
     state = counting(monkeypatch, lambda n, ops, kw: _REAL(ops, **kw))
     execution.execute(AVA, hq.quote_id)
     assert state["ops"] == [["txn", "idem", "approval", "line", "quote"]]

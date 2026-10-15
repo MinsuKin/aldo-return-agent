@@ -365,11 +365,18 @@ def test_transaction_created_event_on_the_aldo_run_once(flow):
                                     "option_type": "exchange_store_pickup", "quote_id": hq.quote_id, "replayed": False}
 
 
+def a2a_events(customer=AVA, *types):
+    """The owner's A2A events, optionally only of the given types."""
+    events = trace.list_a2a_events(customer).events
+    return [e for e in events if not types or e["type"] in types]
+
+
 def test_no_run_event_without_a_run_id_but_the_a2a_mirror_still_happens(flow):
     hq, _ = approved(flow)
     execution.execute(AVA, hq.quote_id)
     assert [e["type"] for e in trace.list_events(hq.run_id).events] == ["quote_created"]
-    assert [e["type"] for e in trace.list_a2a_events(AVA).events] == ["transaction_created"]
+    # domain v2: the quote is mirrored when it is created, a pickup exchange also notifies the store desk
+    assert [e["type"] for e in a2a_events()] == ["quote_created", "transaction_created", "store_notified"]
 
 
 # ------------------------------------------------------------------------ write-back outbox
@@ -420,7 +427,7 @@ def test_exchange_on_a_gateway_order_after_delivery(flow):
     assert line_qty("DEMO-A2A-81B20E", "DEMO-A2A-81B20E-L1") == 1
     txn = store.get_item(store.txn_key(result.transaction_id))
     assert txn["order_id"] == "DEMO-A2A-81B20E" and txn["replacement_size"] == "8.5" and txn["original_size"] == "8.0"
-    mirrored = trace.list_a2a_events(AVA).events[-1]["payload"]
+    mirrored = a2a_events(AVA, "transaction_created")[-1]["payload"]
     assert (mirrored["order_id"], mirrored["original_size"], mirrored["new_size"]) == ("DEMO-A2A-81B20E", "8.0", "8.5")
 
 
@@ -430,26 +437,29 @@ def test_exchange_on_a_gateway_order_after_delivery(flow):
 def test_transaction_created_is_mirrored_to_the_a2a_stream_with_public_fields_only(flow):
     hq, _ = approved(flow)
     result = execution.execute(AVA, hq.quote_id, run_id=hq.run_id)
-    events = trace.list_a2a_events(AVA).events
-    assert len(events) == 1 and events[0]["type"] == "transaction_created" and events[0]["actor"] == "aldo_agent"
+    events = a2a_events(AVA, "transaction_created")
+    assert len(events) == 1 and events[0]["actor"] == "aldo_agent"
     assert events[0]["payload"] == {
         "transaction_id": result.transaction_id, "state": "completed", "option_type": "exchange_store_pickup",
         "order_id": "DEMO-1001", "replayed": False, "original_size": "7.0", "new_size": "7.5",
         "location_id": MTL, "fee_cents": 0}
+    before = trace.list_a2a_events(AVA).events
     execution.execute(AVA, hq.quote_id, run_id=hq.run_id)  # a replay mirrors nothing
-    assert len(trace.list_a2a_events(AVA).events) == 1
-    stored = store.get_item(store.event_key(trace.a2a_run_id(AVA), 1))
-    assert "DEMO-CUST" not in str(stored["payload"]) and "owner_ref" not in stored["payload"]
-    assert set(stored["payload"]) <= trace.A2A_PUBLIC_FIELDS["transaction_created"]
+    assert trace.list_a2a_events(AVA).events == before
+    for event in before:  # every mirrored event carries public fields only
+        stored = store.get_item(store.event_key(trace.a2a_run_id(AVA), event["seq"]))
+        assert "DEMO-CUST" not in str(stored["payload"]) and "owner_ref" not in stored["payload"]
+        assert set(stored["payload"]) <= trace.A2A_PUBLIC_FIELDS[event["type"]]
 
 
 def test_returns_are_mirrored_too(flow):
     hq, _ = approved(flow, "return_mail", types=("return_mail", "exchange_store_pickup"))
     result = execution.execute(AVA, hq.quote_id)
-    mirrored = trace.list_a2a_events(AVA).events[0]["payload"]
-    assert mirrored == {"transaction_id": result.transaction_id, "state": "completed", "option_type": "return_mail",
-                        "order_id": "DEMO-1001", "replayed": False, "original_size": "7.0", "new_size": None,
-                        "location_id": DC, "fee_cents": 595}
+    (mirror,) = a2a_events(AVA, "transaction_created")
+    assert mirror["payload"] == {"transaction_id": result.transaction_id, "state": "completed", "option_type": "return_mail",
+                                 "order_id": "DEMO-1001", "replayed": False, "original_size": "7.0", "new_size": None,
+                                 "location_id": DC, "fee_cents": 595}
+    assert a2a_events(AVA, "store_notified") == []  # a mail return involves no store
 
 
 def test_flush_runs_once_after_an_exchange_when_the_gateway_delivered(flow, monkeypatch):

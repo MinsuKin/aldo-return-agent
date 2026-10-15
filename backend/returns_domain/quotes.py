@@ -13,9 +13,9 @@ import hashlib
 from datetime import timedelta
 from typing import Any, Callable, Literal, Mapping
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_serializer
 
-from . import audit, clock, config, orders, policy, store, trace
+from . import audit, benefits, clock, config, orders, policy, store, trace
 from .errors import DomainError, ErrorCode
 from .options import Option
 
@@ -54,6 +54,18 @@ class Quote(BaseModel):
     options: list[QuoteOption]
     approval: Approval | None = None
     inventory_versions: dict[str, int]
+    #: Bundle returns only (left out of the JSON otherwise): every policy check id and the lines
+    #: (the same list each option carries). ``line_id`` / ``policy_check_id`` are the first of them.
+    policy_check_ids: list[str] | None = None
+    lines: list[dict[str, Any]] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_bundle_fields_when_none(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        for name in ("policy_check_ids", "lines"):
+            if data.get(name) is None:
+                data.pop(name, None)
+        return data
 
 
 def compute_payload_hash(quote_id: str, option: Mapping[str, Any] | BaseModel, policy_version: str) -> str:
@@ -62,22 +74,28 @@ def compute_payload_hash(quote_id: str, option: Mapping[str, Any] | BaseModel, p
     Computed from the stored (``from_ddb``) form, so recomputation at execute time is byte-stable.
     """
     body = store.json_safe(option)
-    return hashlib.sha256(
-        store.canonical_json(
-            {
-                "quote_id": quote_id,
-                "option_id": body["option_id"],
-                "type": body["type"],
-                "sku": body["sku"],
-                "location": body["location_id"],
-                "qty": body["qty"],
-                "refund_cents": body["refund_cents"],
-                "fee_cents": body["fee_cents"],
-                "currency": body["currency"],
-                "policy_version": policy_version,
+    fields: dict[str, Any] = {
+        "quote_id": quote_id,
+        "option_id": body["option_id"],
+        "type": body["type"],
+        "sku": body["sku"],
+        "location": body["location_id"],
+        "qty": body["qty"],
+        "refund_cents": body["refund_cents"],
+        "fee_cents": body["fee_cents"],
+        "currency": body["currency"],
+        "policy_version": policy_version,
+    }
+    if body.get("lines"):  # a bundle return: the approved lines and the perk are part of what is signed
+        fields["lines"] = [
+            {key: entry[key] for key in ("line_id", "sku", "qty", "refund_cents")} for entry in body["lines"]
+        ]
+        fields["refund_total_cents"] = body.get("refund_total_cents")
+        if body.get("benefit"):
+            fields["benefit"] = {
+                key: body["benefit"].get(key) for key in ("type", "saved_cents", "used", "allowed", "period")
             }
-        ).encode("utf-8")
-    ).hexdigest()
+    return hashlib.sha256(store.canonical_json(fields).encode("utf-8")).hexdigest()
 
 
 # ---------------------------------------------------------------------------- create
@@ -107,6 +125,14 @@ def create_quote(
             f"option_ids not in this candidate set: {', '.join(missing)}",
         )
     selected = [by_id[oid] for oid in chosen_ids]  # the agent's order is the ranking the UI shows
+    held = [o for o in selected if o.get("decision") == "needs_review"]
+    if held:  # a bundle above the member's authority limit: visible as an option, never grantable by the agent
+        raise DomainError(
+            ErrorCode.VALIDATION_ERROR,
+            "This return needs a person's review (the total is above the authority limit); "
+            "open a case instead of a quote.",
+            details={"decision": "needs_review", "rule_ids": list(held[0].get("rule_ids") or [])},
+        )
     returns_offered = any(o["type"] in policy.RETURN_OPTION_TYPES for o in cand["options"])
     if returns_offered and not any(o["type"] in policy.RETURN_OPTION_TYPES for o in selected):
         raise DomainError(
@@ -121,6 +147,7 @@ def create_quote(
 
     versions = _used_inventory_versions(cand, selected)
     _require_unchanged_stock(selected, versions)
+    _require_benefit_still_available(customer_id, selected)
 
     check = orders.load_policy_check_item(customer_id, cand["policy_check_id"])
     policy_version = check["policy_version"]
@@ -144,6 +171,9 @@ def create_quote(
         "options": options,
         "inventory_versions": versions,
     }
+    if cand.get("policy_check_ids"):  # a bundle return: carry the lines (and, per option, the perk note)
+        item["policy_check_ids"] = list(cand["policy_check_ids"])
+        item["lines"] = next((list(o["lines"]) for o in options if o.get("lines")), [])
     pk, sk = store.quote_key(quote_id)
     created = True
     try:
@@ -156,11 +186,21 @@ def create_quote(
         item = existing
 
     _supersede_previous_quote(conv_id, quote_id)
-    if created:
+    if created:  # a retry that found the existing quote writes and emits nothing
         trace.emit_safe(
             run_id,
             "quote_created",
             {"quote_id": quote_id, "option_ids": chosen_ids, "expires_at": item["expires_at"]},
+        )
+        trace.emit_a2a_safe(  # the middle timeline: what kind of resolution leads, no amounts or ids of people
+            customer_id,
+            "quote_created",
+            {
+                "quote_id": quote_id,
+                "primary_option_type": options[0]["type"],
+                "option_types": [option["type"] for option in options],
+            },
+            actor="aldo_agent",
         )
     return _quote_view(item, None)
 
@@ -202,6 +242,21 @@ def _require_unchanged_stock(selected: list[Mapping[str, Any]], versions: Mappin
             raise DomainError(
                 ErrorCode.STOCK_CHANGED,
                 "Stock changed since the options were found. Find the options again.",
+            )
+
+
+def _require_benefit_still_available(customer_id: str, selected: list[Mapping[str, Any]]) -> None:
+    """A selected option that carries the member perk needs room left in that month's ledger."""
+    for option in selected:
+        perk = option.get("benefit")
+        if not perk:
+            continue
+        usage = benefits.ledger_usage(customer_id)  # this month on the DEMO clock
+        if usage["period"] != perk.get("period") or usage["used"] >= usage["allowed"]:
+            raise DomainError(
+                ErrorCode.STOCK_CHANGED,
+                "The free return shipping of this month was used since the options were found. Find the options again.",
+                details={"reason": "BENEFIT_USED"},
             )
 
 

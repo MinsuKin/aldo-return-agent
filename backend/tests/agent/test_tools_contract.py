@@ -323,7 +323,7 @@ def test_find_options_passes_the_arguments_to_the_domain(domain: FakeDomain, too
         preferred_channel="store_pickup",
     )
     (args, kwargs), = domain.calls_to("FakeOptions", "find_options")
-    assert args == (CUSTOMER, "PCHK-0000000A", "9.0", "2026-10-17", "store_pickup")
+    assert args == (CUSTOMER, "PCHK-0000000A", "9.0", "2026-10-17", "store_pickup", None)  # no colour for a fit problem
     assert kwargs == {"run_id": "RUN-TEST000001"}
 
 

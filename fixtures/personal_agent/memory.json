@@ -68,6 +68,78 @@
           "source": "synthetic"
         }
       ]
+    },
+    {
+      "owner_id": "DEMO-CUST-JOHN",
+      "display_name": "John",
+      "size_system": "US_M",
+      "typical_size": "10.0",
+      "source": "synthetic",
+      "memory": [
+        {
+          "memory_id": "PM-1",
+          "retailer": "Retailer A (synthetic)",
+          "item": "loafer",
+          "size": "10.0",
+          "outcome": "kept",
+          "color": "BROWN",
+          "source": "synthetic"
+        },
+        {
+          "memory_id": "PM-2",
+          "retailer": "Retailer B (synthetic)",
+          "item": "boot",
+          "size": "10.5",
+          "outcome": "returned_too_big",
+          "color": "BLACK",
+          "source": "synthetic"
+        },
+        {
+          "memory_id": "PM-3",
+          "retailer": "Retailer C (synthetic)",
+          "item": "sneaker",
+          "size": "10.0",
+          "outcome": "kept",
+          "color": "WHITE",
+          "source": "synthetic"
+        }
+      ]
+    },
+    {
+      "owner_id": "DEMO-CUST-DAVID",
+      "display_name": "David",
+      "size_system": "US_M",
+      "typical_size": "11.0",
+      "source": "synthetic",
+      "memory": [
+        {
+          "memory_id": "PM-1",
+          "retailer": "Retailer A (synthetic)",
+          "item": "dress shoe",
+          "size": "11.0",
+          "outcome": "kept",
+          "color": "BLACK",
+          "source": "synthetic"
+        },
+        {
+          "memory_id": "PM-2",
+          "retailer": "Retailer B (synthetic)",
+          "item": "boot",
+          "size": "11.5",
+          "outcome": "returned_too_big",
+          "color": "BROWN",
+          "source": "synthetic"
+        },
+        {
+          "memory_id": "PM-3",
+          "retailer": "Retailer C (synthetic)",
+          "item": "sneaker",
+          "size": "11.0",
+          "outcome": "kept",
+          "color": "TAN",
+          "source": "synthetic"
+        }
+      ]
     }
   ]
 }

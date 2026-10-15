@@ -1,0 +1,314 @@
+{
+  "size_request_id": "SZR-7E0A91",
+  "style_id": "DEMO-STYLE-MEN001",
+  "product_name": "ALDO Men 001",
+  "color": "BLACK",
+  "price_cents": 14999,
+  "currency": "CAD",
+  "fit_signal": {
+    "signal": "runs_large",
+    "too_small_share": 0.0551,
+    "n_fit": 236,
+    "scope": "ALDO_CA",
+    "provenance": "derived"
+  },
+  "sizes": [
+    {
+      "size": "8.0",
+      "options": [
+        {
+          "option_id": "SO-1",
+          "type": "ship_from_dc",
+          "location_id": "DEMO-DC-QC",
+          "location_name": "ALDO Demo Distribution Centre",
+          "eta_date": "2026-10-20",
+          "eta_text": "Tue Oct 20",
+          "meets_deadline": null,
+          "atp": 2
+        },
+        {
+          "option_id": "SO-2",
+          "type": "ship_from_store",
+          "location_id": "DEMO-STORE-MTL-01",
+          "location_name": "ALDO Demo Store Montreal",
+          "eta_date": "2026-10-19",
+          "eta_text": "Mon Oct 19",
+          "meets_deadline": null,
+          "atp": 1
+        },
+        {
+          "option_id": "SO-3",
+          "type": "store_pickup",
+          "location_id": "DEMO-STORE-MTL-01",
+          "location_name": "ALDO Demo Store Montreal",
+          "eta_date": "2026-10-17",
+          "eta_text": "Sat Oct 17",
+          "meets_deadline": null,
+          "atp": 1
+        }
+      ]
+    },
+    {
+      "size": "8.5",
+      "options": [
+        {
+          "option_id": "SO-4",
+          "type": "ship_from_dc",
+          "location_id": "DEMO-DC-QC",
+          "location_name": "ALDO Demo Distribution Centre",
+          "eta_date": "2026-10-20",
+          "eta_text": "Tue Oct 20",
+          "meets_deadline": null,
+          "atp": 3
+        },
+        {
+          "option_id": "SO-5",
+          "type": "ship_from_store",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "location_name": "ALDO Demo Store Laval",
+          "eta_date": "2026-10-19",
+          "eta_text": "Mon Oct 19",
+          "meets_deadline": null,
+          "atp": 1
+        },
+        {
+          "option_id": "SO-6",
+          "type": "store_pickup",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "location_name": "ALDO Demo Store Laval",
+          "eta_date": "2026-10-17",
+          "eta_text": "Sat Oct 17",
+          "meets_deadline": null,
+          "atp": 1
+        }
+      ]
+    },
+    {
+      "size": "9.0",
+      "options": [
+        {
+          "option_id": "SO-7",
+          "type": "ship_from_dc",
+          "location_id": "DEMO-DC-QC",
+          "location_name": "ALDO Demo Distribution Centre",
+          "eta_date": "2026-10-20",
+          "eta_text": "Tue Oct 20",
+          "meets_deadline": null,
+          "atp": 4
+        },
+        {
+          "option_id": "SO-8",
+          "type": "ship_from_store",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "location_name": "ALDO Demo Store Laval",
+          "eta_date": "2026-10-19",
+          "eta_text": "Mon Oct 19",
+          "meets_deadline": null,
+          "atp": 1
+        },
+        {
+          "option_id": "SO-9",
+          "type": "store_pickup",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "location_name": "ALDO Demo Store Laval",
+          "eta_date": "2026-10-17",
+          "eta_text": "Sat Oct 17",
+          "meets_deadline": null,
+          "atp": 1
+        }
+      ]
+    },
+    {
+      "size": "9.5",
+      "options": [
+        {
+          "option_id": "SO-10",
+          "type": "ship_from_dc",
+          "location_id": "DEMO-DC-QC",
+          "location_name": "ALDO Demo Distribution Centre",
+          "eta_date": "2026-10-20",
+          "eta_text": "Tue Oct 20",
+          "meets_deadline": null,
+          "atp": 3
+        },
+        {
+          "option_id": "SO-11",
+          "type": "ship_from_store",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "location_name": "ALDO Demo Store Laval",
+          "eta_date": "2026-10-19",
+          "eta_text": "Mon Oct 19",
+          "meets_deadline": null,
+          "atp": 1
+        },
+        {
+          "option_id": "SO-12",
+          "type": "store_pickup",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "location_name": "ALDO Demo Store Laval",
+          "eta_date": "2026-10-17",
+          "eta_text": "Sat Oct 17",
+          "meets_deadline": null,
+          "atp": 1
+        }
+      ]
+    },
+    {
+      "size": "10.0",
+      "options": [
+        {
+          "option_id": "SO-13",
+          "type": "ship_from_dc",
+          "location_id": "DEMO-DC-QC",
+          "location_name": "ALDO Demo Distribution Centre",
+          "eta_date": "2026-10-20",
+          "eta_text": "Tue Oct 20",
+          "meets_deadline": null,
+          "atp": 5
+        },
+        {
+          "option_id": "SO-14",
+          "type": "ship_from_store",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "location_name": "ALDO Demo Store Laval",
+          "eta_date": "2026-10-19",
+          "eta_text": "Mon Oct 19",
+          "meets_deadline": null,
+          "atp": 1
+        },
+        {
+          "option_id": "SO-15",
+          "type": "store_pickup",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "location_name": "ALDO Demo Store Laval",
+          "eta_date": "2026-10-17",
+          "eta_text": "Sat Oct 17",
+          "meets_deadline": null,
+          "atp": 1
+        }
+      ]
+    },
+    {
+      "size": "10.5",
+      "options": [
+        {
+          "option_id": "SO-16",
+          "type": "ship_from_dc",
+          "location_id": "DEMO-DC-QC",
+          "location_name": "ALDO Demo Distribution Centre",
+          "eta_date": "2026-10-20",
+          "eta_text": "Tue Oct 20",
+          "meets_deadline": null,
+          "atp": 4
+        }
+      ]
+    },
+    {
+      "size": "11.0",
+      "options": [
+        {
+          "option_id": "SO-17",
+          "type": "ship_from_dc",
+          "location_id": "DEMO-DC-QC",
+          "location_name": "ALDO Demo Distribution Centre",
+          "eta_date": "2026-10-20",
+          "eta_text": "Tue Oct 20",
+          "meets_deadline": null,
+          "atp": 3
+        },
+        {
+          "option_id": "SO-18",
+          "type": "ship_from_store",
+          "location_id": "DEMO-STORE-MTL-01",
+          "location_name": "ALDO Demo Store Montreal",
+          "eta_date": "2026-10-19",
+          "eta_text": "Mon Oct 19",
+          "meets_deadline": null,
+          "atp": 1
+        },
+        {
+          "option_id": "SO-19",
+          "type": "store_pickup",
+          "location_id": "DEMO-STORE-MTL-01",
+          "location_name": "ALDO Demo Store Montreal",
+          "eta_date": "2026-10-17",
+          "eta_text": "Sat Oct 17",
+          "meets_deadline": null,
+          "atp": 1
+        }
+      ]
+    },
+    {
+      "size": "11.5",
+      "options": [
+        {
+          "option_id": "SO-20",
+          "type": "ship_from_dc",
+          "location_id": "DEMO-DC-QC",
+          "location_name": "ALDO Demo Distribution Centre",
+          "eta_date": "2026-10-20",
+          "eta_text": "Tue Oct 20",
+          "meets_deadline": null,
+          "atp": 2
+        },
+        {
+          "option_id": "SO-21",
+          "type": "ship_from_store",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "location_name": "ALDO Demo Store Laval",
+          "eta_date": "2026-10-19",
+          "eta_text": "Mon Oct 19",
+          "meets_deadline": null,
+          "atp": 1
+        },
+        {
+          "option_id": "SO-22",
+          "type": "store_pickup",
+          "location_id": "DEMO-STORE-LAVAL-01",
+          "location_name": "ALDO Demo Store Laval",
+          "eta_date": "2026-10-17",
+          "eta_text": "Sat Oct 17",
+          "meets_deadline": null,
+          "atp": 1
+        }
+      ]
+    },
+    {
+      "size": "12.0",
+      "options": [
+        {
+          "option_id": "SO-23",
+          "type": "ship_from_dc",
+          "location_id": "DEMO-DC-QC",
+          "location_name": "ALDO Demo Distribution Centre",
+          "eta_date": "2026-10-20",
+          "eta_text": "Tue Oct 20",
+          "meets_deadline": null,
+          "atp": 1
+        },
+        {
+          "option_id": "SO-24",
+          "type": "ship_from_store",
+          "location_id": "DEMO-STORE-MTL-01",
+          "location_name": "ALDO Demo Store Montreal",
+          "eta_date": "2026-10-19",
+          "eta_text": "Mon Oct 19",
+          "meets_deadline": null,
+          "atp": 1
+        },
+        {
+          "option_id": "SO-25",
+          "type": "store_pickup",
+          "location_id": "DEMO-STORE-MTL-01",
+          "location_name": "ALDO Demo Store Montreal",
+          "eta_date": "2026-10-17",
+          "eta_text": "Sat Oct 17",
+          "meets_deadline": null,
+          "atp": 1
+        }
+      ]
+    }
+  ],
+  "question": "This style runs large (94% of fit-related returns were 'too big', n=236). Which size and option should I reserve for your owner?",
+  "expires_at": "2026-10-16T16:15:00+00:00"
+}

@@ -14,6 +14,34 @@
     "return_in_store",
     "return_mail"
   ],
+  "exchange_reasons": [
+    "FIT_SIZE",
+    "EXPECTATION",
+    "CHANGE_OF_MIND"
+  ],
+  "tiers": {
+    "none": {
+      "label": "Member",
+      "authority_refund_limit_cents": 25000
+    },
+    "silver": {
+      "label": "Silver member",
+      "authority_refund_limit_cents": 25000
+    },
+    "platinum": {
+      "label": "Platinum member",
+      "authority_refund_limit_cents": 75000,
+      "benefits": {
+        "free_return_shipping": {
+          "per_month": 1,
+          "applies_to": [
+            "return_mail"
+          ],
+          "waives_fee": true
+        }
+      }
+    }
+  },
   "rules": [
     {
       "rule_id": "final_sale.no_return",

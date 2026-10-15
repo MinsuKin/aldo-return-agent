@@ -62,10 +62,14 @@ EVENT_TYPES = (
     "decision",
     "size_assist_requested",
     "size_recommended",
+    "handoff_to_returns",
     "assistant_message",
     "run_completed",
     "warning",
 )
+CONVERSATION_MODES = ("bot", "returns")
+MODE_BOT = "bot"
+MODE_RETURNS = "returns"
 ACTORS = ("personal_agent", "system")
 
 # A key is sensitive when its LAST segment is token/secret/authorization/password/email, or it is a
@@ -335,6 +339,7 @@ class MemoryEntry(BaseModel):
     size: str
     outcome: Literal["kept", "returned_too_big", "returned_too_small"]
     source: str = "synthetic"
+    color: str | None = None  # optional: the colour of the item (feeds the return workflow's context)
 
 
 class AppliedUpdate(BaseModel):
@@ -355,6 +360,8 @@ class AppliedUpdate(BaseModel):
     order_id: str | None = None
     status: Literal["active", "superseded"] = "active"
     superseded_by: str | None = None
+    #: "size_ok" on a PREFERENCE (colour) exchange: the owner kept the size, only the colour changed.
+    fit_feedback: Literal["size_ok"] | None = None
 
 
 class OwnerMemory(BaseModel):
@@ -388,6 +395,7 @@ class MemoryUpdate(BaseModel):
     provisional: StrictBool
     source: str = Field(min_length=1, max_length=40)
     ts: str = Field(min_length=10, max_length=40)
+    fit_feedback: Literal["size_ok"] | None = None  # set by ALDO on a PREFERENCE (colour) exchange
 
     @field_validator("product_name", "color", "source", mode="after")
     @classmethod
@@ -487,6 +495,8 @@ def _fixture_problem(data: object) -> str | None:
                 return "memory size must be a size string with one decimal"
             if entry.get("outcome") not in MEMORY_OUTCOMES:
                 return "memory outcome is not one of kept, returned_too_big, returned_too_small"
+            if "color" in entry and (not isinstance(entry["color"], str) or not entry["color"].strip()):
+                return "memory color must be a non-empty string when present"
     return None
 
 
@@ -660,18 +670,19 @@ class MemoryRepo:
                 )
                 owners += 1
                 for entry in owner["memory"]:
-                    batch.put_item(
-                        Item={
-                            "pk": pk,
-                            "sk": _sk_mem(entry["memory_id"]),
-                            "memory_id": entry["memory_id"],
-                            "retailer": entry["retailer"],
-                            "item": entry["item"],
-                            "size": entry["size"],
-                            "outcome": entry["outcome"],
-                            "source": entry["source"],
-                        }
-                    )
+                    item = {
+                        "pk": pk,
+                        "sk": _sk_mem(entry["memory_id"]),
+                        "memory_id": entry["memory_id"],
+                        "retailer": entry["retailer"],
+                        "item": entry["item"],
+                        "size": entry["size"],
+                        "outcome": entry["outcome"],
+                        "source": entry["source"],
+                    }
+                    if entry.get("color"):
+                        item["color"] = entry["color"].strip().upper()
+                    batch.put_item(Item=item)
                     entries += 1
         return {"owners": owners, "entries": entries}
 
@@ -753,6 +764,7 @@ class MemoryRepo:
             order_id=item.get("order_id"),
             status=item.get("status", "active"),
             superseded_by=item.get("superseded_by"),
+            fit_feedback=item.get("fit_feedback"),
         )
         return update, str(item.get("ts", ""))
 
@@ -781,7 +793,9 @@ class MemoryRepo:
                     "reason",
                     "outcome",
                     "confidence",
+                    "fit_feedback",
                 },
+                exclude_none=True,
             )
             for update in view.updates
         ]
@@ -831,6 +845,8 @@ class MemoryRepo:
             "applied_at": clock.iso(clock.now_utc()),
             "status": "active",
         }
+        if update.fit_feedback:
+            item["fit_feedback"] = update.fit_feedback
         try:
             self._put(item, if_absent=True)
         except ConditionFailed:
@@ -856,7 +872,9 @@ class MemoryRepo:
                         "reason",
                         "outcome",
                         "provisional",
+                        "fit_feedback",
                     )
+                    if public.get(key) is not None
                 },
                 actor="personal_agent",
             )
@@ -931,17 +949,174 @@ class MemoryRepo:
         return conv_id
 
     def get_conversation(self, owner_id: str, conv_id: str) -> dict[str, Any]:
-        """Conversation meta (no messages). Another owner's conversation is simply NOT_FOUND."""
+        """Conversation meta (no messages). Another owner's conversation is simply NOT_FOUND.
+
+        ``mode`` is ``bot`` (the ALDO bot purchase workflow answers) or ``returns`` (the owner's
+        messages go straight to the return workflow); in ``returns`` mode ``returns_order_id`` is
+        the order being returned, ``returns_conv_id`` the ALDO-side conversation once it exists,
+        ``handoff_text`` the owner message that started the hand-off until it was forwarded
+        (``handoff_forwarded``) and ``memory_context`` the trusted context for the return run.
+        """
         settings.require_id(conv_id, "conv_id")
         item = self._get(owner_pk(owner_id), _sk_conv(conv_id))
         if item is None:
             raise DomainError(ErrorCode.NOT_FOUND, "conversation not found")
+        mode = item.get("mode") if item.get("mode") in CONVERSATION_MODES else MODE_BOT
         return {
             "conv_id": item["conv_id"],
             "created_at": item.get("created_at"),
             "active_run_id": item.get("active_run_id"),
             "active_run_expires_at": item.get("active_run_expires_at"),
+            "mode": mode,
+            "returns_order_id": item.get("returns_order_id") if mode == MODE_RETURNS else None,
+            "returns_conv_id": item.get("returns_conv_id") if mode == MODE_RETURNS else None,
+            "handoff_text": item.get("handoff_text") if mode == MODE_RETURNS else None,
+            "handoff_forwarded": bool(item.get("handoff_forwarded")) if mode == MODE_RETURNS else False,
+            "memory_context": _json_object(item.get("memory_context_json")) if mode == MODE_RETURNS else None,
         }
+
+    # ------------------------------------------------------------------ conversation mode
+
+    def set_returns_mode(
+        self,
+        owner_id: str,
+        conv_id: str,
+        order_id: str | None,
+        *,
+        handoff_text: str,
+        memory_context: Mapping[str, Any] | None = None,
+    ) -> bool:
+        """bot -> returns, for ``order_id`` when the bot knew it; stores the owner's triggering message.
+
+        ``order_id`` may be None: the return workflow then looks up the owner's recent delivered
+        orders itself. True when the mode (or the order) changed. False when the conversation is
+        ALREADY in returns mode for this order (or, with no order given, in returns mode at all),
+        so a repeated hand-off is a harmless no-op that keeps the first hand-off's text and
+        context. A hand-off for another order starts over (the ALDO-side conversation of the
+        earlier order is forgotten). NOT_FOUND for a missing or foreign conversation.
+        """
+        if order_id is not None:
+            settings.require_id(order_id, "order_id")
+        context_json = json.dumps(dict(memory_context), ensure_ascii=False, separators=(",", ":")) if memory_context else ""
+        sets = "#mode = :returns, #text = :text, #fwd = :no, #mc = :mc, #at = :now"
+        values: dict[str, Any] = {
+            ":returns": MODE_RETURNS,
+            ":text": handoff_text,
+            ":no": False,
+            ":mc": context_json,
+            ":now": clock.iso(clock.now_utc()),
+        }
+        changed = "attribute_not_exists(#mode) OR #mode <> :returns"
+        if order_id is None:
+            expression = f"SET {sets} REMOVE #rconv, #order"
+        else:
+            expression = f"SET {sets}, #order = :order REMOVE #rconv"
+            values[":order"] = order_id
+            changed += " OR attribute_not_exists(#order) OR #order <> :order"
+        try:
+            self._update(
+                owner_pk(owner_id),
+                _sk_conv(conv_id),
+                expression,
+                condition=f"attribute_exists(#pk) AND ({changed})",
+                names={
+                    "#pk": "pk",
+                    "#mode": "mode",
+                    "#order": "returns_order_id",
+                    "#text": "handoff_text",
+                    "#fwd": "handoff_forwarded",
+                    "#mc": "memory_context_json",
+                    "#at": "handoff_at",
+                    "#rconv": "returns_conv_id",
+                },
+                values=values,
+            )
+        except ConditionFailed:
+            self.get_conversation(owner_id, conv_id)  # NOT_FOUND when the conversation is missing
+            return False
+        return True
+
+    def attach_returns_conversation(self, owner_id: str, conv_id: str, returns_conv_id: str) -> str | None:
+        """Remember the ALDO-side conversation of the hand-off, once.
+
+        Returns the id that is stored: ``returns_conv_id`` for the first caller, the earlier
+        winner's id for a concurrent caller, None when the conversation is no longer in returns
+        mode.
+        """
+        settings.require_id(returns_conv_id, "returns_conv_id")
+        try:
+            self._update(
+                owner_pk(owner_id),
+                _sk_conv(conv_id),
+                "SET #rconv = :conv",
+                condition="attribute_exists(#pk) AND #mode = :returns AND attribute_not_exists(#rconv)",
+                names={"#pk": "pk", "#mode": "mode", "#rconv": "returns_conv_id"},
+                values={":returns": MODE_RETURNS, ":conv": returns_conv_id},
+            )
+        except ConditionFailed:
+            current = self.get_conversation(owner_id, conv_id)
+            return current["returns_conv_id"] if current["mode"] == MODE_RETURNS else None
+        return returns_conv_id
+
+    def forget_returns_conversation(self, owner_id: str, conv_id: str, returns_conv_id: str) -> None:
+        """Drop a stored ALDO-side conversation id that no longer exists (for example after a reset)."""
+        with contextlib.suppress(ConditionFailed):
+            self._update(
+                owner_pk(owner_id),
+                _sk_conv(conv_id),
+                "REMOVE #rconv",
+                condition="#rconv = :conv",
+                names={"#rconv": "returns_conv_id"},
+                values={":conv": returns_conv_id},
+            )
+
+    def mark_handoff_forwarded(self, owner_id: str, conv_id: str) -> None:
+        """The stored triggering text has been sent to the return workflow; never send it again."""
+        with contextlib.suppress(ConditionFailed):
+            self._update(
+                owner_pk(owner_id),
+                _sk_conv(conv_id),
+                "SET #fwd = :yes",
+                condition="attribute_exists(#pk) AND #mode = :returns",
+                names={"#pk": "pk", "#fwd": "handoff_forwarded", "#mode": "mode"},
+                values={":yes": True, ":returns": MODE_RETURNS},
+            )
+
+    def set_bot_mode(
+        self, owner_id: str, conv_id: str, *, expected_order_id: str | None = None
+    ) -> dict[str, Any] | None:
+        """returns -> bot (handback). Returns ``{"returns_order_id", "returns_conv_id"}`` as they were.
+
+        None when the conversation was not in returns mode (or, with ``expected_order_id``, was
+        returning another order), so a late or repeated handback changes nothing.
+        """
+        condition = "attribute_exists(#pk) AND #mode = :returns"
+        values: dict[str, Any] = {":bot": MODE_BOT, ":returns": MODE_RETURNS}
+        if expected_order_id is not None:
+            condition += " AND #order = :expected"
+            values[":expected"] = expected_order_id
+        try:
+            old = self._update(
+                owner_pk(owner_id),
+                _sk_conv(conv_id),
+                "SET #mode = :bot REMOVE #order, #rconv, #text, #fwd, #mc, #at",
+                condition=condition,
+                names={
+                    "#pk": "pk",
+                    "#mode": "mode",
+                    "#order": "returns_order_id",
+                    "#rconv": "returns_conv_id",
+                    "#text": "handoff_text",
+                    "#fwd": "handoff_forwarded",
+                    "#mc": "memory_context_json",
+                    "#at": "handoff_at",
+                },
+                values=values,
+                return_values="ALL_OLD",
+            )
+        except ConditionFailed:
+            return None
+        return {"returns_order_id": old.get("returns_order_id"), "returns_conv_id": old.get("returns_conv_id")}
 
     def load_messages(self, owner_id: str, conv_id: str) -> list[dict[str, Any]]:
         item = self._get(owner_pk(owner_id), _sk_conv(conv_id))
@@ -1216,6 +1391,17 @@ def _natural_key(identifier: str) -> tuple[str, int]:
     return (identifier[: match.start()] if match else identifier, int(match.group(1)) if match else 0)
 
 
+def _json_object(raw: object) -> dict[str, Any] | None:
+    """The object stored as a JSON string, or None when it is absent, empty or not an object."""
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        value = json.loads(raw)
+    except ValueError:
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def _public_memory(item: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "memory_id": item["memory_id"],
@@ -1224,6 +1410,7 @@ def _public_memory(item: Mapping[str, Any]) -> dict[str, Any]:
         "size": item["size"],
         "outcome": item["outcome"],
         "source": item.get("source", "synthetic"),
+        "color": item.get("color"),
     }
 
 

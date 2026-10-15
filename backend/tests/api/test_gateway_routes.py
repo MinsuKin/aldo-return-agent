@@ -50,9 +50,11 @@ def gateway(client) -> FakeGateway:
 
 # ------------------------------------------------------------------ token scopes (C4)
 
+REVIEWS = {"style_id": "DEMO-STYLE-MEN001", "limit": 20}
 GATEWAY_CALLS = [
     ("/api/gateway/size-assist", SIZE_ASSIST),
     ("/api/gateway/size-decision", PROPOSAL),
+    ("/api/gateway/reviews", REVIEWS),
 ]
 
 
@@ -92,6 +94,7 @@ def test_delegated_token_cannot_reach_the_owners_purchase_routes(client, gateway
 NOT_SESSION_ROUTES = PUBLIC_ROUTES | {
     ("POST", "/gateway/size-assist"),
     ("POST", "/gateway/size-decision"),
+    ("POST", "/gateway/reviews"),
     ("POST", "/demo/reset"),
     ("POST", "/personal-agent/memory-updates"),
 }
@@ -148,7 +151,7 @@ def test_size_decision_passes_the_delegation_cap_and_returns_a_proposal(client, 
 
 @pytest.mark.parametrize("raw", [None, "", "{oops", "[]", '"text"'])
 def test_gateway_bodies_must_be_json_objects(client, gateway, raw):
-    for path in ("/api/gateway/size-assist", "/api/gateway/size-decision"):
+    for path in ("/api/gateway/size-assist", "/api/gateway/size-decision", "/api/gateway/reviews"):
         reply = client.call("POST", path, raw_body=raw, token=delegated_token())
         assert reply.status == 422 and reply.code == "VALIDATION_ERROR"
     assert gateway.calls == []
@@ -156,8 +159,9 @@ def test_gateway_bodies_must_be_json_objects(client, gateway, raw):
 
 def test_gateway_bodies_are_size_limited(client, gateway):
     body = {"product_query": "x" * 20_000}
-    reply = client.post("/api/gateway/size-assist", body, token=delegated_token())
-    assert reply.status == 422 and reply.code == "VALIDATION_ERROR"
+    for path in ("/api/gateway/size-assist", "/api/gateway/reviews"):
+        reply = client.post(path, body, token=delegated_token())
+        assert reply.status == 422 and reply.code == "VALIDATION_ERROR"
     assert gateway.calls == []
 
 
@@ -182,6 +186,7 @@ def test_gateway_errors_map_to_http(client, gateway, code, status):
     for method, path, body, token in (
         ("POST", "/api/gateway/size-assist", SIZE_ASSIST, delegated_token()),
         ("POST", "/api/gateway/size-decision", PROPOSAL, delegated_token()),
+        ("POST", "/api/gateway/reviews", REVIEWS, delegated_token()),
         ("GET", "/api/purchases/SZR-3F9A1C", None, session_token()),
         ("POST", "/api/purchases/SZR-3F9A1C/confirm", {}, session_token()),
     ):
@@ -197,6 +202,28 @@ def test_unknown_style_carries_its_candidates_next_to_the_code(client, gateway):
     assert reply.status == 422
     assert reply.error["code"] == "UNKNOWN_STYLE" and reply.error["candidates"] == candidates
     assert reply.error["retryable"] is False and "request_id" in reply.error
+
+
+def test_reviews_hand_the_verified_claims_and_the_raw_body_over(client, gateway):
+    reply = client.post("/api/gateway/reviews", REVIEWS, token=delegated_token(BEN))
+    assert reply.status == 200 and reply.json["provenance"] == "synthetic"
+    assert reply.json["reviews"][0]["flags"] == [] and reply.json["style_id"] == "DEMO-STYLE-MEN001"
+    (name, (claims, request), kwargs), = gateway.calls
+    assert name == "get_reviews" and kwargs == {}
+    assert claims.customer_id == BEN and claims.scope == "delegated_gateway" and claims.actor == "personal_agent"
+    assert request == REVIEWS  # untouched: the gateway module owns the strict schema
+
+
+def test_reviews_never_take_the_customer_from_the_body(client, gateway):
+    body = {**REVIEWS, "customer_id": AVA, "owner_ref": AVA}
+    client.post("/api/gateway/reviews", body, token=delegated_token(BEN))
+    (_, (claims, request), _), = gateway.calls
+    assert claims.customer_id == BEN and request == body  # the gateway rejects the extra fields (422)
+
+
+def test_reviews_accept_a_product_query_body_too(client, gateway):
+    reply = client.post("/api/gateway/reviews", {"product_query": "ALDO Men 001"}, token=delegated_token())
+    assert reply.status == 200 and gateway.calls[0][1][1] == {"product_query": "ALDO Men 001"}
 
 
 def test_a_crashing_gateway_does_not_leak_internals(client, gateway):
@@ -243,7 +270,7 @@ def test_confirm_rejects_a_non_string_option(client, gateway):
 def test_agent_card_is_public_on_both_paths(client, gateway, path):
     reply = client.get(path)
     assert reply.status == 200
-    assert reply.json["name"] == "ALDO Fit Gateway"
+    assert reply.json["name"] == "ALDO bot"
     assert reply.json["url"] == f"https://{DOMAIN_NAME}/api/gateway"
 
 

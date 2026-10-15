@@ -6,6 +6,7 @@ import type {
   ApproveResponse,
   CaseWire,
   ConfirmPurchaseResponse,
+  ConversationInfo,
   ConversationResponse,
   MemoryWire,
   Order,
@@ -115,6 +116,11 @@ export const api = {
     });
   },
 
+  /** Conversation mode (addendum 11.5): "bot" = purchase workflow, "returns" = return workflow. */
+  paConversation(convId: string): Promise<ConversationInfo> {
+    return request<ConversationInfo>("GET", `/personal-agent/conversations/${enc(convId)}`);
+  },
+
   paMemory(): Promise<MemoryWire> {
     return request<MemoryWire>("GET", "/personal-agent/memory");
   },
@@ -147,18 +153,6 @@ export const api = {
     });
   },
 
-  createConversation(orderId?: string): Promise<ConversationResponse> {
-    return request<ConversationResponse>("POST", "/conversations", {
-      body: orderId ? { order_id: orderId } : {},
-    });
-  },
-
-  sendMessage(convId: string, text: string, orderId?: string): Promise<SendMessageResponse> {
-    return request<SendMessageResponse>("POST", `/conversations/${enc(convId)}/messages`, {
-      body: orderId ? { text, order_id: orderId } : { text },
-    });
-  },
-
   runEvents(runId: string, after: number, signal?: AbortSignal): Promise<RunEventsResponse> {
     return request<RunEventsResponse>("GET", `/runs/${enc(runId)}/events?after=${after}`, { signal });
   },
@@ -180,10 +174,6 @@ export const api = {
   async cases(): Promise<CaseWire[]> {
     const data = await request<unknown>("GET", "/cases");
     return listOf<CaseWire>(data, "cases");
-  },
-
-  impact(): Promise<unknown> {
-    return request<unknown>("GET", "/impact", { auth: false });
   },
 
   reset(variant: ResetVariant, adminSecret: string): Promise<unknown> {

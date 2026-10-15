@@ -10,6 +10,12 @@ export interface Persona {
   display_name: string;
   description?: string;
   home_region?: string;
+  /** Demo tier (addendum 11.1 D2): "none" | "silver" | "platinum". A demo assumption, not ALDO policy. */
+  tier?: string;
+  /** Human label of the tier, for example "Silver member". */
+  tier_label?: string;
+  /** Where the persona lives, for example "Downtown Montreal". */
+  location_label?: string;
 }
 
 export interface SessionInfo {
@@ -42,8 +48,8 @@ export interface Order {
   lines: OrderLine[];
 }
 
-/** Who produced a trace event (pivot addendum 5.6). Existing ALDO events default to aldo_agent. */
-export type Actor = "personal_agent" | "aldo_gateway" | "aldo_agent" | "system";
+/** Who produced a trace event (pivot addendum 5.6 and 11.4). Existing ALDO events default to aldo_agent. */
+export type Actor = "personal_agent" | "aldo_gateway" | "aldo_agent" | "aldo_store" | "system";
 
 export interface RunEvent {
   seq: number;
@@ -74,6 +80,17 @@ export interface ConversationResponse {
 export interface SendMessageResponse {
   run_id: string;
   conv_id?: string;
+  /** Which agent handles this message (addendum 11.5): the purchase workflow or the return workflow. */
+  agent?: "personal" | "returns";
+  /** Conversation mode when the message was accepted. */
+  mode?: "bot" | "returns";
+}
+
+/** GET /personal-agent/conversations/{conv} (addendum 11.5). */
+export interface ConversationInfo {
+  conv_id: string;
+  mode: "bot" | "returns";
+  returns_order_id?: string | null;
 }
 
 export interface ApproveResponse {

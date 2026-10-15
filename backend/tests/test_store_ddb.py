@@ -186,6 +186,7 @@ def test_key_builders_follow_the_design():
         "AUDIT#2026-10-16", "2026-10-16T16:00:00+00:00#u")
     assert store.sizereq_key("SZR-1") == ("SIZEREQ#SZR-1", "META")
     assert store.outbox_key("MU-1") == ("A2AOUT#MU-1", "META")
+    assert store.storenote_key("DEMO-RMA-3F9A1C") == ("STORENOTE#DEMO-RMA-3F9A1C", "META")  # domain v2
     assert store.gsi1_order("C", "2026-09-30", "O") == ("CUST#C", "ORDER#2026-09-30#O")
     assert store.gsi1_product("ST", "BLACK", "7.5") == ("STYLE#ST#BLACK", "SIZE#007.5")
     assert store.gsi1_product("ST", "BLACK", "10") == ("STYLE#ST#BLACK", "SIZE#010.0")
@@ -208,7 +209,7 @@ def test_event_keys_sort_lexicographically_by_seq():
 
 def test_runtime_prefixes_cover_every_runtime_partition():
     for prefix in ("CONV#", "RUN#", "PCHK#", "CAND#", "QUOTE#", "TXN#", "IDEM#", "CASE#", "AUDIT#",
-                   "SIZEREQ#", "A2AOUT#", "ORDER#DEMO-A2A-"):
+                   "SIZEREQ#", "A2AOUT#", "STORENOTE#", "ORDER#DEMO-A2A-"):
         assert prefix in store.RUNTIME_PREFIXES
     # fixture partitions must never be matched by a runtime prefix
     for fixture_pk in ("CUST#DEMO-CUST-AVA", "ORDER#DEMO-1001", "PRODUCT#DEMO-SKU-X", "LOC#DEMO-DC-QC",

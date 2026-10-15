@@ -13,10 +13,10 @@ import time
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 
 from agent.services import Services
-from returns_domain import policy
+from returns_domain import policy, store as real_store
 from returns_domain.errors import DomainError, ErrorCode
 
 CUSTOMER = "DEMO-CUST-AVA"
@@ -93,6 +93,19 @@ class OptionM(BaseModel):
     evidence: dict[str, Any] = Field(default_factory=dict)
     source_refs: list[str] = Field(default_factory=list)
     provenance: str = "synthetic"
+    # Domain v2: left out of the JSON when unknown, like the real Option (never null).
+    replacement_sku: str | None = None
+    replacement_color: str | None = None
+    minutes_away: int | None = None
+    benefit: dict[str, Any] | None = None  # phase 2 (a tier perk); the agent passes it through untouched
+
+    @model_serializer(mode="wrap")
+    def _omit_unknown_optionals(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        for name in ("replacement_sku", "replacement_color", "minutes_away", "benefit"):
+            if data.get(name) is None:
+                data.pop(name, None)
+        return data
 
 
 class CandidateSetM(BaseModel):
@@ -104,6 +117,15 @@ class CandidateSetM(BaseModel):
     inventory_versions: dict[str, int] = Field(default_factory=dict)
     deadline_date: str | None
     created_at: str = "2026-10-16T16:00:00+00:00"
+    preferred_channel: str | None = None
+    needs_choice: dict[str, Any] | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_needs_choice_when_none(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        if data.get("needs_choice") is None:
+            data.pop("needs_choice", None)
+        return data
 
 
 class QuoteM(BaseModel):
@@ -114,6 +136,17 @@ class QuoteM(BaseModel):
     options: list[OptionM]
 
 
+#: What the real domain puts in a store notice (display_name and tier_label are NOT for the model).
+STORE_NOTICE = {
+    "store_id": "DEMO-STORE-MTL-01",
+    "store_name": "ALDO Demo Store Montreal",
+    "display_name": "John",
+    "tier_label": "Silver member",
+    "eta_minutes": 5,
+    "summary": "ALDO Demo Store Montreal will have your Brown pair ready, John is about 5 minutes away",
+}
+
+
 class ExecutionResultM(BaseModel):
     transaction_id: str
     state: str = "completed"
@@ -122,6 +155,7 @@ class ExecutionResultM(BaseModel):
     quote_id: str
     approval_id: str = "APR-000001"
     memory_update_id: str | None = None
+    store_notice: dict[str, Any] | None = None
 
 
 class TransactionViewM(BaseModel):
@@ -143,6 +177,10 @@ class TransactionViewM(BaseModel):
     next_step: str
     simulated: bool = True
     quote_id: str
+    original_size: str | None = None
+    memory_update_id: str | None = None
+    replacement_color: str | None = None
+    store_notice: dict[str, Any] | None = None
 
 
 class CaseM(BaseModel):
@@ -310,25 +348,114 @@ def hero_options(*, dc_stock: bool = True, deadline: str | None = "2026-10-17") 
     return opts
 
 
+#: Colours in stock in the owner's size (the domain sorts them by colour name).
+COLOR_CHOICES = [
+    {"color": "BROWN", "total_atp": 7, "nearest_store_minutes": 5},
+    {"color": "TAN", "total_atp": 3, "nearest_store_minutes": None},
+    {"color": "WHITE", "total_atp": 2, "nearest_store_minutes": 24},
+]
+
+
+def _opt(option_id: str, kind: str, name: str, location_id: str, eta: str, eta_text: str, *, color: str | None = None,
+         minutes: int | None = None, refund: int = 0, fee: int = 0, size: str | None = "9.5") -> OptionM:
+    returns = kind.startswith("return_")
+    return OptionM(
+        option_id=option_id, type=kind, sku="DEMO-SKU-MEN001-BLACK-095" if returns else "DEMO-SKU-MEN001-BROWN-095",
+        replacement_size=None if returns else size, location_id=location_id, location_name=name,
+        refund_cents=refund, fee_cents=fee, eta_date=eta, eta_text=eta_text, meets_deadline=None,
+        conditions=["Bring the original pair, unworn"], evidence={"atp": 2, "inventory_version": 1},
+        source_refs=[f"INV#{option_id}"], replacement_sku=None if returns or not color else "DEMO-SKU-MEN001-BROWN-095",
+        replacement_color=None if returns else color, minutes_away=minutes,
+    )
+
+
+def colour_options() -> list[OptionM]:
+    """The options of a colour exchange to BROWN for John: DC, two pickups (nearest first), two returns."""
+    mtl, laval = "ALDO Demo Store Montreal", "ALDO Demo Store Laval"
+    return [
+        _opt("OPT-1", "exchange_ship_from_dc", "ALDO Demo Distribution Centre", "DEMO-DC-QC", "2026-10-20", "Tue Oct 20",
+             color="BROWN"),
+        _opt("OPT-2", "exchange_store_pickup", mtl, "DEMO-STORE-MTL-01", "2026-10-17", "Sat Oct 17", color="BROWN", minutes=5),
+        _opt("OPT-3", "exchange_store_pickup", laval, "DEMO-STORE-LAVAL-01", "2026-10-17", "Sat Oct 17", color="BROWN",
+             minutes=24),
+        _opt("OPT-4", "return_in_store", mtl, "DEMO-STORE-MTL-01", "2026-10-16", "Fri Oct 16", minutes=5, refund=14999),
+        _opt("OPT-5", "return_mail", "ALDO Demo Distribution Centre", "DEMO-DC-QC", "2026-10-26", "Mon Oct 26",
+             refund=14404, fee=595),
+    ]
+
+
+class FakeStore:
+    """The ``store`` service: real ``json_safe``, plus the stored candidate sets the fake options persist."""
+
+    def __init__(self) -> None:
+        self.items: dict[tuple[str, str], dict] = {}
+
+    def json_safe(self, value: Any) -> Any:
+        return real_store.json_safe(value)
+
+    def cand_key(self, candidate_set_id: str) -> tuple[str, str]:
+        return (f"CAND#{candidate_set_id}", "META")
+
+    def get_item(self, key: tuple[str, str]) -> dict | None:
+        return self.items.get(key)
+
+
 class FakeOptions(_Fake):
     dc_stock = True
+    #: False: the fit-size hero options. True: a preference (colour) return, see ``find_options``.
+    preference = False
+    #: Extra options appended to the next result (for the cap test).
+    extra_options: list[OptionM] = []
+    store: FakeStore | None = None
 
     def find_options(self, customer_id: str, policy_check_id: str, replacement_size: str | None = None,
-                     deadline_date: str | None = None, preferred_channel: str | None = None, *,
-                     run_id: str | None = None) -> CandidateSetM:
+                     deadline_date: str | None = None, preferred_channel: str | None = None,
+                     replacement_color: str | None = None, *, run_id: str | None = None) -> CandidateSetM:
         self._enter("find_options", customer_id, policy_check_id, replacement_size, deadline_date,
-                    preferred_channel, run_id=run_id)
-        return CandidateSetM(
-            candidate_set_id="CAND-0000000B", policy_check_id=policy_check_id,
-            options=hero_options(dc_stock=self.dc_stock, deadline=deadline_date),
-            availability={
+                    preferred_channel, replacement_color, run_id=run_id)
+        needs_choice = None
+        if not self.preference:
+            options = hero_options(dc_stock=self.dc_stock, deadline=deadline_date)
+            availability = {
                 "replacement_size": replacement_size or "8.5", "replacement_sku": "DEMO-SKU-HERO-BLACK-085",
                 "atp_by_location": {"DEMO-DC-QC": Decimal("5"), "DEMO-STORE-MTL-01": 1}, "dc_atp": Decimal("5"),
                 "reason_no_exchange": None,
-            },
-            other_sizes_in_stock=[{"size": "9.0", "sku": "DEMO-SKU-HERO-BLACK-090", "total_atp": 4}],
+            }
+            others = [{"size": "9.0", "sku": "DEMO-SKU-HERO-BLACK-090", "total_atp": 4}]
+        elif replacement_color is None:
+            options = [o for o in colour_options() if o.type.startswith("return_")]
+            options = [o.model_copy(update={"option_id": f"OPT-{i}"}) for i, o in enumerate(options, start=1)]
+            needs_choice = {"replacement_color": [dict(c) for c in COLOR_CHOICES]}
+            availability = {"replacement_size": "9.5", "replacement_sku": None, "atp_by_location": {},
+                            "dc_atp": 0, "reason_no_exchange": "NEEDS_COLOR_CHOICE", "replacement_color": None}
+            others = []
+        else:
+            options = colour_options()
+            availability = {"replacement_size": "9.5", "replacement_sku": "DEMO-SKU-MEN001-BROWN-095",
+                            "atp_by_location": {"DEMO-DC-QC": 4}, "dc_atp": 4, "reason_no_exchange": None,
+                            "replacement_color": replacement_color.upper()}
+            others = []
+        options = [*options, *self.extra_options]
+        result = CandidateSetM(
+            candidate_set_id="CAND-0000000B", policy_check_id=policy_check_id, options=options,
+            availability=availability, other_sizes_in_stock=others,
             inventory_versions={"DEMO-SKU-HERO-BLACK-085|DEMO-STORE-MTL-01": 1}, deadline_date=deadline_date,
+            preferred_channel=preferred_channel, needs_choice=needs_choice,
         )
+        self.candidates[result.candidate_set_id] = list(options)
+        if self.store is not None:  # what the domain persists as CAND#{id}: a later run reads it back
+            self.store.items[self.store.cand_key(result.candidate_set_id)] = {
+                "customer_id": customer_id, "options": [o.model_dump() for o in options],
+                "availability": availability, "preferred_channel": preferred_channel,
+            }
+        return result
+
+    candidates: dict[str, list[OptionM]]
+
+    def __init__(self, calls: list, failures: dict) -> None:
+        super().__init__(calls, failures)
+        self.candidates = {}
+        self.extra_options = []
 
 
 class FakeQuotes(_Fake):
@@ -339,21 +466,36 @@ class FakeQuotes(_Fake):
     def create_quote(self, customer_id: str, run_id: str, conv_id: str, candidate_set_id: str,
                      option_ids: list[str]) -> QuoteM:
         self._enter("create_quote", customer_id, run_id, conv_id, candidate_set_id, list(option_ids))
-        known = {o.option_id: o for o in hero_options(dc_stock=self._options.dc_stock)}
+        offered = self._options.candidates.get(candidate_set_id) or hero_options(dc_stock=self._options.dc_stock)
+        known = {o.option_id: o for o in offered}
         chosen = [known[i] for i in option_ids]  # KeyError would be a test bug
         digest = hashlib.sha1("|".join([run_id, candidate_set_id, *sorted(option_ids)]).encode()).hexdigest()
         return QuoteM(quote_id="QUO-" + digest[:10].upper(), order_id=AGENT_ORDER, options=chosen)
 
 
 class FakeExecution(_Fake):
+    #: True: the in-store colour exchange of John, with a store notice (the default is the fit pickup of Ava).
+    colour_exchange = False
+
     def execute(self, customer_id: str, quote_id: str, option_id: str | None = None, *,
                 run_id: str | None = None) -> ExecutionResultM:
         self._enter("execute", customer_id, quote_id, option_id, run_id=run_id)
         return ExecutionResultM(transaction_id="DEMO-RMA-ABC123", option_type="exchange_store_pickup",
-                                quote_id=quote_id, memory_update_id="MU-5C0A11")
+                                quote_id=quote_id, memory_update_id="MU-5C0A11",
+                                store_notice=dict(STORE_NOTICE) if self.colour_exchange else None)
 
     def get_status(self, customer_id: str, transaction_id: str, *, run_id: str | None = None) -> TransactionViewM:
         self._enter("get_status", customer_id, transaction_id, run_id=run_id)
+        if self.colour_exchange:
+            return TransactionViewM(
+                transaction_id=transaction_id, option_type="exchange_store_pickup", order_id=AGENT_ORDER,
+                line_id=f"{AGENT_ORDER}-L1", sku="DEMO-SKU-MEN001-BROWN-095", location_id="DEMO-STORE-MTL-01",
+                location_name="ALDO Demo Store Montreal", replacement_size="9.5", original_size="9.5",
+                replacement_color="BROWN", eta_date="2026-10-17", eta_text="Sat Oct 17", quote_id="QUO-X",
+                memory_update_id="MU-5C0A11", store_notice=dict(STORE_NOTICE),
+                next_step=("ALDO Demo Store Montreal will have your Brown pair, size 9.5, ready from Sat Oct 17; "
+                           "bring the original pair, unworn."),
+            )
         return TransactionViewM(
             transaction_id=transaction_id, option_type="exchange_store_pickup", order_id=AGENT_ORDER,
             line_id=f"{AGENT_ORDER}-L1", sku="DEMO-SKU-HERO-BLACK-085", location_id="DEMO-STORE-MTL-01",
@@ -451,7 +593,9 @@ class FakeDomain:
         self.failures: dict[str, list[BaseException]] = {}
         self.trace = FakeTrace(self.calls, self.failures)
         self.orders = FakeOrders(self.calls, self.failures)
+        self.store = FakeStore()
         self.options = FakeOptions(self.calls, self.failures)
+        self.options.store = self.store
         self.quotes = FakeQuotes(self.calls, self.failures, self.options)
         self.execution = FakeExecution(self.calls, self.failures)
         self.cases = FakeCases(self.calls, self.failures)
@@ -465,7 +609,7 @@ class FakeDomain:
         parts = {
             "orders": self.orders, "options": self.options, "quotes": self.quotes,
             "execution": self.execution, "cases": self.cases, "trace": self.trace, "runs": self.runs,
-            "conversations": self.conversations, "gateway": self.gateway,
+            "conversations": self.conversations, "gateway": self.gateway, "store": self.store,
         }
         for name in skip:
             parts.pop(name)

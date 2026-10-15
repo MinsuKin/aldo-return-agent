@@ -3,8 +3,9 @@
 Two token families, never mixed:
 
 * ``/gateway/*`` accepts ONLY delegated tokens (the ALDO bot's short-lived, capped token). A
-  session token is NOT_AUTHORIZED there. Both calls are deterministic gateway functions: a
-  size assist returns ALDO's own facts, a size decision only RECORDS a proposal.
+  session token is NOT_AUTHORIZED there. The calls are deterministic gateway functions: a
+  size assist returns ALDO's own facts, the reviews are untrusted customer text with flags, a
+  size decision only RECORDS a proposal.
 * ``/purchases/*`` accepts ONLY session tokens: the owner's click is what turns a proposal into
   an order, exactly like the return approval. A delegated token is NOT_AUTHORIZED there, so no
   agent can place an order.
@@ -45,6 +46,17 @@ def register(api: Api) -> None:
         if isinstance(body.get("size_request_id"), str):
             req.annotate(size_request_id=body["size_request_id"][:32])
         return gateway.decide_size(req.claims, body)
+
+    @api.post("/gateway/reviews", auth=DELEGATED)
+    def reviews(req: Request) -> Any:
+        """Customer reviews of one style: untrusted text with a ``flags`` list per review.
+
+        Flagged (instruction-like) reviews are served, not dropped: the caller must ignore them.
+        """
+        body = req.body_dict()
+        if isinstance(body.get("style_id"), str):
+            req.annotate(style_id=body["style_id"][:64])
+        return gateway.get_reviews(req.claims, body)
 
     # ------------------------------------------------------- owner-facing (session token)
 

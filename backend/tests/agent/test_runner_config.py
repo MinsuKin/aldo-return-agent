@@ -44,7 +44,15 @@ def test_no_sampling_kwargs(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(runner, "BedrockModel", RecordingModel)
     runner.make_model(PRIMARY_ID)
-    assert seen == {"model_id": PRIMARY_ID, "region_name": "us-east-1", "max_tokens": 2048}
+    # Prompt caching (strands 1.61.0 cache_config, which replaces the deprecated cache_prompt/cache_tools)
+    # is the only addition; it is not a sampling parameter.
+    assert seen == {
+        "model_id": PRIMARY_ID, "region_name": "us-east-1", "max_tokens": 2048,
+        "cache_config": runner.PROMPT_CACHE_OPTIONS["cache_config"],
+    }
+    assert set(runner.PROMPT_CACHE_OPTIONS) == {"cache_config"}
+    cache = seen["cache_config"]
+    assert cache.strategy == "auto" and cache.tools_ttl is True and cache.system_prompt_ttl is True
     for forbidden in ("temperature", "top_p", "top_k", "stop_sequences", "additional_request_fields"):
         assert forbidden not in seen
 
@@ -111,8 +119,8 @@ def test_events_and_finish_run_in_order(domain: FakeDomain, models: dict[str, Sc
     (run_id, status, metrics), = domain.runs.finished
     assert (run_id, status) == ("RUN-TEST000001", "completed")
     assert set(metrics) == {
-        "rounds", "tool_count", "input_tokens", "output_tokens", "total_latency_ms",
-        "model_id_used", "fallback_used", "error_code",
+        "rounds", "tool_count", "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens",
+        "total_latency_ms", "model_id_used", "fallback_used", "error_code",
     }
     assert metrics["rounds"] == 2 and metrics["tool_count"] == 1
     assert metrics["input_tokens"] == 200 and metrics["output_tokens"] == 40

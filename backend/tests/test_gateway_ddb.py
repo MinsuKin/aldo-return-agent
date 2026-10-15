@@ -516,7 +516,7 @@ def test_a_session_token_cannot_propose(seeded):
     assert changed(before, snapshot()) == set()
 
 
-def test_the_delegation_limit_is_checked_against_the_price_ald_recorded(seeded):
+def test_the_delegation_limit_is_checked_against_the_price_aldo_recorded(seeded):
     response = assist()  # CAD 129.99
     before = snapshot()
     refused(ErrorCode.DELEGATION_LIMIT_EXCEEDED, propose, response, cap=12_998)
@@ -1008,6 +1008,162 @@ def test_simulated_delivery_refuses_fixture_orders_and_other_peoples_orders(seed
     assert store.get_item(store.order_key("DEMO-1007"))["delivered_at"] is None
     assert store.get_item(store.order_key(order.order_id))["delivered_at"] is None
     assert any(r["refs"]["resource_type"] == "order" for r in audit.list_audit(action="access_denied"))
+
+
+def test_a_simulated_delivery_shows_delivered_on_the_a2a_stream_once(seeded):
+    _, order = confirmed()
+    before = a2a_types()
+    gateway.simulate_delivery(AVA, order.order_id)
+    events = a2a()
+    assert [e["type"] for e in events] == before + ["delivered"]
+    delivered = events[-1]
+    assert delivered["actor"] == "system"
+    assert delivered["payload"] == {
+        "order_id": order.order_id,
+        "delivered_at": "2026-10-16",
+        "product_name": product_name_of(HERO),
+        "size": "8.0",
+    }
+    gateway.simulate_delivery(AVA, order.order_id)  # a repeat writes nothing and shows nothing
+    assert a2a_types() == before + ["delivered"]
+
+
+def test_a_refused_delivery_shows_nothing_on_the_stream(seeded):
+    _, order = confirmed()
+    before = a2a_types()
+    refused(ErrorCode.NOT_AUTHORIZED, gateway.simulate_delivery, BEN, order.order_id)
+    refused(ErrorCode.VALIDATION_ERROR, gateway.simulate_delivery, AVA, "DEMO-1001")
+    assert a2a_types() == before and a2a_types(BEN) == []
+
+
+# ================================================ John, the men's style and the reviews (demo v2)
+
+JOHN, DAVID = "DEMO-CUST-JOHN", "DEMO-CUST-DAVID"
+MEN = "DEMO-STYLE-MEN001"
+MEN_BLACK_095 = "DEMO-SKU-MEN001-BLACK-095"
+
+
+def john_assist(**overrides: Any) -> gateway.SizeAssistResponse:
+    return assist(JOHN, style=MEN, product_query="ALDO Men 001", color="black", size_system="US_M", **overrides)
+
+
+def test_johns_alias_finds_the_mens_style_with_the_real_fit_signal_and_his_stores(seeded):
+    response = john_assist()
+    assert (response.style_id, response.product_name, response.color) == (MEN, product_name_of(MEN), "BLACK")
+    assert (response.price_cents, response.currency) == (14_999, "CAD")
+    assert response.fit_signal.signal == "runs_large" and response.fit_signal.scope == "ALDO_CA"
+    assert response.fit_signal.n_fit >= 100 and response.fit_signal.too_small_share < 0.35
+    assert response.question.startswith("This style runs large (") and "'too big'" in response.question
+    sizes = {c.size: c.options for c in response.sizes}
+    assert list(sizes) == [f"{n / 2:.1f}" for n in range(16, 25)]  # 8.0 to 12.0 in half sizes
+    nine_half = sizes["9.5"]
+    # BLACK 9.5: DC 3, Montreal 0 (the stockout John met), Laval 1, Toronto 1 (not his region)
+    assert [(o.type, o.location_id) for o in nine_half] == [
+        ("ship_from_dc", DC), ("ship_from_store", LAVAL), ("store_pickup", LAVAL),
+    ]
+    assert [o.meets_deadline for o in nine_half] == [False, False, True]
+    assert [o.atp for o in nine_half] == [3, 1, 1]
+    assert request_item(response)["size_system"] == "US_M"
+    assert a2a_types(JOHN) == ["size_assist_requested", "fit_signal_shared", "size_requested"]
+
+
+def test_a_product_alias_in_the_fixtures_resolves_through_size_assist_on_the_table(ddb, tmp_path, monkeypatch):
+    """The builder variant: give the hero an alias in a copy of the fixtures and ask by that alias."""
+    import shutil
+    from pathlib import Path
+
+    from returns_domain import fit
+
+    source = Path(__file__).resolve().parents[2] / "fixtures"
+    copy = tmp_path / "fixtures"
+    for folder in ("demo", "derived"):
+        shutil.copytree(source / folder, copy / folder)
+    path = copy / "demo" / "products.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    for record in data["products"]:
+        if record["style"] == HERO:
+            record["aliases"] = ["Heroine Heels", "Hero H"]
+    path.write_text(json.dumps(data), encoding="utf-8")
+    monkeypatch.setenv("FIXTURES_DIR", str(copy))
+    fixtures.clear_cache()
+    fit.clear_cache()
+    fixtures.reset("default")
+
+    for query in ("Heroine Heels", "heroine heels", "  HERO   H ", "hero h"):
+        response = assist(AVA, product_query=query, color="black")
+        assert (response.style_id, response.product_name) == (HERO, product_name_of(HERO)), query
+    reviews = gateway.get_reviews(delegated(AVA), {"product_query": "heroine heels", "limit": 20})
+    assert reviews.style_id == HERO
+    still_by_name = assist(AVA, product_query=product_name_of(HERO))
+    assert still_by_name.style_id == HERO
+
+
+def test_a_mens_size_system_request_is_accepted_for_any_style_and_stored(seeded):
+    response = assist(AVA, size_system="US_M")
+    assert request_item(response)["size_system"] == "US_M"
+    assert request_item(assist(AVA))["size_system"] == "US_W"
+
+
+def test_johns_proposal_click_and_delivery_for_the_half_size_down(seeded):
+    response = john_assist()
+    proposal = propose(response, "9.5", "store_pickup", customer=JOHN)
+    assert proposal.status == "proposed" and proposal.summary["location_name"].endswith("Laval")
+    assert not agent_orders() and inv(MEN_BLACK_095, LAVAL)["atp"] == 1
+    order = gateway.confirm_purchase(JOHN, proposal.size_request_id, proposal.summary["option_id"])
+    assert order.order_id.startswith("DEMO-A2A-") and inv(MEN_BLACK_095, LAVAL)["atp"] == 0
+    gateway.simulate_delivery(JOHN, order.order_id)
+    events = a2a(JOHN)
+    assert [e["type"] for e in events] == [
+        "size_assist_requested", "fit_signal_shared", "size_requested", "size_recommended", "size_confirmed", "delivered",
+    ]
+    assert events[-1]["payload"]["product_name"] == product_name_of(MEN) and events[-1]["payload"]["size"] == "9.5"
+    assert events[-1]["payload"]["order_id"] == order.order_id
+
+
+def test_reading_the_reviews_shows_reviews_shared_with_counts_and_no_text(seeded):
+    response = john_assist()
+    answer = gateway.get_reviews(delegated(JOHN), {"style_id": response.style_id, "limit": 20})
+    assert answer.n_reviews == 16 and answer.n_flagged == 1
+    events = a2a(JOHN)
+    assert [e["type"] for e in events] == [
+        "size_assist_requested", "fit_signal_shared", "size_requested", "reviews_shared",
+    ]
+    shared = events[-1]
+    assert shared["actor"] == "aldo_gateway"
+    assert shared["payload"] == {
+        "style_id": MEN,
+        "product_name": product_name_of(MEN),
+        "n_reviews": 16,
+        "n_flagged": 1,
+        "flagged_review_ids": ["REV-INJECT-1"],
+        "provenance": "synthetic",
+    }
+    text = json.dumps(events).lower()
+    assert "ignore" not in text and "five stars" not in text and JOHN.lower() not in text
+
+
+def test_the_reviews_of_the_other_styles_come_from_their_own_fixture_set(seeded):
+    hero = gateway.get_reviews(delegated(AVA), {"product_query": product_name_of(HERO), "limit": 20})
+    assert (hero.style_id, hero.n_reviews, hero.n_flagged) == (HERO, 8, 0)
+    contrast = gateway.get_reviews(delegated(AVA), {"style_id": "DEMO-STYLE-CONTRAST", "limit": 20})
+    assert (contrast.n_reviews, contrast.n_flagged) == (4, 0)
+    assert all(r.rating in range(1, 6) and r.text and r.flags == [] for r in hero.reviews + contrast.reviews)
+
+
+def test_reviews_change_no_stock_and_create_no_request_or_order(seeded):
+    before = snapshot()
+    gateway.get_reviews(delegated(JOHN), {"style_id": MEN, "limit": 20})
+    after = snapshot()
+    assert {key[0] for key in changed(before, after)} == {f"RUN#A2A-{JOHN}"}  # only the A2A stream itself
+    assert not agent_orders()
+
+
+def test_a_session_token_cannot_read_the_reviews_and_nothing_is_written(seeded):
+    before = snapshot()
+    refused(ErrorCode.NOT_AUTHORIZED, gateway.get_reviews, session(JOHN), {"style_id": MEN})
+    refused(ErrorCode.VALIDATION_ERROR, gateway.get_reviews, delegated(JOHN), {"style_id": MEN, "customer_id": AVA})
+    refused(ErrorCode.UNKNOWN_STYLE, gateway.get_reviews, delegated(JOHN), {"style_id": "DEMO-STYLE-NOPE"})
+    assert changed(before, snapshot()) == set()
 
 
 # =========================================================================== reset

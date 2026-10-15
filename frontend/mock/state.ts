@@ -29,7 +29,8 @@ export const MODEL_ID = "us.anthropic.claude-sonnet-5-5";
 export const writebackDelay = { ms: Number(process.env.MOCK_WRITEBACK_DELAY_MS ?? "0") };
 
 export const now = (): number => Date.now();
-export const iso = (ms: number): string => new Date(ms).toISOString().replace(/\.\d+Z$/, "+00:00");
+/** ISO timestamp with milliseconds, so events a fraction of a second apart keep their order and spacing. */
+export const iso = (ms: number): string => new Date(ms).toISOString().replace("Z", "+00:00");
 export const hex = (n: number): string => randomBytes(Math.ceil(n / 2)).toString("hex").slice(0, n).toUpperCase();
 export const newId = (prefix: string, n = 6): string => `${prefix}${hex(n)}`;
 
@@ -57,14 +58,76 @@ export interface Run {
   events: ScriptEvent[];
 }
 
+/** What the return workflow knows about the current return (addendum 11.5; one chat, two workflows). */
+export interface RetMemo {
+  orderId?: string;
+  reason?: string;
+  condition?: "unworn" | "worn";
+  color?: string;
+  channel?: "store" | "mail";
+  lineIds: string[];
+  /** Reason and condition of the previous return, reused for "also return the grey sneaker". */
+  lastReason?: string;
+  lastCondition?: "unworn" | "worn";
+  latestQuoteId?: string;
+  /** "too_big" / "too_small" for a fit return. */
+  direction?: "too_big" | "too_small";
+  /** get_order_context already ran for this return. */
+  contextRead?: boolean;
+  /** The policy checks already run for these facts (so the trace shows each check once). */
+  policyKey?: string;
+  policyIds?: string[];
+  /** The customer already asked to waive a fee or override the policy in this return. */
+  overrideAsked?: boolean;
+}
+
+export const newRetMemo = (): RetMemo => ({ lineIds: [] });
+
 export interface Conv {
   conv_id: string;
   customer_id: string;
   agent: "aldo" | "personal";
   order_id: string | null;
   active_run_id: string | null;
-  /** Remembered between turns so a follow-up can answer a clarifying question. */
+  /** Remembered between turns so a follow-up can answer a clarifying question (legacy return flows). */
   memo: { orderId?: string; reason?: string; direction?: string; deadline?: string | null; latestQuoteId?: string };
+  /** "bot" = purchase workflow, "returns" = return workflow (personal conversations only). */
+  mode: "bot" | "returns";
+  returns_order_id: string | null;
+  ret: RetMemo;
+}
+
+export const newConv = (conv_id: string, customer_id: string, agent: Conv["agent"], order_id: string | null = null): Conv => ({
+  conv_id,
+  customer_id,
+  agent,
+  order_id,
+  active_run_id: null,
+  memo: {},
+  mode: "bot",
+  returns_order_id: null,
+  ret: newRetMemo(),
+});
+
+export interface BundleLine {
+  line_id: string;
+  sku: string;
+  product_name: string;
+  category?: string;
+  color: string;
+  size: string;
+  qty: number;
+  refund_cents: number;
+  unit_paid_cents: number;
+}
+
+export interface Benefit {
+  type: "free_return_shipping";
+  label: string;
+  saved_cents: number;
+  used: number;
+  per_month: number;
+  note: string;
 }
 
 export interface QuoteOption {
@@ -72,6 +135,9 @@ export interface QuoteOption {
   type: string;
   sku: string;
   replacement_size: string | null;
+  /** Colour exchange: the colour the customer gets (same style and size). */
+  replacement_color?: string | null;
+  original_size?: string | null;
   location_id: string;
   location_name: string;
   qty: number;
@@ -81,10 +147,16 @@ export interface QuoteOption {
   eta_date: string;
   eta_text: string;
   meets_deadline: boolean | null;
+  /** Travel time to the store in minutes, when known (addendum 11.1 D6). */
+  minutes_away?: number | null;
   conditions: string[];
   evidence: Record<string, unknown>;
   source_refs: string[];
   provenance: string;
+  /** Bundle option: the items of one shipment (addendum 11.1 D9). */
+  lines?: BundleLine[];
+  benefit?: Benefit | null;
+  ranking_note?: string;
   payload_hash?: string;
 }
 
@@ -114,6 +186,18 @@ export interface Quote {
   stored_status: "open" | "executed" | "superseded";
   options: QuoteOption[];
   approval: Approval | null;
+  /** Built by the colour exchange / bundle engine (not the legacy fit-exchange engine). */
+  v2?: boolean;
+  /** Lines the quote covers (a bundle covers several). */
+  line_ids?: string[];
+}
+
+export interface StoreNotice {
+  store_id: string;
+  store_name: string;
+  eta_minutes: number | null;
+  summary: string;
+  notified_at: string;
 }
 
 export interface Txn {
@@ -128,6 +212,7 @@ export interface Txn {
   location_id: string;
   location_name: string;
   replacement_size: string | null;
+  replacement_color?: string | null;
   refund_cents: number;
   fee_cents: number;
   currency: string;
@@ -138,6 +223,11 @@ export interface Txn {
   created_at: string;
   quote_id: string;
   update_id: string | null;
+  /** Bundle return: one transaction, several lines. */
+  lines?: BundleLine[];
+  benefit?: Benefit | null;
+  /** Created in the same transaction as an in-store exchange or return (addendum 11.1 D7). */
+  store_notice?: StoreNotice | null;
 }
 
 export interface CaseRecord {
@@ -163,6 +253,8 @@ export interface MemoryUpdate {
   reason: string;
   outcome: string;
   provisional: boolean;
+  /** "size_ok" when the owner kept the same size while exchanging colour (addendum 11.1 D11). */
+  fit_feedback?: string | null;
   source: string;
   ts: string;
 }
@@ -228,6 +320,8 @@ export interface MockState {
   /** ALDO -> ALDO bot write-backs waiting to be delivered (A2AOUT# items). */
   outbox: Map<string, PendingWriteback[]>;
   sizeRequests: Map<string, SizeRequest>;
+  /** Monthly benefit ledger: `${customer_id}|${yyyy-mm}` -> perks used (addendum 11.1 D8). */
+  ledger: Map<string, number>;
   auditCount: number;
 }
 
@@ -244,6 +338,7 @@ export const state: MockState = {
   memoryUpdates: new Map(),
   outbox: new Map(),
   sizeRequests: new Map(),
+  ledger: new Map(),
   auditCount: 0,
 };
 
@@ -262,6 +357,7 @@ export function resetState(variant: Variant): { deleted: number; written: number
   state.outbox = new Map();
   writebackDelay.ms = Number(process.env.MOCK_WRITEBACK_DELAY_MS ?? "0");
   state.sizeRequests = new Map();
+  state.ledger = new Map();
   return { deleted, written: state.orders.length + state.inventory.size };
 }
 
@@ -278,9 +374,12 @@ export function takeStock(sku: string, loc: string, qty: number): void {
 
 // ---- A2A stream and memory --------------------------------------------------------------
 
+/** While a scripted event's side effect runs, this is the time the event was scripted for. */
+export const clock = { at: 0 };
+
 export function pushA2a(customerId: string, type: string, actor: string, payload: Record<string, unknown>): void {
   const list = state.a2a.get(customerId) ?? [];
-  list.push({ seq: list.length + 1, type, ts: iso(now()), actor, payload });
+  list.push({ seq: list.length + 1, type, ts: iso(clock.at || now()), actor, payload });
   state.a2a.set(customerId, list);
 }
 
@@ -291,7 +390,7 @@ export function memoryFor(customerId: string) {
     display_name: seed?.display_name ?? "Owner",
     size_system: seed?.size_system ?? "US_W",
     typical_size: seed?.typical_size ?? null,
-    label: "Synthetic demo memory",
+    label: "ALDO bot memory",
     memory: seed?.memory ?? [],
     updates: state.memoryUpdates.get(customerId) ?? [],
   };
@@ -330,11 +429,13 @@ export function flushOutbox(customerId: string): number {
       update_id: u.update_id,
       style_id: u.style_id,
       product_name: u.product_name,
+      color: u.color,
       original_size: u.original_size,
       new_size: u.new_size,
       reason: u.reason,
       outcome: u.outcome,
       provisional: u.provisional,
+      ...(u.fit_feedback ? { fit_feedback: u.fit_feedback } : {}),
     });
   }
   return due.length;
@@ -440,7 +541,12 @@ export function materialize(t = now()): void {
       if (ev.applied) continue;
       if (run.startedAt + ev.at > t) break;
       ev.applied = true;
-      ev.apply?.();
+      clock.at = run.startedAt + ev.at;
+      try {
+        ev.apply?.();
+      } finally {
+        clock.at = 0;
+      }
     }
   }
 }
@@ -497,17 +603,17 @@ export function sizeRun(style: string): { token: string; color: string } | null 
   return null;
 }
 
-function condition(type: string): string[] {
+export function condition(type: string): string[] {
   switch (type) {
     case "exchange_store_pickup":
       return ["Bring the original pair, unworn", "Collect within 7 days of the ready date"];
     case "exchange_ship_from_store":
     case "exchange_ship_from_dc":
-      return ["Send back the original pair, unworn, in its box", "Free shipping both ways (demo assumption)"];
+      return ["Send back the original pair, unworn, in its box", "Free shipping both ways"];
     case "return_in_store":
-      return ["Bring the original pair, unworn", "Refund at drop-off to the original payment method (simulated)"];
+      return ["Bring the original pair, unworn", "Refund at drop-off to the original payment method"];
     default:
-      return ["Fee CAD 5.95 is taken from the refund (demo assumption)", "Refund about 10 days after drop-off (simulated)"];
+      return ["Standard shipping fee of CAD 5.95 is taken from the refund", "Refund follows once ALDO receives the parcel"];
   }
 }
 
@@ -708,25 +814,37 @@ export function quoteStatus(q: Quote, t = now()): string {
   return q.stored_status;
 }
 
-export function nextStepText(o: { type: string; location_name: string; replacement_size: string | null; eta_date: string; fee_cents: number }): string {
+export function nextStepText(o: {
+  type: string;
+  location_name: string;
+  replacement_size: string | null;
+  replacement_color?: string | null;
+  eta_date: string;
+  fee_cents: number;
+}): string {
   const day = weekdayText(o.eta_date);
+  const what = `${o.replacement_color ? `${o.replacement_color.toLowerCase()} ` : "size "}${o.replacement_size}`;
   switch (o.type) {
     case "exchange_store_pickup":
-      return `Pick up size ${o.replacement_size} at ${o.location_name} from ${day}; bring the original pair, unworn.`;
+      return o.eta_date === DEMO_TODAY
+        ? `Pick up ${what} at ${o.location_name} today. Bring the original pair, unworn.`
+        : `Pick up ${what} at ${o.location_name} from ${day}. Bring the original pair, unworn.`;
     case "exchange_ship_from_store":
     case "exchange_ship_from_dc":
-      return `Size ${o.replacement_size} is set aside at ${o.location_name} for ${day}. Send back the original pair, unworn, in its box.`;
+      return `${what} ships from ${o.location_name} and should arrive ${day}. Send back the original pair, unworn, in its box.`;
     case "return_in_store":
-      return `Bring the original pair, unworn, to ${o.location_name}. The simulated return is recorded; no money has moved.`;
+      return `Bring the original pair, unworn, to ${o.location_name}. Your refund is issued at drop-off.`;
     default:
-      return `Mail the original pair, unworn, to ${o.location_name}. A fee of CAD 5.95 applies (simulated).`;
+      return o.fee_cents > 0
+        ? `A return label has been created. Pack the items and drop the parcel at any carrier point; the CAD 5.95 shipping fee comes out of your refund, which follows once ALDO receives it.`
+        : `A return label has been created. Pack the items and drop the parcel at any carrier point; shipping is free and your refund follows once ALDO receives it.`;
   }
 }
 
 export function purchaseNextStep(o: Pick<OfferedOption, "type" | "size" | "location_name" | "eta_text">): string {
   return o.type === "store_pickup"
-    ? `Pick up size ${o.size} at ${o.location_name} from ${o.eta_text}. Simulated order, no payment taken.`
-    : `Size ${o.size} ships from ${o.location_name} and should arrive by ${o.eta_text}. Simulated order, no payment taken.`;
+    ? `Pick up size ${o.size} at ${o.location_name} from ${o.eta_text}.`
+    : `Size ${o.size} ships from ${o.location_name} and should arrive by ${o.eta_text}.`;
 }
 
 /** The ONLY place an agent-channel order is created: the owner's confirm click (or a mock control standing in for another client). */
@@ -767,9 +885,11 @@ export function placeOrder(sr: SizeRequest, opt: OfferedOption, approvedBy = "ow
     size_request_id: sr.size_request_id,
     order_id: orderId,
     status: "placed_simulated",
-    chosen_size: opt.size,
+    size: opt.size,
+    location_name: opt.location_name,
+    eta_date: opt.eta_date,
+    price_cents: sr.price_cents,
     fulfillment,
-    next_step: nextStep,
     approved_by: approvedBy,
   });
   return {

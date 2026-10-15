@@ -7,7 +7,8 @@ query) passes through ``sanitize_public_text`` first. It removes, in this order:
    "(synthetic)" marker) and any generic "Retailer X" label;
 2. the item names of the owner's other purchases (whole-phrase match);
 3. every number that appears in the owner's memory (typical size and sizes of other purchases),
-   compared by numeric value, so "8", "8.0" and "8,0" are all the same number;
+   compared by numeric value, so "8", "8.0", "8,0" and "7 ½" are the same numbers as 8.0 and 7.5;
+   spelled-out forms ("seven and a half", "eight") are removed as well;
 
 then tidies leftover punctuation and truncates to the limit (default 120 characters). The model is
 also told not to include any of this; this module is the backstop that does not depend on it.
@@ -29,6 +30,11 @@ _EMPTY_BRACKETS = re.compile(r"\(\s*\)|\[\s*\]|\{\s*\}")
 _SPACE_BEFORE_PUNCT = re.compile(r"\s+([,.;:!?])")
 _REPEATED_PUNCT = re.compile(r"([,;:])(?:\s*[,;:])+")
 _WHITESPACE = re.compile(r"\s+")
+_HALF_FRACTION = re.compile(r"(\d)\s*[\u00bd]")
+_NUMBER_WORDS = (
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen "
+    "sixteen seventeen eighteen nineteen twenty"
+).split()
 _MD_HEADING = re.compile(r"(?m)^\s{0,3}#{1,6}\s+")
 _MD_BULLET = re.compile(r"(?m)^\s*(?:[-*\u2022]|\d{1,2}[.)])\s+")
 _MD_EMPHASIS = re.compile(r"\*\*|__|\*|`")
@@ -91,7 +97,8 @@ class PrivateTerms:
 
 def normalize_text(text: object) -> str:
     """NFKC-normalize, drop invisible/control characters and collapse whitespace."""
-    raw = unicodedata.normalize("NFKC", str(text if text is not None else ""))
+    raw = _HALF_FRACTION.sub(r"\1.5", str(text if text is not None else ""))
+    raw = unicodedata.normalize("NFKC", raw)
     kept: list[str] = []
     for char in raw:
         category = unicodedata.category(char)
@@ -147,6 +154,25 @@ def count_words(text: str) -> int:
     return len(text.split())
 
 
+def spelled_forms(number: Decimal) -> list[str]:
+    """Spelled-out ways to write a shoe size: "seven and a half", "seven point five", "eight", "8 1/2"."""
+    if number < 0 or number > 20:
+        return []
+    whole = int(number)
+    fraction = number - whole
+    if fraction == 0:
+        return [_NUMBER_WORDS[whole]]
+    if fraction == Decimal("0.5"):
+        word = _NUMBER_WORDS[whole]
+        return [f"{word} and a half", f"{word}-and-a-half", f"{word} point five", f"{word} 1/2", f"{whole} 1/2", f"{whole}-1/2"]
+    return []
+
+
+def _spelled_patterns(numbers: Iterable[Decimal]) -> list[re.Pattern[str]]:
+    phrases = sorted({form for number in numbers for form in spelled_forms(number)}, key=len, reverse=True)
+    return [_phrase_pattern(phrase) for phrase in phrases]
+
+
 def sanitize_public_text(text: object, terms: PrivateTerms, *, max_chars: int) -> str:
     """Return ``text`` without private terms, tidied and at most ``max_chars`` long."""
     cleaned = normalize_text(text)
@@ -157,8 +183,46 @@ def sanitize_public_text(text: object, terms: PrivateTerms, *, max_chars: int) -
     for item in sorted(terms.items, key=len, reverse=True):
         if not is_protected(item):
             cleaned = _phrase_pattern(item).sub(" ", cleaned)
+    for pattern in _spelled_patterns(terms.numbers):
+        cleaned = pattern.sub(" ", cleaned)
     cleaned = _strip_numbers(cleaned, terms.numbers)
     return truncate(_tidy(cleaned), max_chars)
+
+
+_WORD = re.compile(r"\w+(?:'\w+)?", re.UNICODE)
+_SENTENCE_END = re.compile(r"(?<=[.!?…])\s+")
+QUOTE_WINDOW = 4  # consecutive words that count as "quoting" a source
+
+
+def _word_grams(text: object, window: int) -> set[tuple[str, ...]]:
+    words = _WORD.findall(normalize_text(text).lower())
+    return {tuple(words[index : index + window]) for index in range(len(words) - window + 1)}
+
+
+def quotes_any(text: object, sources: Iterable[str], *, window: int = QUOTE_WINDOW) -> bool:
+    """True when ``text`` repeats ``window`` or more consecutive words of any of ``sources``.
+
+    Used for flagged reviews: whatever an injected review said must not come back out in a public
+    rationale or in the reply to the owner, not even as a quotation. Case, punctuation and
+    spacing do not matter.
+    """
+    grams = _word_grams(text, window)
+    if not grams:
+        return False
+    return any(grams & _word_grams(source, window) for source in sources if source)
+
+
+def drop_quoting_sentences(text: str, sources: Iterable[str], *, window: int = QUOTE_WINDOW) -> str:
+    """``text`` without the sentences that quote a source (the rest is kept as written)."""
+    sources = [source for source in sources if source]
+    if not sources:
+        return text
+    kept = [
+        sentence
+        for sentence in _SENTENCE_END.split(text.strip())
+        if sentence and not quotes_any(sentence, sources, window=window)
+    ]
+    return " ".join(kept).strip()
 
 
 def contains_private_term(text: str, terms: PrivateTerms) -> bool:
@@ -169,6 +233,8 @@ def contains_private_term(text: str, terms: PrivateTerms) -> bool:
     if any(_phrase_pattern(label).search(probe) for label in terms.label_variants()):
         return True
     if any(_phrase_pattern(item).search(probe) for item in terms.items if not is_protected(item)):
+        return True
+    if any(pattern.search(probe) for pattern in _spelled_patterns(terms.numbers)):
         return True
     return any(
         _number_value(match.group(0)) in terms.numbers for match in _NUMBER.finditer(probe)
