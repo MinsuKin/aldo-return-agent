@@ -245,21 +245,37 @@ class FakeSystem:
         self._hidden.clear()
         root = Path(os.environ.get("FIXTURES_DIR") or REPO_ROOT / "fixtures")
         load = lambda name: json.loads((root / name).read_text(encoding="utf-8"))  # noqa: E731
+        opt = lambda name: load(name) if (root / name).is_file() else None  # noqa: E731
         items: list[dict] = []
-        for c in load("demo/customers.json")["customers"]:
+        customers = load("demo/customers.json")["customers"]
+        if opt("demo/customers_v2.json"):
+            customers = customers + load("demo/customers_v2.json")["customers"]
+        for c in customers:
             items.append({"pk": f"CUST#{c['customer_id']}", "sk": "PROFILE", **c})
-        for o in load("demo/orders.json")["orders"]:
+        orders = load("demo/orders.json")["orders"]
+        if opt("demo/orders_v2.json"):
+            orders = orders + load("demo/orders_v2.json")["orders"]
+        for o in orders:
             meta = {k: v for k, v in o.items() if k != "lines"}
             items.append({**meta, "pk": f"ORDER#{o['order_id']}", "sk": "META", "gsi1pk": f"CUST#{o['customer_id']}",
                           "gsi1sk": f"ORDER#{o['ordered_at']}#{o['order_id']}"})
             items += [{**line, "pk": f"ORDER#{o['order_id']}", "sk": f"LINE#{line['line_id']}", "order_id": o["order_id"]} for line in o["lines"]]
-        for p in load("demo/products.json")["products"]:
+        products = load("demo/products.json")["products"]
+        if opt("demo/products_v2.json"):
+            products = products + load("demo/products_v2.json")["products"]
+        for p in products:
             items.append({**p, "pk": f"PRODUCT#{p['sku']}", "sk": "META", "gsi1pk": f"STYLE#{p['style']}#{p['color']}",
                           "gsi1sk": f"SIZE#{float(p['size']):05.1f}"})
         items += [{**loc, "pk": f"LOC#{loc['location_id']}", "sk": "META"} for loc in load("demo/locations.json")["locations"]]
+        # inventory_v2.json is additive and merged behind the base, exactly as fixtures.load_bundle.
         inv_doc = load("demo/inventory.json")
-        rows = {(r["sku"], r["location_id"]): dict(r, version=1) for r in inv_doc["base"]}
-        for over in inv_doc["variants"][variant]["overrides"]:
+        inv_v2 = opt("demo/inventory_v2.json")
+        base_rows = list(inv_doc["base"]) + (list(inv_v2["base"]) if inv_v2 else [])
+        rows = {(r["sku"], r["location_id"]): dict(r, version=1) for r in base_rows}
+        overrides = list(inv_doc["variants"][variant]["overrides"])
+        if inv_v2:
+            overrides += list((inv_v2.get("variants", {}).get(variant) or {}).get("overrides") or [])
+        for over in overrides:
             rows[(over["sku"], over["location_id"])]["atp"] = over["atp"]
         items += [{**r, "pk": f"INV#{r['sku']}", "sk": f"LOC#{r['location_id']}"} for r in rows.values()]
         with self.t.aldo.batch_writer() as batch:

@@ -322,19 +322,39 @@ def load_fixture_facts(fixtures_dir: Path | None = None) -> FixtureFacts:
     hero = next(p for p in products if p.get("style") == HERO_STYLE)
     name = str(hero["product_name"])
     query = (re.match(r"[A-Za-z]+", name) or re.match(r".+", name)).group(0)
+    # Fixtures v2 are ADDITIVE and merged exactly as returns_domain.fixtures.load_bundle does:
+    # inventory_v2.json "base" rows follow the base rows, and each variant's overrides are the
+    # base overrides followed by the v2 overrides. The deployed reset loads this merged bundle,
+    # so the eval's expected inventory must too (otherwise every v2 row reads as "unexpected").
     inv_doc = _load_json(demo / "inventory.json")
-    base = {(r["sku"], r["location_id"]): {"atp": int(r["atp"]), "version": 1} for r in inv_doc["base"]}
+    inv_v2 = _load_json(demo / "inventory_v2.json") if (demo / "inventory_v2.json").is_file() else None
+    base_rows = list(inv_doc["base"]) + (list(inv_v2["base"]) if inv_v2 else [])
+    base = {(r["sku"], r["location_id"]): {"atp": int(r["atp"]), "version": 1} for r in base_rows}
+    variant_specs: dict[str, dict] = {v: dict(spec) for v, spec in inv_doc["variants"].items()}
+    if inv_v2:
+        for v, spec in inv_v2.get("variants", {}).items():
+            merged = {**variant_specs.get(v, {})}
+            merged["overrides"] = [
+                *(variant_specs.get(v, {}).get("overrides") or []),
+                *(spec.get("overrides") or []),
+            ]
+            variant_specs[v] = merged
     inventory: dict[str, dict] = {}
-    for variant, spec in inv_doc["variants"].items():
+    for variant, spec in variant_specs.items():
         rows = {k: dict(v) for k, v in base.items()}
         for over in spec.get("overrides", []):
             rows[(over["sku"], over["location_id"])]["atp"] = int(over["atp"])
         inventory[variant] = rows
     lines = {}
-    for order in _load_json(demo / "orders.json")["orders"]:
+    order_docs = list(_load_json(demo / "orders.json")["orders"])
+    if (demo / "orders_v2.json").is_file():
+        order_docs += list(_load_json(demo / "orders_v2.json")["orders"])
+    for order in order_docs:
         for line in order["lines"]:
             lines[(order["order_id"], line["line_id"])] = int(line["returned_or_reserved_qty"])
     customers = _load_json(demo / "customers.json")["customers"]
+    if (demo / "customers_v2.json").is_file():
+        customers = list(customers) + list(_load_json(demo / "customers_v2.json")["customers"])
     typical: dict[str, str] = {}
     labels: dict[str, tuple[str, ...]] = {}
     memory_path = root / "personal_agent" / "memory.json"

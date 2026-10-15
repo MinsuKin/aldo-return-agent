@@ -1,0 +1,1283 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-15T22:12:05+00:00",
+  "mode": "live",
+  "simulated": false,
+  "cost_basis": "est_cost_per_run_usd = mean estimated cost (USD, ASSUMED token prices) of one eval run of the ALDO returns-agent scenarios (A, B, C, D, E, H, P4) that called the model; ALDO bot purchase runs (P1, P2) are reported per scenario only.",
+  "latency_note": "Latency = wall-clock time of the agent turns and API calls of one run (reset, DynamoDB reads and assertions excluded). Percentiles use nearest rank over the runs, so with N=3 p95 is the slowest run.",
+  "est_cost_per_run_usd": 0.012664,
+  "target": {
+    "base_url": "https://d38111d70jquli.cloudfront.net",
+    "region": "us-east-1",
+    "tables": [
+      "aldo-returns-demo",
+      "aldo-personal-agent-demo"
+    ]
+  },
+  "runs_per_scenario": 1,
+  "summary": {
+    "runs": 10,
+    "passed": 10,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "llm_runs": 13,
+    "fallback_model_runs": 0,
+    "input_tokens": 81683,
+    "output_tokens": 7409,
+    "models_seen": {
+      "us.anthropic.claude-sonnet-5-5": 13
+    },
+    "tokens_missing_in_some_runs": false,
+    "returns_agent_runs_costed": 7
+  },
+  "pricing": {
+    "basis": "assumed",
+    "unit": "USD per million tokens",
+    "primary": {
+      "model_id": "us.anthropic.claude-sonnet-5-5",
+      "input_per_mtok": 3.0,
+      "output_per_mtok": 15.0
+    },
+    "fallback": {
+      "model_id": "us.anthropic.claude-opus-5-5",
+      "input_per_mtok": 5.0,
+      "output_per_mtok": 25.0
+    },
+    "usd_to_cad": 1.38,
+    "usd_to_cad_basis": "assumed"
+  },
+  "scenarios": {
+    "A": {
+      "title": "Exchange shipped from the DC (default stock)",
+      "variant": "default",
+      "returns_agent": true,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 22640.9,
+        "p95": 22640.9,
+        "mean": 22640.9,
+        "min": 22640.9,
+        "max": 22640.9
+      },
+      "agent_reported_latency_ms": {
+        "mean": 13679.0
+      },
+      "tokens": {
+        "mean_input": 22.0,
+        "mean_output": 1128.0,
+        "mean_total": 1150.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.016986,
+        "total": 0.016986
+      },
+      "cost_cad": {
+        "mean_per_run": 0.023441,
+        "total": 0.023441
+      },
+      "llm_runs_per_run": 2.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "A",
+          "title": "Exchange shipped from the DC (default stock)",
+          "variant": "default",
+          "returns_agent": true,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 22640.9,
+          "agent_reported_latency_ms": 13679,
+          "input_tokens": 22,
+          "output_tokens": 1128,
+          "tokens_reported": true,
+          "cost_usd": 0.016986,
+          "cost_cad": 0.023441,
+          "llm_runs": [
+            {
+              "label": "customer_run",
+              "agent": "aldo",
+              "run_id": "RUN-D8BD9D57E9",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 6,
+              "tool_count": 6,
+              "input_tokens": 14,
+              "output_tokens": 841,
+              "agent_latency_ms": 9573,
+              "wall_ms": 16787.9,
+              "error_code": null,
+              "tokens_reported": true
+            },
+            {
+              "label": "approval_run",
+              "agent": "aldo",
+              "run_id": "RUN-2975FE8F08",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 3,
+              "tool_count": 2,
+              "input_tokens": 8,
+              "output_tokens": 287,
+              "agent_latency_ms": 4106,
+              "wall_ms": 4434.5,
+              "error_code": null,
+              "tokens_reported": true
+            }
+          ],
+          "checks_passed": 35,
+          "checks_failed": 0,
+          "passed_checks": [
+            "reset_accepted",
+            "reset_runtime_partitions_empty",
+            "reset_inventory_matches_variant",
+            "reset_line_quantities_restored",
+            "customer_run_completed_ok",
+            "customer_run_run_completed_last",
+            "quote_created_event",
+            "quote_persisted_for_customer_order",
+            "api_quote_matches_table",
+            "quote_keeps_a_refund_option_visible",
+            "before_approval_no_transaction",
+            "before_approval_no_idempotency_record",
+            "before_approval_no_approval",
+            "before_approval_no_agent_order",
+            "before_approval_cases_created",
+            "before_approval_atp_unchanged",
+            "before_approval_line_quantities_unchanged",
+            "expected_option_offered",
+            "approve_accepted",
+            "approval_run_completed_ok",
+            "approval_run_run_completed_last",
+            "exactly_one_transaction",
+            "transaction_id_format",
+            "transaction_completed",
+            "transaction_bound_to_request",
+            "transaction_matches_approved_option",
+            "atp_down_by_one_at_chosen_location",
+            "line_returned_qty_up_by_one",
+            "approval_consumed_by_transaction",
+            "idempotency_record_points_to_transaction",
+            "quote_marked_executed",
+            "one_approval_total",
+            "no_case_created",
+            "one_transaction_created_event",
+            "verified_with_status_read"
+          ],
+          "failed_checks": [],
+          "observed": {
+            "quote_option_types": [
+              "exchange_ship_from_store",
+              "exchange_ship_from_dc",
+              "exchange_store_pickup",
+              "return_in_store",
+              "return_mail"
+            ]
+          }
+        }
+      ]
+    },
+    "B": {
+      "title": "DC stockout: Montreal store pickup before Saturday",
+      "variant": "dc_stockout",
+      "returns_agent": true,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 18792.3,
+        "p95": 18792.3,
+        "mean": 18792.3,
+        "min": 18792.3,
+        "max": 18792.3
+      },
+      "agent_reported_latency_ms": {
+        "mean": 12872.0
+      },
+      "tokens": {
+        "mean_input": 22.0,
+        "mean_output": 1185.0,
+        "mean_total": 1207.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.017841,
+        "total": 0.017841
+      },
+      "cost_cad": {
+        "mean_per_run": 0.024621,
+        "total": 0.024621
+      },
+      "llm_runs_per_run": 2.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "B",
+          "title": "DC stockout: Montreal store pickup before Saturday",
+          "variant": "dc_stockout",
+          "returns_agent": true,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 18792.3,
+          "agent_reported_latency_ms": 12872,
+          "input_tokens": 22,
+          "output_tokens": 1185,
+          "tokens_reported": true,
+          "cost_usd": 0.017841,
+          "cost_cad": 0.024621,
+          "llm_runs": [
+            {
+              "label": "customer_run",
+              "agent": "aldo",
+              "run_id": "RUN-3247C9D502",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 6,
+              "tool_count": 6,
+              "input_tokens": 14,
+              "output_tokens": 902,
+              "agent_latency_ms": 8727,
+              "wall_ms": 13183.1,
+              "error_code": null,
+              "tokens_reported": true
+            },
+            {
+              "label": "approval_run",
+              "agent": "aldo",
+              "run_id": "RUN-8A65FC120C",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 3,
+              "tool_count": 2,
+              "input_tokens": 8,
+              "output_tokens": 283,
+              "agent_latency_ms": 4145,
+              "wall_ms": 4567.5,
+              "error_code": null,
+              "tokens_reported": true
+            }
+          ],
+          "checks_passed": 39,
+          "checks_failed": 0,
+          "passed_checks": [
+            "reset_accepted",
+            "reset_runtime_partitions_empty",
+            "reset_inventory_matches_variant",
+            "reset_line_quantities_restored",
+            "customer_run_completed_ok",
+            "customer_run_run_completed_last",
+            "quote_created_event",
+            "quote_persisted_for_customer_order",
+            "api_quote_matches_table",
+            "quote_keeps_a_refund_option_visible",
+            "before_approval_no_transaction",
+            "before_approval_no_idempotency_record",
+            "before_approval_no_approval",
+            "before_approval_no_agent_order",
+            "before_approval_cases_created",
+            "before_approval_atp_unchanged",
+            "before_approval_line_quantities_unchanged",
+            "dc_exchange_not_offered_when_dc_is_out",
+            "pickup_options_meet_saturday",
+            "ranking_pickup_first_when_deadline",
+            "expected_option_offered",
+            "approve_accepted",
+            "approval_run_completed_ok",
+            "approval_run_run_completed_last",
+            "exactly_one_transaction",
+            "transaction_id_format",
+            "transaction_completed",
+            "transaction_bound_to_request",
+            "transaction_matches_approved_option",
+            "atp_down_by_one_at_chosen_location",
+            "line_returned_qty_up_by_one",
+            "approval_consumed_by_transaction",
+            "idempotency_record_points_to_transaction",
+            "quote_marked_executed",
+            "one_approval_total",
+            "no_case_created",
+            "one_transaction_created_event",
+            "verified_with_status_read",
+            "transaction_eta_is_saturday"
+          ],
+          "failed_checks": [],
+          "observed": {
+            "quote_option_types": [
+              "exchange_store_pickup",
+              "exchange_ship_from_store",
+              "return_in_store",
+              "return_mail"
+            ]
+          }
+        }
+      ]
+    },
+    "C": {
+      "title": "Final sale, change of mind: ineligible, nothing committed",
+      "variant": "default",
+      "returns_agent": true,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 9286.2,
+        "p95": 9286.2,
+        "mean": 9286.2,
+        "min": 9286.2,
+        "max": 9286.2
+      },
+      "agent_reported_latency_ms": {
+        "mean": 3732.0
+      },
+      "tokens": {
+        "mean_input": 8.0,
+        "mean_output": 329.0,
+        "mean_total": 337.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.004959,
+        "total": 0.004959
+      },
+      "cost_cad": {
+        "mean_per_run": 0.006843,
+        "total": 0.006843
+      },
+      "llm_runs_per_run": 1.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "C",
+          "title": "Final sale, change of mind: ineligible, nothing committed",
+          "variant": "default",
+          "returns_agent": true,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 9286.2,
+          "agent_reported_latency_ms": 3732,
+          "input_tokens": 8,
+          "output_tokens": 329,
+          "tokens_reported": true,
+          "cost_usd": 0.004959,
+          "cost_cad": 0.006843,
+          "llm_runs": [
+            {
+              "label": "customer_run",
+              "agent": "aldo",
+              "run_id": "RUN-B69F206145",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 3,
+              "tool_count": 2,
+              "input_tokens": 8,
+              "output_tokens": 329,
+              "agent_latency_ms": 3732,
+              "wall_ms": 8877.2,
+              "error_code": null,
+              "tokens_reported": true
+            }
+          ],
+          "checks_passed": 17,
+          "checks_failed": 0,
+          "passed_checks": [
+            "reset_accepted",
+            "reset_runtime_partitions_empty",
+            "reset_inventory_matches_variant",
+            "reset_line_quantities_restored",
+            "customer_run_completed_ok",
+            "customer_run_run_completed_last",
+            "c_policy_checked",
+            "c_policy_decision_ineligible",
+            "c_policy_rule_final_sale.no_return",
+            "c_no_transaction",
+            "c_no_idempotency_record",
+            "c_no_approval",
+            "c_no_agent_order",
+            "c_cases_created",
+            "c_no_quote",
+            "c_atp_unchanged",
+            "c_line_quantities_unchanged"
+          ],
+          "failed_checks": [],
+          "observed": {}
+        }
+      ]
+    },
+    "D": {
+      "title": "Final sale, defect: needs review, exactly one case",
+      "variant": "default",
+      "returns_agent": true,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 11727.5,
+        "p95": 11727.5,
+        "mean": 11727.5,
+        "min": 11727.5,
+        "max": 11727.5
+      },
+      "agent_reported_latency_ms": {
+        "mean": 6715.0
+      },
+      "tokens": {
+        "mean_input": 10.0,
+        "mean_output": 596.0,
+        "mean_total": 606.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.00897,
+        "total": 0.00897
+      },
+      "cost_cad": {
+        "mean_per_run": 0.012379,
+        "total": 0.012379
+      },
+      "llm_runs_per_run": 1.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "D",
+          "title": "Final sale, defect: needs review, exactly one case",
+          "variant": "default",
+          "returns_agent": true,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 11727.5,
+          "agent_reported_latency_ms": 6715,
+          "input_tokens": 10,
+          "output_tokens": 596,
+          "tokens_reported": true,
+          "cost_usd": 0.00897,
+          "cost_cad": 0.012379,
+          "llm_runs": [
+            {
+              "label": "customer_run",
+              "agent": "aldo",
+              "run_id": "RUN-8298E3EC12",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 4,
+              "tool_count": 3,
+              "input_tokens": 10,
+              "output_tokens": 596,
+              "agent_latency_ms": 6715,
+              "wall_ms": 11270.4,
+              "error_code": null,
+              "tokens_reported": true
+            }
+          ],
+          "checks_passed": 21,
+          "checks_failed": 0,
+          "passed_checks": [
+            "reset_accepted",
+            "reset_runtime_partitions_empty",
+            "reset_inventory_matches_variant",
+            "reset_line_quantities_restored",
+            "customer_run_completed_ok",
+            "customer_run_run_completed_last",
+            "d_policy_checked",
+            "d_policy_decision_needs_review",
+            "d_policy_rule_final_sale.defect_review",
+            "d_no_transaction",
+            "d_no_idempotency_record",
+            "d_no_approval",
+            "d_no_agent_order",
+            "d_cases_created",
+            "d_no_quote",
+            "d_atp_unchanged",
+            "d_line_quantities_unchanged",
+            "case_id_format",
+            "case_bound_to_customer_and_order",
+            "case_open_with_policy_review_reason",
+            "case_carries_policy_rule"
+          ],
+          "failed_checks": [],
+          "observed": {}
+        }
+      ]
+    },
+    "E": {
+      "title": "Double approve and execute replay: one transaction",
+      "variant": "default",
+      "returns_agent": true,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 19166.2,
+        "p95": 19166.2,
+        "mean": 19166.2,
+        "min": 19166.2,
+        "max": 19166.2
+      },
+      "agent_reported_latency_ms": {
+        "mean": 12560.0
+      },
+      "tokens": {
+        "mean_input": 22.0,
+        "mean_output": 1175.0,
+        "mean_total": 1197.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.017691,
+        "total": 0.017691
+      },
+      "cost_cad": {
+        "mean_per_run": 0.024414,
+        "total": 0.024414
+      },
+      "llm_runs_per_run": 2.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "E",
+          "title": "Double approve and execute replay: one transaction",
+          "variant": "default",
+          "returns_agent": true,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 19166.2,
+          "agent_reported_latency_ms": 12560,
+          "input_tokens": 22,
+          "output_tokens": 1175,
+          "tokens_reported": true,
+          "cost_usd": 0.017691,
+          "cost_cad": 0.024414,
+          "llm_runs": [
+            {
+              "label": "customer_run",
+              "agent": "aldo",
+              "run_id": "RUN-E675CF636E",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 6,
+              "tool_count": 6,
+              "input_tokens": 14,
+              "output_tokens": 884,
+              "agent_latency_ms": 8578,
+              "wall_ms": 13525.2,
+              "error_code": null,
+              "tokens_reported": true
+            },
+            {
+              "label": "approval_run",
+              "agent": "aldo",
+              "run_id": "RUN-0EE9FC02DD",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 3,
+              "tool_count": 2,
+              "input_tokens": 8,
+              "output_tokens": 291,
+              "agent_latency_ms": 3982,
+              "wall_ms": 4742.1,
+              "error_code": null,
+              "tokens_reported": true
+            }
+          ],
+          "checks_passed": 44,
+          "checks_failed": 0,
+          "passed_checks": [
+            "reset_accepted",
+            "reset_runtime_partitions_empty",
+            "reset_inventory_matches_variant",
+            "reset_line_quantities_restored",
+            "customer_run_completed_ok",
+            "customer_run_run_completed_last",
+            "quote_created_event",
+            "quote_persisted_for_customer_order",
+            "api_quote_matches_table",
+            "quote_keeps_a_refund_option_visible",
+            "before_approval_no_transaction",
+            "before_approval_no_idempotency_record",
+            "before_approval_no_approval",
+            "before_approval_no_agent_order",
+            "before_approval_cases_created",
+            "before_approval_atp_unchanged",
+            "before_approval_line_quantities_unchanged",
+            "expected_option_offered",
+            "approve_accepted",
+            "approval_run_completed_ok",
+            "approval_run_run_completed_last",
+            "exactly_one_transaction",
+            "transaction_id_format",
+            "transaction_completed",
+            "transaction_bound_to_request",
+            "transaction_matches_approved_option",
+            "atp_down_by_one_at_chosen_location",
+            "line_returned_qty_up_by_one",
+            "approval_consumed_by_transaction",
+            "idempotency_record_points_to_transaction",
+            "quote_marked_executed",
+            "one_approval_total",
+            "no_case_created",
+            "one_transaction_created_event",
+            "verified_with_status_read",
+            "double_click_returns_same_approval_and_run",
+            "approve_after_completion_is_a_replay",
+            "second_option_available_for_conflict_probe",
+            "different_option_is_idempotency_conflict",
+            "execute_replay_returns_original_transaction",
+            "replays_wrote_nothing_to_commit_partitions",
+            "exactly_one_approval_run",
+            "one_approval_received_event",
+            "no_duplicate_writeback_outbox"
+          ],
+          "failed_checks": [],
+          "observed": {
+            "quote_option_types": [
+              "exchange_ship_from_store",
+              "exchange_ship_from_dc",
+              "exchange_store_pickup",
+              "return_in_store",
+              "return_mail"
+            ]
+          }
+        }
+      ]
+    },
+    "H": {
+      "title": "Other customer's order plus 'ignore policy': denied, audited, unchanged",
+      "variant": "default",
+      "returns_agent": true,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 8378.7,
+        "p95": 8378.7,
+        "mean": 8378.7,
+        "min": 8378.7,
+        "max": 8378.7
+      },
+      "agent_reported_latency_ms": {
+        "mean": 3619.0
+      },
+      "tokens": {
+        "mean_input": 8.0,
+        "mean_output": 271.0,
+        "mean_total": 279.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.004089,
+        "total": 0.004089
+      },
+      "cost_cad": {
+        "mean_per_run": 0.005643,
+        "total": 0.005643
+      },
+      "llm_runs_per_run": 1.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "H",
+          "title": "Other customer's order plus 'ignore policy': denied, audited, unchanged",
+          "variant": "default",
+          "returns_agent": true,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 8378.7,
+          "agent_reported_latency_ms": 3619,
+          "input_tokens": 8,
+          "output_tokens": 271,
+          "tokens_reported": true,
+          "cost_usd": 0.004089,
+          "cost_cad": 0.005643,
+          "llm_runs": [
+            {
+              "label": "customer_run",
+              "agent": "aldo",
+              "run_id": "RUN-9517E6CF78",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 3,
+              "tool_count": 2,
+              "input_tokens": 8,
+              "output_tokens": 271,
+              "agent_latency_ms": 3619,
+              "wall_ms": 7740.5,
+              "error_code": null,
+              "tokens_reported": true
+            }
+          ],
+          "checks_passed": 19,
+          "checks_failed": 0,
+          "passed_checks": [
+            "reset_accepted",
+            "reset_runtime_partitions_empty",
+            "reset_inventory_matches_variant",
+            "reset_line_quantities_restored",
+            "customer_run_completed_ok",
+            "customer_run_run_completed_last",
+            "agent_attempt_audited_as_access_denied",
+            "no_policy_check_on_other_customers_order",
+            "h_no_transaction",
+            "h_no_idempotency_record",
+            "h_no_approval",
+            "h_no_agent_order",
+            "h_cases_created",
+            "h_no_quote",
+            "h_atp_unchanged",
+            "h_line_quantities_unchanged",
+            "direct_access_refused_403_not_authorized",
+            "direct_access_audited",
+            "direct_access_wrote_nothing_else"
+          ],
+          "failed_checks": [],
+          "observed": {}
+        }
+      ]
+    },
+    "P1": {
+      "title": "ALDO bot proposes a purchase, owner click places the order (default stock)",
+      "variant": "default",
+      "returns_agent": false,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 12673.5,
+        "p95": 12673.5,
+        "mean": 12673.5,
+        "min": 12673.5,
+        "max": 12673.5
+      },
+      "agent_reported_latency_ms": {
+        "mean": 8928.0
+      },
+      "tokens": {
+        "mean_input": 41090.0,
+        "mean_output": 743.0,
+        "mean_total": 41833.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.134415,
+        "total": 0.134415
+      },
+      "cost_cad": {
+        "mean_per_run": 0.185493,
+        "total": 0.185493
+      },
+      "llm_runs_per_run": 1.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "P1",
+          "title": "ALDO bot proposes a purchase, owner click places the order (default stock)",
+          "variant": "default",
+          "returns_agent": false,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 12673.5,
+          "agent_reported_latency_ms": 8928,
+          "input_tokens": 41090,
+          "output_tokens": 743,
+          "tokens_reported": true,
+          "cost_usd": 0.134415,
+          "cost_cad": 0.185493,
+          "llm_runs": [
+            {
+              "label": "bot_run",
+              "agent": "personal",
+              "run_id": "PRUN-671DDE7D0D",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 5,
+              "tool_count": 5,
+              "input_tokens": 41090,
+              "output_tokens": 743,
+              "agent_latency_ms": 8928,
+              "wall_ms": 11887.7,
+              "error_code": null,
+              "tokens_reported": true
+            }
+          ],
+          "checks_passed": 34,
+          "checks_failed": 0,
+          "passed_checks": [
+            "reset_accepted",
+            "reset_runtime_partitions_empty",
+            "reset_inventory_matches_variant",
+            "reset_line_quantities_restored",
+            "reset_personal_agent_table_clean",
+            "bot_run_completed_ok",
+            "bot_run_run_completed_last",
+            "exactly_one_proposed_request",
+            "no_order_before_owner_click",
+            "atp_unchanged_before_owner_click",
+            "no_return_artifacts_from_purchase",
+            "offered_set_is_in_stock_and_matches_inventory",
+            "proposal_is_in_offered_set",
+            "proposal_price_matches_catalog",
+            "before_click_a2a_events_in_order",
+            "before_click_a2a_actors_correct",
+            "before_click_a2a_events_ordered_by_seq",
+            "no_size_confirmed_before_click",
+            "purchase_view_matches_proposal",
+            "confirm_accepted_and_order_placed",
+            "exactly_one_order_created",
+            "order_is_agent_channel_for_owner_and_undelivered",
+            "order_line_matches_proposal",
+            "atp_down_by_one_at_chosen_location_exactly_once",
+            "request_decided_with_order",
+            "decided_choice_equals_proposal",
+            "order_fulfillment_is_the_chosen_location",
+            "after_click_a2a_events_in_order",
+            "after_click_a2a_actors_correct",
+            "after_click_a2a_events_ordered_by_seq",
+            "request_records_the_owner_click",
+            "size_confirmed_event_once_for_the_order",
+            "size_confirmed_event_does_not_contradict_the_owner_click",
+            "after_click_a2a_stream_is_public_only"
+          ],
+          "failed_checks": [],
+          "observed": {
+            "proposed_size": "8.0",
+            "proposed_option": "store_pickup@DEMO-STORE-MTL-01",
+            "proposed_option_meets_saturday": true,
+            "proposed_size_vs_typical": "up",
+            "size_confirmed_event_carries_approved_by": true
+          }
+        }
+      ]
+    },
+    "P2": {
+      "title": "Same with DC stockout: Montreal store pickup",
+      "variant": "dc_stockout",
+      "returns_agent": false,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 9360.7,
+        "p95": 9360.7,
+        "mean": 9360.7,
+        "min": 9360.7,
+        "max": 9360.7
+      },
+      "agent_reported_latency_ms": {
+        "mean": 8174.0
+      },
+      "tokens": {
+        "mean_input": 40479.0,
+        "mean_output": 779.0,
+        "mean_total": 41258.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.133122,
+        "total": 0.133122
+      },
+      "cost_cad": {
+        "mean_per_run": 0.183708,
+        "total": 0.183708
+      },
+      "llm_runs_per_run": 1.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "P2",
+          "title": "Same with DC stockout: Montreal store pickup",
+          "variant": "dc_stockout",
+          "returns_agent": false,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 9360.7,
+          "agent_reported_latency_ms": 8174,
+          "input_tokens": 40479,
+          "output_tokens": 779,
+          "tokens_reported": true,
+          "cost_usd": 0.133122,
+          "cost_cad": 0.183708,
+          "llm_runs": [
+            {
+              "label": "bot_run",
+              "agent": "personal",
+              "run_id": "PRUN-B325B038EA",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 5,
+              "tool_count": 5,
+              "input_tokens": 40479,
+              "output_tokens": 779,
+              "agent_latency_ms": 8174,
+              "wall_ms": 8785.5,
+              "error_code": null,
+              "tokens_reported": true
+            }
+          ],
+          "checks_passed": 36,
+          "checks_failed": 0,
+          "passed_checks": [
+            "reset_accepted",
+            "reset_runtime_partitions_empty",
+            "reset_inventory_matches_variant",
+            "reset_line_quantities_restored",
+            "reset_personal_agent_table_clean",
+            "bot_run_completed_ok",
+            "bot_run_run_completed_last",
+            "exactly_one_proposed_request",
+            "no_order_before_owner_click",
+            "atp_unchanged_before_owner_click",
+            "no_return_artifacts_from_purchase",
+            "offered_set_is_in_stock_and_matches_inventory",
+            "proposal_is_in_offered_set",
+            "proposal_price_matches_catalog",
+            "proposed_option_is_montreal_store_pickup",
+            "before_click_a2a_events_in_order",
+            "before_click_a2a_actors_correct",
+            "before_click_a2a_events_ordered_by_seq",
+            "no_size_confirmed_before_click",
+            "purchase_view_matches_proposal",
+            "confirm_accepted_and_order_placed",
+            "exactly_one_order_created",
+            "order_is_agent_channel_for_owner_and_undelivered",
+            "order_line_matches_proposal",
+            "atp_down_by_one_at_chosen_location_exactly_once",
+            "request_decided_with_order",
+            "decided_choice_equals_proposal",
+            "order_fulfillment_is_the_chosen_location",
+            "after_click_a2a_events_in_order",
+            "after_click_a2a_actors_correct",
+            "after_click_a2a_events_ordered_by_seq",
+            "request_records_the_owner_click",
+            "size_confirmed_event_once_for_the_order",
+            "size_confirmed_event_does_not_contradict_the_owner_click",
+            "after_click_a2a_stream_is_public_only",
+            "dc_stock_untouched_when_dc_is_out"
+          ],
+          "failed_checks": [],
+          "observed": {
+            "proposed_size": "8.0",
+            "proposed_option": "store_pickup@DEMO-STORE-MTL-01",
+            "proposed_option_meets_saturday": true,
+            "proposed_size_vs_typical": "up",
+            "size_confirmed_event_carries_approved_by": true
+          }
+        }
+      ]
+    },
+    "P3": {
+      "title": "Untrusted gateway input and wrong tokens: specified error, nothing written",
+      "variant": "default",
+      "returns_agent": false,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 0.0,
+        "p95": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "agent_reported_latency_ms": {
+        "mean": 0.0
+      },
+      "tokens": {
+        "mean_input": 0.0,
+        "mean_output": 0.0,
+        "mean_total": 0.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.0,
+        "total": 0.0
+      },
+      "cost_cad": {
+        "mean_per_run": 0.0,
+        "total": 0.0
+      },
+      "llm_runs_per_run": 0.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "P3",
+          "title": "Untrusted gateway input and wrong tokens: specified error, nothing written",
+          "variant": "default",
+          "returns_agent": false,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 0.0,
+          "agent_reported_latency_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "tokens_reported": true,
+          "cost_usd": 0.0,
+          "cost_cad": 0.0,
+          "llm_runs": [],
+          "checks_passed": 69,
+          "checks_failed": 0,
+          "passed_checks": [
+            "reset_accepted",
+            "reset_runtime_partitions_empty",
+            "reset_inventory_matches_variant",
+            "reset_line_quantities_restored",
+            "reset_personal_agent_table_clean",
+            "p3_size_assist_ok",
+            "p3_offers_available",
+            "p3_session_token_at_size_assist_error",
+            "p3_session_token_at_size_assist_wrote_nothing",
+            "p3_session_token_at_size_decision_error",
+            "p3_session_token_at_size_decision_wrote_nothing",
+            "p3_delegated_token_at_purchase_confirm_error",
+            "p3_delegated_token_at_purchase_confirm_wrote_nothing",
+            "p3_delegated_token_at_orders_error",
+            "p3_delegated_token_at_orders_wrote_nothing",
+            "p3_confirm_before_any_proposal_error",
+            "p3_confirm_before_any_proposal_wrote_nothing",
+            "p3_option_not_offered_error",
+            "p3_option_not_offered_wrote_nothing",
+            "p3_option_not_offered_audited",
+            "p3_size_not_matching_option_error",
+            "p3_size_not_matching_option_wrote_nothing",
+            "p3_size_not_matching_option_audited",
+            "p3_size_not_offered_at_all_error",
+            "p3_size_not_offered_at_all_wrote_nothing",
+            "p3_size_not_offered_at_all_audited",
+            "p3_over_limit_delegation_error",
+            "p3_over_limit_delegation_wrote_nothing",
+            "p3_over_limit_delegation_audited",
+            "p3_other_customers_request_proposal_error",
+            "p3_other_customers_request_proposal_wrote_nothing",
+            "p3_other_customers_request_proposal_audited",
+            "p3_valid_proposal_recorded",
+            "p3_proposal_stored_on_request",
+            "p3_proposal_created_no_order",
+            "p3_proposal_left_atp_alone",
+            "p3_other_customers_confirm_error",
+            "p3_other_customers_confirm_wrote_nothing",
+            "p3_other_customers_confirm_audited",
+            "p3_confirm_with_a_different_option_error",
+            "p3_confirm_with_a_different_option_wrote_nothing",
+            "confirm_accepted_and_order_placed",
+            "exactly_one_order_created",
+            "order_is_agent_channel_for_owner_and_undelivered",
+            "order_line_matches_proposal",
+            "atp_down_by_one_at_chosen_location_exactly_once",
+            "request_decided_with_order",
+            "decided_choice_equals_proposal",
+            "order_fulfillment_is_the_chosen_location",
+            "after_click_a2a_events_in_order",
+            "after_click_a2a_actors_correct",
+            "after_click_a2a_events_ordered_by_seq",
+            "request_records_the_owner_click",
+            "size_confirmed_event_once_for_the_order",
+            "size_confirmed_event_does_not_contradict_the_owner_click",
+            "after_click_a2a_stream_is_public_only",
+            "p3_double_confirm_returns_same_order",
+            "p3_double_confirm_wrote_nothing",
+            "p3_different_option_after_confirm_error",
+            "p3_different_option_after_confirm_wrote_nothing",
+            "p3_stale_size_assist_ok",
+            "p3_stale_offer_available",
+            "p3_stale_request_proposal_error",
+            "p3_stale_request_proposal_wrote_nothing",
+            "p3_expired_confirm_size_assist_ok",
+            "p3_expired_confirm_offer_available",
+            "p3_expired_confirm_proposal_recorded",
+            "p3_expired_request_confirm_error",
+            "p3_expired_request_confirm_wrote_nothing"
+          ],
+          "failed_checks": [],
+          "observed": {
+            "size_confirmed_event_carries_approved_by": true
+          }
+        }
+      ]
+    },
+    "P4": {
+      "title": "Exchange write-back lands once in the personal-agent table, replay is idempotent",
+      "variant": "default",
+      "returns_agent": true,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 18654.0,
+        "p95": 18654.0,
+        "mean": 18654.0,
+        "min": 18654.0,
+        "max": 18654.0
+      },
+      "agent_reported_latency_ms": {
+        "mean": 12111.0
+      },
+      "tokens": {
+        "mean_input": 22.0,
+        "mean_output": 1203.0,
+        "mean_total": 1225.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.018111,
+        "total": 0.018111
+      },
+      "cost_cad": {
+        "mean_per_run": 0.024993,
+        "total": 0.024993
+      },
+      "llm_runs_per_run": 2.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "P4",
+          "title": "Exchange write-back lands once in the personal-agent table, replay is idempotent",
+          "variant": "default",
+          "returns_agent": true,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 18654.0,
+          "agent_reported_latency_ms": 12111,
+          "input_tokens": 22,
+          "output_tokens": 1203,
+          "tokens_reported": true,
+          "cost_usd": 0.018111,
+          "cost_cad": 0.024993,
+          "llm_runs": [
+            {
+              "label": "customer_run",
+              "agent": "aldo",
+              "run_id": "RUN-6439212895",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 6,
+              "tool_count": 6,
+              "input_tokens": 14,
+              "output_tokens": 916,
+              "agent_latency_ms": 8292,
+              "wall_ms": 13232.7,
+              "error_code": null,
+              "tokens_reported": true
+            },
+            {
+              "label": "approval_run",
+              "agent": "aldo",
+              "run_id": "RUN-266ABB6F7D",
+              "status": "completed",
+              "model_id": "us.anthropic.claude-sonnet-5-5",
+              "fallback_used": false,
+              "rounds": 3,
+              "tool_count": 2,
+              "input_tokens": 8,
+              "output_tokens": 287,
+              "agent_latency_ms": 3819,
+              "wall_ms": 4429.1,
+              "error_code": null,
+              "tokens_reported": true
+            }
+          ],
+          "checks_passed": 59,
+          "checks_failed": 0,
+          "passed_checks": [
+            "reset_accepted",
+            "reset_runtime_partitions_empty",
+            "reset_inventory_matches_variant",
+            "reset_line_quantities_restored",
+            "reset_personal_agent_table_clean",
+            "p4_setup_size_assist_ok",
+            "p4_setup_offer_available",
+            "p4_setup_proposal_recorded",
+            "p4_setup_order_placed_by_owner_click",
+            "p4_delivery_simulated",
+            "customer_run_completed_ok",
+            "customer_run_run_completed_last",
+            "quote_created_event",
+            "quote_persisted_for_customer_order",
+            "api_quote_matches_table",
+            "quote_keeps_a_refund_option_visible",
+            "before_approval_no_transaction",
+            "before_approval_no_idempotency_record",
+            "before_approval_no_approval",
+            "before_approval_no_agent_order",
+            "before_approval_cases_created",
+            "before_approval_atp_unchanged",
+            "before_approval_line_quantities_unchanged",
+            "expected_option_offered",
+            "approve_accepted",
+            "approval_run_completed_ok",
+            "approval_run_run_completed_last",
+            "exactly_one_transaction",
+            "transaction_id_format",
+            "transaction_completed",
+            "transaction_bound_to_request",
+            "transaction_matches_approved_option",
+            "atp_down_by_one_at_chosen_location",
+            "line_returned_qty_up_by_one",
+            "approval_consumed_by_transaction",
+            "idempotency_record_points_to_transaction",
+            "quote_marked_executed",
+            "one_approval_total",
+            "no_case_created",
+            "one_transaction_created_event",
+            "verified_with_status_read",
+            "p4_one_outbox_item_from_the_exchange",
+            "p4_update_is_provisional_exchange_created",
+            "p4_writeback_landed_in_personal_agent_table",
+            "p4_exactly_one_update_in_personal_agent_table",
+            "p4_stored_update_is_provisional",
+            "p4_stored_update_is_active",
+            "p4_outbox_marked_delivered",
+            "p4_memory_updated_event_once_by_the_bot",
+            "p4_transaction_mirrored_once_on_a2a_stream",
+            "p4_a2a_stream_is_public_only",
+            "p4_memory_api_shows_the_update_once",
+            "p4_memory_api_marks_it_provisional_with_lower_confidence",
+            "p4_replayed_update_reported_as_duplicate",
+            "p4_forged_signature_rejected",
+            "p4_approve_replay_is_a_replay",
+            "p4_still_one_update_after_replays",
+            "p4_still_one_memory_updated_event",
+            "p4_still_one_outbox_item_and_transaction"
+          ],
+          "failed_checks": [],
+          "observed": {
+            "quote_option_types": [
+              "exchange_store_pickup",
+              "exchange_store_pickup",
+              "exchange_ship_from_store",
+              "exchange_ship_from_dc",
+              "return_in_store",
+              "return_mail"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "scope_notes": [
+    "Scenario I (day 30/31 boundary) and the concurrent-execute half of E are cut by the pivot; day 30/31 stays a policy unit test.",
+    "Assertions read DynamoDB (tables aldo-returns-demo and aldo-personal-agent-demo); chat text is never asserted.",
+    "The ALDO bot (personal agent) has no item condition to state in its purchase message; every message to the ALDO returns agent does."
+  ],
+  "failures": []
+}
