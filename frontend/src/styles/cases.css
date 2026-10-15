@@ -1,0 +1,61 @@
+/* ---- Cases page ---------------------------------------------------------------------------- */
+
+.page-card {
+  width: min(1000px, calc(100% - 36px));
+  margin: 16px auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  max-height: calc(100% - 32px);
+}
+.table-wrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table th[scope="row"],
+.table td.nowrap {
+  white-space: nowrap;
+}
+.table th,
+.table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.table thead th {
+  background: #f1f2f4;
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #333a42;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-right-color: currentColor;
+  }
+  .dots i,
+  .is-live .live-dot {
+    animation: none;
+  }
+  .push,
+  .sheet,
+  .sheet-scrim {
+    animation: none;
+  }
+  .delivery-bar span {
+    animation: none;
+    width: 55%;
+  }
+}

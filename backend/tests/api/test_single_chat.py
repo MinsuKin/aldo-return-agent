@@ -545,6 +545,16 @@ def test_recent_orders_carry_the_category_when_the_order_has_one(world):
             assert isinstance(line["category"], str) and line["category"]
 
 
+def test_recent_orders_list_the_lines_in_the_order_a_person_counts_them(world):
+    """The table returns line ids as strings (L1, L10, L2 ...); the bot's numbered list must read L1 ... L10."""
+    from pathlib import Path
+
+    fixture = json.loads((Path(__file__).resolve().parents[3] / "fixtures" / "demo" / "orders_v2.json").read_text(encoding="utf-8"))
+    expected = [line["product_name"] for order in fixture["orders"] if order["order_id"] == "DEMO-3001" for line in order["lines"]]
+    bundle = next(o for o in returns_chat.recent_orders("DEMO-CUST-DAVID") if o["order_id"] == "DEMO-3001")
+    assert [line["product_name"] for line in bundle["lines"]] == expected and len(expected) == 10
+
+
 def test_no_user_facing_text_of_the_single_chat_mentions_a_second_agent(world, app, enqueued):
     """Addendum 12.1: errors and messages talk about ALDO bot only."""
     from api import personal_agent_routes as routes

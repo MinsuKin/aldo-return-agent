@@ -1,0 +1,123 @@
+/* ---- Sheets (modal, inside the phone) ------------------------------------------------------ */
+
+.sheet-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: rgba(14, 17, 21, 0.5);
+  display: flex;
+  align-items: flex-end;
+  animation: fade 0.18s ease-out;
+}
+.sheet {
+  width: 100%;
+  max-height: 90%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 28px 28px 0 0;
+  padding-bottom: 24px;
+  animation: sheet-up 0.24s ease-out;
+}
+.sheet:focus {
+  outline: none;
+}
+.sheet-grabber {
+  align-self: center;
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: #cdd2d8;
+  margin: 8px 0 4px;
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 16px 6px 20px;
+}
+.sheet-head h2 {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+.sheet-body {
+  overflow-y: auto;
+  padding: 2px 20px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sheet-body h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.sheet-summary {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+  background: #fafbfc;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sheet-heading {
+  font-weight: 650;
+  font-size: 16px;
+}
+.sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 2px;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(30%);
+    opacity: 0.4;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.memory-typical {
+  font-size: 16px;
+}
+.memory-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+  font-size: 14px;
+}
+.memory-list li {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #f4f5f7;
+  border: 1px solid #e3e6ea;
+}
+.memory-list + .memory-list {
+  margin-top: 6px;
+}
+.outcome-kept {
+  color: #14532d;
+  font-weight: 600;
+}
+.outcome-returned_too_big,
+.outcome-returned_too_small {
+  color: #7a3f06;
+  font-weight: 600;
+}

@@ -1,0 +1,276 @@
+/* ALDO bot stage: an iPhone-style chat on the left, the live A2A trace on the right.
+   Design system (dark workspace, after the team designer's demo-dashboard): near-black surfaces on an elevation
+   ramp, hairline borders, ALDO yellow for the one primary action, saturated actor hues, Geist + Geist Mono
+   (self-hosted, no external requests), inline SVG icons. Plain CSS.
+
+   CONTRAST RULES (checked with axe in the Playwright pass, at least 4.5:1 for text):
+   - --fg and --fg-muted pass on every surface below.
+   - --fg-dim passes on --bg, --panel, --card, --surface-2 and --surface-3 only. On --surface-4 / --surface-5 use --fg-muted.
+   - Actor hues (--violet --orange --blue --green --amber --cyan --red) pass on --panel, --card and on their own *-soft tint.
+   - Text on --brand is --brand-ink. Never white on yellow.
+   Files (imported in this order by main.tsx): base, shell, components, phone, picker, chat, cards, sheets, trace, cases. */
+
+:root {
+  color-scheme: dark;
+
+  /* ---- Surfaces: a dark -> light elevation ramp ---- */
+  --bg: #0b0b0c;
+  --bg-elev: #0f0f11;
+  --panel: #141416;
+  --panel-2: #171719;
+  --card: #19191c;
+  --surface-2: #1a1a1f; /* inputs, inner fills */
+  --surface-3: #202026; /* header bars, hover */
+  --surface-4: #2a2a30; /* user bubble, scrollbar thumb */
+  --surface-5: #35353c; /* active pill */
+  --track: #15151a;
+
+  /* ---- Lines ---- */
+  --border: #2a2a30; /* panel and card outlines */
+  --border-soft: #1e1e21; /* row separators */
+  --border-hover: #3d3d45; /* inputs, hovered controls */
+
+  /* ---- Text ---- */
+  --fg: #ececef;
+  --fg-muted: #a8a8b0;
+  --fg-dim: #8e8e97;
+  --fg-on-color: #ffffff;
+  --link: #8ab4ff;
+
+  /* ---- ALDO yellow: the one primary action per screen ---- */
+  --brand: #ffcc00;
+  --brand-hover: #ffd633;
+  --brand-ink: #1a1500;
+  --brand-soft: rgba(255, 204, 0, 0.14);
+  --brand-ring: rgba(255, 204, 0, 0.45);
+
+  /* ---- Actor and status hues ---- */
+  --violet: #a78bfa; /* ALDO bot · Purchase */
+  --violet-soft: rgba(167, 139, 250, 0.14);
+  --orange: #f97316; /* ALDO bot · Return */
+  --orange-soft: rgba(249, 115, 22, 0.14);
+  --blue: #60a5fa; /* ALDO Data */
+  --blue-soft: rgba(96, 165, 250, 0.14);
+  --amber: #fbbf24; /* ALDO Store Desk, warnings */
+  --amber-soft: rgba(251, 191, 36, 0.13);
+  --green: #34d399; /* done, success */
+  --green-soft: rgba(52, 211, 153, 0.13);
+  --cyan: #22b8cf; /* in progress */
+  --cyan-soft: rgba(34, 184, 207, 0.14);
+  --red: #f87171; /* errors */
+  --red-soft: rgba(248, 113, 113, 0.14);
+
+  /* ---- Shape and depth ---- */
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.3);
+
+  /* ---- Type ---- */
+  --sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ---- Legacy aliases: the names of the old light theme, so unconverted rules never render undefined.
+         New code uses the tokens above. ---- */
+  --surface: var(--panel);
+  --text: var(--fg);
+  --muted: var(--fg-muted);
+  --line: var(--border-soft);
+  --ink: var(--fg);
+  --ink-2: var(--surface-4);
+  --mist: var(--surface-2);
+  --focus: var(--brand);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  background:
+    radial-gradient(1100px 560px at 100% -5%, rgba(255, 255, 255, 0.035), transparent 55%),
+    var(--bg);
+  color: var(--fg);
+  font: 14px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+p,
+dl,
+dd,
+ul,
+ol {
+  margin: 0;
+}
+
+a {
+  color: var(--link);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+::selection {
+  background: var(--brand-ring);
+  color: var(--fg);
+}
+
+/* Scrollbars: thin, dark, quiet */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-4) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--surface-4);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+  background-clip: content-box;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+.strong {
+  font-weight: 600;
+}
+.muted {
+  color: var(--fg-muted);
+}
+.small {
+  font-size: 13px;
+}
+.empty {
+  padding: 10px 2px;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 100;
+  background: var(--brand);
+  color: var(--brand-ink);
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+}
+.skip-link:focus {
+  top: 8px;
+}
+
+/* One visible focus ring everywhere (yellow on dark: 10:1 or better). No border-radius here: it would change shapes. */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+main:focus {
+  outline: none;
+}
+
+/* ---- Shared motion. Every animation is switched off by the reduced-motion rule at the end. ---- */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -40% 0;
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--green-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 6px var(--green-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -27,6 +27,7 @@ the memory context all come from the personal-agent table, which only trusted co
 
 from __future__ import annotations
 
+import re
 from typing import Any, Callable, Mapping, Sequence
 
 from returns_domain import config
@@ -94,10 +95,15 @@ def recent_orders(customer_id: str, limit: int = RECENT_ORDERS) -> list[dict[str
                 "channel": order.channel,
                 "ordered_at": order.ordered_at,
                 "delivered_at": order.delivered_at,
-                "lines": [_compact_line(line) for line in order.lines[:MAX_LINES_PER_ORDER]],
+                "lines": [_compact_line(line) for line in sorted(order.lines, key=_natural_line_key)[:MAX_LINES_PER_ORDER]],
             }
         )
     return compact
+
+
+def _natural_line_key(line: Any) -> tuple[Any, ...]:
+    """Order lines as a person counts them (L2 before L10); the table returns them as strings (L1, L10, L2 ...)."""
+    return tuple(int(part) if part.isdigit() else part for part in re.split(r"(\d+)", str(getattr(line, "line_id", ""))))
 
 
 def _compact_line(line: Any) -> dict[str, Any]:
