@@ -8,11 +8,11 @@
   background: var(--violet);
   box-shadow: 0 0 0 1px var(--violet-soft);
 }
-.bot-avatar svg path {
+.bot-avatar-bubble {
   fill: var(--fg-on-color);
 }
-.bot-avatar svg circle {
-  fill: var(--panel);
+.bot-avatar-eye {
+  fill: var(--violet);
 }
 .persona-avatar {
   flex: none;
