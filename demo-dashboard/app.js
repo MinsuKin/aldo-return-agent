@@ -568,6 +568,73 @@ if (KB_INPUT && KB_WRAP) {
   });
 }
 
+/* ============================================================ IDE-style resizers
+   Column resizer drags the left (phone) column width via --left-w.
+   Row resizer drags the trace-panel height via --trace-h (+ .sized). */
+const root = document.documentElement;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+(function setupColResizer() {
+  const handle = $("colResizer");
+  const grid = document.querySelector(".grid");
+  if (!handle || !grid) return;
+  let startX = 0, startW = 0;
+
+  const onMove = (e) => {
+    const dx = e.clientX - startX;
+    // left column has min 320 / max 60% of grid width
+    const max = grid.getBoundingClientRect().width - 420;
+    root.style.setProperty("--left-w", clamp(startW + dx, 320, max) + "px");
+  };
+  const onUp = () => {
+    document.removeEventListener("mousemove", onMove);
+    document.removeEventListener("mouseup", onUp);
+    document.body.classList.remove("resizing");
+    handle.classList.remove("dragging");
+  };
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    startX = e.clientX;
+    startW = parseFloat(getComputedStyle(root).getPropertyValue("--left-w")) || handle.previousElementSibling.getBoundingClientRect().width;
+    document.body.classList.add("resizing");
+    handle.classList.add("dragging");
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+})();
+
+(function setupRowResizer() {
+  const handle = $("rowResizer");
+  const tracePanel = document.querySelector(".right-col .panel.trace-panel");
+  const rightCol = document.querySelector(".right-col");
+  if (!handle || !tracePanel || !rightCol) return;
+  let startY = 0, startH = 0;
+
+  const onMove = (e) => {
+    const dy = e.clientY - startY;
+    // trace panel between 140px and (right-col height - 160 for meta)
+    const max = rightCol.getBoundingClientRect().height - 180;
+    const h = clamp(startH + dy, 140, max);
+    tracePanel.classList.add("sized");
+    root.style.setProperty("--trace-h", h + "px");
+  };
+  const onUp = () => {
+    document.removeEventListener("mousemove", onMove);
+    document.removeEventListener("mouseup", onUp);
+    document.body.classList.remove("resizing", "row");
+    handle.classList.remove("dragging");
+  };
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    startY = e.clientY;
+    startH = tracePanel.getBoundingClientRect().height;
+    document.body.classList.add("resizing", "row");
+    handle.classList.add("dragging");
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+})();
+
 // live clock in the phone status bar
 const tick = () => ($("clock").textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
 tick();

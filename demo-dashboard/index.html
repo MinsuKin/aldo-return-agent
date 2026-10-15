@@ -17,10 +17,6 @@
     <div>ALDO Fit Gateway</div>
   </div>
   <div class="spacer"></div>
-  <div class="actions">
-  <button class="btn run ghost" id="resetBtn">Reset ↺</button>
-  <button class="btn run" id="playBtn" aria-keyshortcuts="R">Run demo <span class="keycap" aria-hidden="true">R</span></button>
-  </div>
 </header>
 
 <div class="wrap">
@@ -28,12 +24,6 @@
 
     <!-- LEFT: iPhone -->
     <div class="phone-col">
-      <div class="scenario" id="scenario">
-        <button data-scn="buy" class="active">Buy</button>
-        <button data-scn="return">Return</button>
-        <button data-scn="safety">Safety</button>
-      </div>
-
       <div class="phone" id="phone">
         <div class="phone-screen">
           <div class="notch"></div>
@@ -88,8 +78,22 @@
       </div>
     </div>
 
+    <!-- column resize handle (IDE-style) -->
+    <div class="col-resizer" id="colResizer" role="separator" aria-orientation="vertical" title="Drag to resize"></div>
+
     <!-- RIGHT: trace + meta -->
     <div class="right-col">
+      <!-- toolbar: scenario segmented control + run controls -->
+      <div class="right-toolbar">
+        <div class="scenario seg" id="scenario">
+          <button class="btn run seg-btn active" data-scn="buy">Buy</button>
+          <button class="btn run seg-btn" data-scn="return">Return</button>
+          <button class="btn run seg-btn" data-scn="safety">Safety</button>
+        </div>
+        <button class="btn run ghost" id="resetBtn">Reset ↺</button>
+        <button class="btn run" id="playBtn" aria-keyshortcuts="R">Run demo <span class="keycap" aria-hidden="true">R</span></button>
+      </div>
+
       <div class="panel trace-panel">
         <div class="panel-bar">
           <i class="codicon codicon-type-hierarchy-sub"></i>
@@ -103,6 +107,9 @@
           <div class="trace-empty">Press <span class="kbd">▶ Run demo</span> or send a message in the phone to watch the agents reason step by step.</div>
         </div>
       </div>
+
+      <!-- row resize handle between trace and meta -->
+      <div class="row-resizer" id="rowResizer" role="separator" aria-orientation="horizontal" title="Drag to resize"></div>
 
       <div class="panel">
         <div class="panel-bar">
