@@ -190,10 +190,11 @@ def run_payload(
 ) -> dict[str, Any]:
     """contracts.md C.6 worker payload for the ALDO return workflow.
 
-    The runs of a hand-off (the single chat) add two trusted server fields; both keys are absent
-    on every other run: ``memory_context`` (addendum 12.3, the summary of the owner's ALDO bot
-    memory) and ``selected_order_id`` (the order ``hand_off_to_returns`` named, the same value as
-    ``order_id``; without it the return workflow looks up the owner's recent delivered orders).
+    EVERY run of a hand-off's conversation (the single chat: each owner message, the approval, a
+    requote) adds two trusted server fields; both keys are absent on every other run:
+    ``memory_context`` (addendum 12.3, the summary of the owner's ALDO bot memory) and
+    ``selected_order_id`` (the order ``hand_off_to_returns`` named, the same value as ``order_id``;
+    without it the return workflow looks up the owner's recent delivered orders).
     """
     payload = {
         "run_id": run_id,
@@ -242,6 +243,7 @@ def _start_run(
     quote_id: str | None = None,
 ) -> str:
     """lease -> create run -> enqueue. Undoes what it did when a later step fails."""
+    handoff = _handoff_fields(customer_id, conv_id, order_id)
     return start_customer_run(
         api.enqueue,
         customer_id=customer_id,
@@ -250,8 +252,21 @@ def _start_run(
         order_id=order_id,
         message=message,
         quote_id=quote_id,
+        memory_context=handoff.get("memory_context"),
+        selected_order_id=handoff.get("selected_order_id"),
         annotate=req.annotate,
     )
+
+
+def _handoff_fields(customer_id: str, conv_id: str, order_id: str | None) -> dict[str, Any]:
+    """``memory_context`` and ``selected_order_id`` when the conversation belongs to a hand-off of the single chat.
+
+    Every run of that conversation carries them (an owner message, the approval, a requote); a
+    conversation that is not a hand-off gets nothing.
+    """
+    from . import returns_chat  # late: returns_chat imports this module
+
+    return returns_chat.handoff_fields(customer_id, conv_id, order_id)
 
 
 def start_customer_run(
@@ -363,15 +378,19 @@ def _approval_body(approval: Any, *, replayed: bool) -> dict[str, Any]:
 
 
 def _approval_payload(customer_id: str, quote: Any, approval: Any) -> dict[str, Any]:
+    order_id = _field(quote, "order_id")
+    handoff = _handoff_fields(customer_id, _field(quote, "conv_id"), order_id)
     return run_payload(
         run_id=_field(approval, "run_id"),
         conv_id=_field(quote, "conv_id"),
         customer_id=customer_id,
         kind="approval",
-        order_id=_field(quote, "order_id"),
+        order_id=order_id,
         quote_id=_field(approval, "quote_id"),
         option_id=_field(approval, "option_id"),
         approval_id=_field(approval, "approval_id"),
+        memory_context=handoff.get("memory_context"),
+        selected_order_id=handoff.get("selected_order_id"),
     )
 
 

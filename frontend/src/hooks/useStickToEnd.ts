@@ -4,7 +4,8 @@ import { useCallback, useRef, type RefObject } from "react";
  * Follow-the-end bookkeeping for a transcript or a live feed: keep following while the reader is at the
  * end, stop when they scroll away. Scroll events are delivered a frame late, so one caused by our own
  * scrollTop assignment can arrive after more content has grown below; it is ignored (otherwise the feed
- * would stop following by itself).
+ * would stop following by itself). The scroller must also set `overflow-anchor: none`: scroll anchoring
+ * moves scrollTop when a card above the viewport changes size, and that is not the reader scrolling.
  */
 export function useStickToEnd(
   ref: RefObject<HTMLElement | null>,

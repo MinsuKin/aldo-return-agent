@@ -685,15 +685,12 @@ def question_text(signal: FitSignalView | Mapping[str, Any]) -> str:
 
 
 def next_step_text(option: Mapping[str, Any]) -> str:
-    """Template text for the order confirmation (weekdays come from the date)."""
+    """Template text for the order confirmation, shown to the owner as it is (weekdays come from the date)."""
     when = _eta_text(option["eta_date"])
     size, place = option["size"], option["location_name"]
     if option["type"] == TYPE_PICKUP:
-        return f"Pick up size {size} at {place} from {when}. Simulated order, no payment taken."
-    return (
-        f"Size {size} ships from {place} and should arrive by {when}. "
-        "Simulated order, no payment taken."
-    )
+        return f"Order placed. Pick up size {size} at {place} from {when}."
+    return f"Order placed. Size {size} ships from {place} and should arrive by {when}."
 
 
 def _option_summary(record: Mapping[str, Any], option_id: str | None) -> dict[str, Any]:

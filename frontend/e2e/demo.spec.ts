@@ -91,7 +91,7 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(card).toContainText("derived from provided ALDO data");
     await expect(card.getByTestId("purchase-countdown")).toBeVisible();
     await onMock(async () => {
-      await expect(card).toContainText("Biglect");
+      await expect(card).toContainText("ALDO Men 001");
       await expect(card).toContainText("9.5");
       await expect(card).toContainText("CAD 149.99");
       await expect(card).toContainText("Runs large: 94.5% of fit-related returns were too big (n=236)");
@@ -139,7 +139,7 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(page.getByTestId("order-id")).toHaveText(/^DEMO-A2A-[0-9A-F]{6}$/);
     await expect(page.getByTestId("delivery-status")).toHaveAttribute("data-state", "out");
     const push = page.getByTestId("push-banner");
-    await expect(push).toContainText("Delivered: Biglect, size 9.5", { timeout: 20_000 });
+    await expect(push).toContainText("Delivered: ALDO Men 001, size 9.5", { timeout: 20_000 });
     await expect(page.getByTestId("delivery-status")).toHaveAttribute("data-state", "delivered");
     await expect(page.getByTestId("bubble-bot").last()).toContainText("was delivered");
     await expect(traceEvent(page, "size_confirmed").first()).toContainText("Confirmed by the owner");

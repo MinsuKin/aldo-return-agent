@@ -16,6 +16,8 @@ This module is the composition-root glue between the two tables, so it may read 
   machinery (one active run per conversation, lease, queued run, worker hand-off).
 * ``hand_back`` / ``settle_after_run``: the way back (used by the router for "cancel" and by the
   worker after a run).
+* ``handoff_fields``: the memory context and the selected order that EVERY run of the hand-off's
+  ALDO-side conversation carries (owner messages, the approval, a requote), not only the first.
 * ``recent_orders``: the owner's recent ALDO orders in the compact form the bot's prompt, its
   hand-off tool and the memory context use.
 
@@ -47,6 +49,9 @@ CANCEL_PREFIXES = ("cancel", "back to bot")
 #: Events of a return run that mean "this return is done" (a quote is not: the owner still has to approve).
 HANDBACK_EVENTS = ("transaction_created", "case_created")
 ACTOR_RETURN = "aldo_agent"
+#: How the phone UI words the end of a return (the ``reason`` next to ``outcome`` on ``handback``).
+#: A cancel or an unavailable order has no such word: ``outcome`` alone says it.
+PUBLIC_REASONS = {"transaction_created": "completed", "case_created": "escalated"}
 RECENT_ORDERS = 6
 MAX_LINES_PER_ORDER = 12
 
@@ -129,10 +134,17 @@ def hand_back(
         return False
     public = {key: value for key, value in (ids or {}).items() if isinstance(value, str) and value}
     order_id = previous.get("returns_order_id")
+    word = PUBLIC_REASONS.get(reason)
     trace.emit_a2a_safe(
         customer_id,
         "handback",
-        {**({"order_id": order_id} if order_id else {}), "outcome": reason, "mode": MODE_BOT, **public},
+        {
+            **({"order_id": order_id} if order_id else {}),
+            "outcome": reason,
+            **({"reason": word} if word else {}),
+            "mode": MODE_BOT,
+            **public,
+        },
         actor=ACTOR_RETURN,
     )
     return True
@@ -160,6 +172,30 @@ def settle_after_run(customer_id: str, aldo_conv_id: str, run_id: str) -> bool:
     except Exception:
         logger.exception("handback_check_failed", run_id=run_id)
         return False
+
+
+def handoff_fields(customer_id: str, aldo_conv_id: str, order_id: str | None = None) -> dict[str, Any]:
+    """The trusted ``memory_context`` and ``selected_order_id`` for a run of a hand-off's ALDO-side conversation.
+
+    EVERY run of the conversation needs them again: each owner message, the approval and a requote
+    are separate runs, and the return workflow keeps the context only in the system prompt of the
+    run it is handed. Empty for a conversation that is not a hand-off, and once the chat is back
+    with the bot (the stored context leaves with the mode). Never raises: the context is optional
+    and must never stop a run from starting.
+    """
+    try:
+        conv = store.get_item(store.conv_key(aldo_conv_id)) or {}
+        pa_conv = conv.get("pa_conv_id")
+        if conv.get("customer_id") != customer_id or not isinstance(pa_conv, str) or not pa_conv:
+            return {}
+        state = _memory().get_repo().get_conversation(customer_id, pa_conv)
+        context = state.get("memory_context")
+        if state.get("mode") != MODE_RETURNS or state.get("returns_conv_id") != aldo_conv_id or not context:
+            return {}
+        return {"memory_context": dict(context), **({"selected_order_id": order_id} if order_id else {})}
+    except Exception:
+        logger.exception("handoff_fields_not_read", conv_id=aldo_conv_id)
+        return {}
 
 
 class ReturnsChat:

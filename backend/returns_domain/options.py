@@ -22,6 +22,11 @@ Two kinds of exchange (PIVOT_ADDENDUM D5, 11.4):
 
 Every option at a store carries ``minutes_away`` (the customer's ``travel_minutes`` to that store;
 the field is absent when unknown) and the store options are ordered nearest first.
+
+A BUNDLE return (``find_options(policy_check_ids=[...])``, PIVOT_ADDENDUM D9) covers up to ten lines
+of one order in one shipment: return options only, ONE shipping fee, per-line refunds in ``lines``,
+the member's free return shipping on ``return_mail`` while this month's ledger (``benefits``) has
+room, and the tier authority limit checked on the TOTAL (``decision`` ``needs_review`` above it).
 """
 
 from __future__ import annotations

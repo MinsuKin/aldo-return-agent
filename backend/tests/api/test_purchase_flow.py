@@ -265,7 +265,7 @@ def test_only_the_owners_confirm_creates_the_order(client):
     order = confirmed.json
     assert order["order_id"].startswith("DEMO-A2A-") and order["status"] == "placed_simulated"
     assert order["replayed"] is False and order["fulfillment"]["type"] == "store_pickup"
-    assert "Simulated order" in order["next_step"]
+    assert order["next_step"].startswith("Order placed. ") and "imulated" not in order["next_step"]
     assert len(order_keys()) == 2  # the order and its single line
     assert atp(HERO_80, option["location_id"]) == before - 1
     assert sizereq(rid)["status"] == "decided"

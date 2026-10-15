@@ -677,7 +677,7 @@ def test_the_owners_click_creates_the_order_in_one_transaction(seeded, fixed_now
         "location_name": "ALDO Demo Store Montreal",
         "eta_date": "2026-10-17",
     }
-    assert order.next_step == "Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17. Simulated order, no payment taken."
+    assert order.next_step == "Order placed. Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17."
 
     meta = store.get_item(store.order_key(oid))
     assert meta["customer_id"] == AVA and meta["banner"] == "ALDO_CA" and meta["currency"] == "CAD"
@@ -907,8 +907,7 @@ def test_a_ship_from_dc_purchase_takes_one_unit_from_the_dc(seeded):
     order = gateway.confirm_purchase(AVA, proposal.size_request_id, proposal.summary["option_id"])
     assert order.fulfillment.type == "ship_from_dc" and order.fulfillment.location_id == DC
     assert order.next_step == (
-        "Size 7.5 ships from ALDO Demo Distribution Centre and should arrive by Tue Oct 20. "
-        "Simulated order, no payment taken.")
+        "Order placed. Size 7.5 ships from ALDO Demo Distribution Centre and should arrive by Tue Oct 20.")
     assert (inv(HERO_075, DC)["atp"], inv(HERO_075, MTL)["atp"]) == (4, 1)
 
 

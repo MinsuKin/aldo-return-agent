@@ -1074,7 +1074,7 @@ def test_the_response_has_the_contract_shape_and_no_identifiers():
             "location_name": "ALDO Demo Store Montreal",
             "eta_date": "2026-10-17",
         },
-        "next_step": "Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17. Simulated order, no payment taken.",
+        "next_step": "Order placed. Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17.",
         "replayed": False,
     }
     assert "DEMO-CUST" not in json.dumps(body)
@@ -1083,16 +1083,17 @@ def test_the_response_has_the_contract_shape_and_no_identifiers():
 def test_next_step_text_for_pickup_and_shipping():
     pickup = record()["offered"]["SO-3"]
     ship = record()["offered"]["SO-4"]
-    assert gateway.next_step_text(pickup) == (
-        "Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17. Simulated order, no payment taken."
-    )
+    assert gateway.next_step_text(pickup) == "Order placed. Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17."
     assert gateway.next_step_text(ship) == (
-        "Size 8.0 ships from ALDO Demo Distribution Centre and should arrive by Tue Oct 20. "
-        "Simulated order, no payment taken."
+        "Order placed. Size 8.0 ships from ALDO Demo Distribution Centre and should arrive by Tue Oct 20."
     )
     assert gateway.next_step_text({**ship, "type": "ship_from_store", "eta_date": "2026-10-19"}).endswith(
-        "should arrive by Mon Oct 19. Simulated order, no payment taken."
+        "should arrive by Mon Oct 19."
     )
+    # the owner reads this text as it is: natural copy, no disclaimer, never "ready today"
+    for text in (gateway.next_step_text(pickup), gateway.next_step_text(ship)):
+        assert text.startswith("Order placed. ") and "imulated" not in text and "payment" not in text
+        assert "today" not in text.lower()
 
 
 def test_the_proposal_summary_is_rendered_from_the_recorded_offer():
