@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Vite dev-server cache / build artifacts (auto-generated, never commit)
+.vite/
+**/.vite/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor junk
+.DS_Store
+*.log
