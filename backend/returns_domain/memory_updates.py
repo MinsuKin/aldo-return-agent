@@ -9,6 +9,9 @@ gateway's ``build_memory_update`` / ``enqueue_memory_update`` / ``flush_outbox``
 * A colour exchange (same size, a reason that is not a fit reason) is a ``PREFERENCE`` update with
   ``fit_feedback = "size_ok"``: the owner kept the size and only changed the colour (D11).
   Every other update has exactly the fields of addendum 5.4.
+* A BUNDLE return sends ONE small update for the whole shipment (``build_bundle_update``):
+  ``outcome = return_created``, ``provisional`` true, a common ``reason`` (or ``OTHER``) and an
+  ``items`` list (style, product, colour, size, reason per line), no ``fit_feedback`` and no sizes.
 * The payload carries no typical size, hint, other retailer or event (C3). ``owner_ref`` is the
   synthetic persona id; it goes only to the owner's own agent endpoint and into no trace event.
 * ``update_id = derived_id("MU-", transaction_id, outcome, n=6)``, so a replayed transaction

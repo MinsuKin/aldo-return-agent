@@ -9,8 +9,15 @@ item and, for in-store options, the store-desk notice ``STORENOTE#{txn}``), so e
 happens or nothing does, and a retry or a second caller gets the same transaction (``replayed``)
 without any write.
 
+A BUNDLE option (it carries ``lines``) commits the same way with one guarded update per line, the
+member's monthly perk ledger (condition ``used < per_month``, only when the option carries
+``benefit``), one small write-back item and, in store, the notice: at most 16 operations for ten
+lines. If the perk was used meanwhile, nothing is written and the error is STOCK_CHANGED with
+``details.reason`` ``BENEFIT_USED`` so the agent can quote again without the waiver.
+
 After the commit (and never for a replay) the call mirrors ``transaction_created`` (and, for an
-in-store option, ``store_notified`` from the actor ``aldo_store``) to the owner's agent-to-agent
+in-store option, ``store_notified`` from the actor ``aldo_store``; for a bundle that used the perk,
+``benefit_applied``) to the owner's agent-to-agent
 stream and flushes the write-back outbox through ``gateway.flush_outbox``. All of it is best
 effort: a failure there is logged (and shown as a ``warning`` event on the run) but the exchange
 stays successful.
@@ -477,8 +484,8 @@ def _commit_bundle(
     """ONE TransactWriteItems for the whole bundle: the transaction (with its ``lines``), the
     idempotency record, the approval, one guarded update per line, the perk ledger (only when the
     option carries ``benefit``), the quote, the write-back outbox item and, in store, the notice.
-    At most 3 + 10 lines + 4 = 17 operations, below the limit of 25 that the single-line path
-    and its tests assume."""
+    At most 3 + 10 lines + 3 = 16 operations (txn, idem, approval, the lines, then the ledger OR
+    the store notice, quote, outbox), measured on moto; DynamoDB allows 100."""
     members, profile = context["members"], context["profile"]
     order_id = members[0]["check"]["order_id"]
     kind = option["type"]

@@ -259,14 +259,15 @@ export const FIT: Record<string, { signal: string; too_small: number; too_big: n
 };
 
 /**
- * The men's style of the John script (addendum 11.3). The product name is a stand-in for the real ALDO_CA
- * style the fixtures stream picks; the UI shows whatever name the server sends.
+ * The men's style of the John script (addendum 11.3). The product is named "ALDO Men 001" (the fit numbers
+ * behind it are those of a real ALDO_CA style, see fixtures/demo/README.md); the UI shows whatever name the
+ * server sends.
  */
 export const MEN001 = {
-  product: "Biglect",
+  product: "ALDO Men 001",
   token: "MEN001",
   style: "DEMO-STYLE-MEN001",
-  aliases: ["ALDO Men 001", "Men 001"],
+  aliases: ["Men 001"],
   colors: ["BLACK", "BROWN", "TAN"],
   priceCents: 14999,
 };
