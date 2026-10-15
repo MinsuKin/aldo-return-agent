@@ -1234,4 +1234,92 @@ def check_proposal(rec: Recorder, base: Snapshot, snap: Snapshot, ctx: Ctx, *, c
     rec.check("no_size_confirmed_before_click", not [e for e in snap.a2a_events(customer_id) if e.get("type") == "size_confirmed"], "size_confirmed already emitted")
     return rid, sr
 
+
+def check_purchase_view(rec: Recorder, ctx: Ctx, session: str, rid: str, sr: Mapping[str, Any]) -> None:
+    """The confirmation card is rendered from server data: GET /api/purchases/<id> agrees with the table."""
+    resp = ctx.api.get(f"/api/purchases/{rid}", token=session)
+    body = resp.body if isinstance(resp.body, Mapping) else {}
+    status = dig(body, "status", "proposal.status")
+    size = dig(body, "size", "proposed_size", "proposal.size", "summary.size")
+    price = dig(body, "price_cents", "proposal.price_cents", "summary.price_cents")
+    rec.check("purchase_view_matches_proposal",
+              resp.ok and status == "proposed" and str(size) == str(sr.get("proposed_size")) and price == sr.get("price_cents"),
+              f"{resp.brief()} status={status} size={size} price={price}")
+
+
+def owner_confirm(ctx: Ctx, rec: Recorder, session: str, request_id: str, option_id: str | None) -> ApiResponse:
+    """The simulated Confirm click: session token, option from the proposal."""
+    body = {"option_id": option_id} if option_id else {}
+    with rec.timed():
+        return ctx.api.post(f"/api/purchases/{request_id}/confirm", body, token=session)
+
+
+def check_purchase_confirmed(rec: Recorder, base: Snapshot, final: Snapshot, ctx: Ctx, *, customer_id: str,
+                             rid: str, sr: Mapping[str, Any], resp: ApiResponse) -> str | None:
+    body = resp.body if isinstance(resp.body, Mapping) else {}
+    oid = str(body.get("order_id") or "")
+    rec.check("confirm_accepted_and_order_placed", resp.status == 200 and body.get("status") == "placed_simulated"
+              and body.get("replayed") in (False, None) and bool(re.fullmatch(r"DEMO-A2A-[0-9A-F]{6}", oid)), resp.brief())
+    offered = sr.get("offered") or {}
+    chosen = offered.get(sr.get("proposed_option_id")) or {}
+    new_orders = sorted(set(final.agent_orders()) - set(base.agent_orders()))
+    rec.check("exactly_one_order_created", new_orders == [oid] and bool(oid), f"new agent orders: {new_orders}")
+    order = final.agent_orders().get(oid) or {}
+    rec.check("order_is_agent_channel_for_owner_and_undelivered",
+              (order.get("channel"), order.get("customer_id"), order.get("delivered_at")) == ("agent", customer_id, None),
+              f"channel/customer/delivered_at = {order.get('channel')}/{order.get('customer_id')}/{order.get('delivered_at')}")
+    line = final.lines().get((oid, f"{oid}-L1")) or {}
+    rec.check("order_line_matches_proposal",
+              (line.get("size"), line.get("sku"), line.get("unit_paid_cents"), line.get("purchased_qty"), line.get("returned_or_reserved_qty"))
+              == (sr.get("proposed_size"), chosen.get("sku"), ctx.facts.hero_price_cents, 1, 0), f"line: {line.get('size')}/{line.get('sku')}/{line.get('unit_paid_cents')}")
+    deltas = inv_deltas(base, final)
+    rec.check("atp_down_by_one_at_chosen_location_exactly_once",
+              deltas == {(str(chosen.get("sku")), str(chosen.get("location_id"))): -1}, f"atp deltas: {fmt_deltas(deltas)}")
+    decided = final.sizereqs().get(rid) or {}
+    rec.check("request_decided_with_order", (decided.get("status"), decided.get("order_id")) == ("decided", oid),
+              f"status={decided.get('status')} order_id={decided.get('order_id')}")
+    rec.check("decided_choice_equals_proposal",
+              (dig(decided, "chosen_option_id", "proposed_option_id"), dig(decided, "chosen_size", "proposed_size"))
+              == (sr.get("proposed_option_id"), sr.get("proposed_size")), "decided option/size differ from the proposal")
+    rec.check("order_fulfillment_is_the_chosen_location", dig(order, "fulfillment.location_id") == chosen.get("location_id"),
+              f"fulfillment={dig(order, 'fulfillment.location_id')} chosen={chosen.get('location_id')}")
+    events = a2a_for_request(final, customer_id, rid, oid)
+    check_a2a_sequence(rec, events, A2A_PURCHASE_TYPES, "after_click_")
+    confirmed = [e for e in events if e.get("type") == "size_confirmed"]
+    rec.check("size_confirmed_once_by_owner_click", len(confirmed) == 1 and dig(confirmed[0], "payload.approved_by") == "owner_click"
+              and dig(confirmed[0], "payload.order_id") == oid,
+              f"{len(confirmed)} events, approved_by={dig(confirmed[0], 'payload.approved_by') if confirmed else None}")
+    check_a2a_privacy(rec, final, ctx.facts, customer_id, "after_click_")
+    return oid or None
+
+
+def bot_purchase(ctx: Ctx, rec: Recorder, variant: str, *, want_montreal_pickup: bool) -> None:
+    """ALDO bot run -> proposal only -> owner click (confirm) -> order. Shared by P1 and P2."""
+    base = reset_and_baseline(ctx, rec, variant, pa=True)
+    session = ctx.api.session(AVA)
+    start_bot_run(ctx, rec, session, text=msg_buy_for_saturday(ctx.facts))
+    proposed_snap = ctx.tables.snapshot(pa=True)
+    found = check_proposal(rec, base, proposed_snap, ctx, customer_id=AVA, want_montreal_pickup=want_montreal_pickup)
+    if found is None:
+        return
+    rid, sr = found
+    check_purchase_view(rec, ctx, session, rid, sr)
+    resp = owner_confirm(ctx, rec, session, rid, str(sr.get("proposed_option_id")))
+    final = ctx.tables.snapshot(pa=True)
+    check_purchase_confirmed(rec, base, final, ctx, customer_id=AVA, rid=rid, sr=sr, resp=resp)
+    if want_montreal_pickup:
+        chosen = (sr.get("offered") or {}).get(sr.get("proposed_option_id")) or {}
+        dc_moves = {k: d for k, d in inv_deltas(base, final).items() if k[1] == DC_LOCATION}
+        rec.check("dc_stock_untouched_when_dc_is_out", not dc_moves and chosen.get("location_id") == MTL_STORE, f"dc deltas: {dc_moves}")
+
+
+def scenario_p1(ctx: Ctx, rec: Recorder) -> None:
+    """ALDO bot proposes a purchase (default stock); the owner's click places the order."""
+    bot_purchase(ctx, rec, "default", want_montreal_pickup=False)
+
+
+def scenario_p2(ctx: Ctx, rec: Recorder) -> None:
+    """Same with the DC out of stock: the proposal and the order are Montreal store pickup."""
+    bot_purchase(ctx, rec, "dc_stockout", want_montreal_pickup=True)
+
 # <<APPEND>>
