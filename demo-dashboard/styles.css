@@ -146,9 +146,12 @@ body {
 }
 .btn.run.ghost:hover { background: var(--surface-2); color: var(--fg); border-color: var(--border-hover); }
 .topbar .actions { display: flex; align-items: center; gap: 6px; }
-/* Reset is secondary: darker than Run demo */
-#resetBtn { background: var(--panel-2); border-color: var(--border); color: var(--fg-muted); box-shadow: none; }
-#resetBtn:hover { background: var(--surface-3); border-color: var(--border-hover); color: var(--fg); }
+/* Reset is the quiet, secondary action — no fill, dim text, hairline border */
+#resetBtn {
+  background: transparent; border-color: transparent; color: var(--fg-dim);
+  box-shadow: none; font-weight: 500;
+}
+#resetBtn:hover { background: var(--surface-2); border-color: var(--border); color: var(--fg-muted); }
 
 /* ============================================================ Layout */
 .wrap { padding: 22px; max-width: 1800px; margin: 0 auto; }
@@ -458,58 +461,37 @@ body {
 .panel-bar .pb-title { font-size: 13px; font-weight: 600; letter-spacing: -.01em; color: var(--fg); }
 
 /* phase status chip on the right of the trace bar (thicker, text inside) */
+/* trace status: just text — LLM-style shimmer while running, muted ms when done */
 .pb-progress {
   margin-left: auto;
-  display: inline-flex; align-items: center; gap: 7px;
-  min-width: 150px; height: 22px; padding: 0 10px;
-  border-radius: 6px; border: 1px solid var(--border);
-  position: relative; overflow: hidden;
-  background: var(--track);
-  transition: border-color .3s ease, color .3s ease;
-}
-/* animated stripe layer fills the whole chip (never a horizontal progress fill) */
-.pb-progress::before {
-  content: ""; position: absolute; inset: 0; opacity: 0;
-  transition: opacity .3s ease;
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(255,255,255,.055) 0, rgba(255,255,255,.055) 2px,
-    transparent 2px, transparent 10px
-  );
-  background-size: 34px 34px;
-}
-.pb-progress .pb-dot {
-  width: 7px; height: 7px; border-radius: 50%; flex: none; position: relative; z-index: 1;
-  background: var(--fg-dim); transition: background-color .3s ease;
+  display: inline-flex; align-items: baseline; gap: 8px;
+  background: none; border: 0; padding: 0;
 }
 .pb-progress .pb-phase {
-  position: relative; z-index: 1;
-  font-size: 11px; font-weight: 600; letter-spacing: .01em; white-space: nowrap;
-  color: var(--fg-muted); transition: color .3s ease;
+  font-size: 11.5px; font-weight: 500; letter-spacing: .01em; white-space: nowrap;
+  color: var(--fg-dim); transition: color .3s ease;
+}
+.pb-progress .pb-time {
+  font-family: var(--mono); font-size: 11px; color: var(--fg-dim); white-space: nowrap;
 }
 
 /* idle */
-.pb-progress[data-state="idle"] { color: var(--fg-dim); }
+.pb-progress[data-state="idle"] .pb-phase { color: var(--fg-dim); }
 
-/* running: cyan accent + marching stripes behind the text */
-.pb-progress[data-state="running"] {
-  border-color: color-mix(in srgb, var(--cyan) 55%, var(--border));
-  background: var(--cyan-soft);
+/* running: shiny gradient sweep across the phase text, like an LLM thinking */
+.pb-progress[data-state="running"] .pb-phase {
+  background: linear-gradient(100deg,
+    var(--fg-dim) 30%, var(--fg) 50%, var(--fg-dim) 70%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: pbShimmer 1.8s linear infinite;
 }
-.pb-progress[data-state="running"]::before { opacity: 1; animation: pbStripes 2.4s linear infinite; }
-.pb-progress[data-state="running"] .pb-dot { background: var(--cyan); animation: pbPulse 1.8s ease-in-out infinite; }
-.pb-progress[data-state="running"] .pb-phase { color: var(--cyan); }
 
-/* done: settles to green, no animation */
-.pb-progress[data-state="done"] {
-  border-color: color-mix(in srgb, var(--green) 50%, var(--border));
-  background: var(--green-soft);
-}
-.pb-progress[data-state="done"] .pb-dot { background: var(--green); }
-.pb-progress[data-state="done"] .pb-phase { color: var(--green); }
+/* done: plain muted phase + ms time */
+.pb-progress[data-state="done"] .pb-phase { color: var(--fg-muted); }
 
-@keyframes pbStripes { from { background-position: 0 0; } to { background-position: 34px 0; } }
-@keyframes pbPulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+@keyframes pbShimmer { from { background-position: 180% 0; } to { background-position: -40% 0; } }
 
 /* legacy head helpers still used by decision-box */
 .hicon { width: 30px; height:30px; display:grid; place-items:center; color: var(--fg-muted); font-size:19px; flex:none; }
