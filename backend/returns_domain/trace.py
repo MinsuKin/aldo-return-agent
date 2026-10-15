@@ -41,16 +41,28 @@ EVENT_TYPES: tuple[str, ...] = (
     "size_recommended",
     "size_confirmed",
     "memory_updated",
+    # Demo v2 (PIVOT_ADDENDUM 11.4): reviews, one-chat handoff, store desk, perks, delivery
+    "reviews_shared",
+    "handoff_to_returns",
+    "handback",
+    "store_notified",
+    "benefit_applied",
+    "delivered",
+    # Addendum 12.3: the return workflow used the owner's remembered preferences (counts only)
+    "memory_consulted",
 )
 
-ACTORS: tuple[str, ...] = ("personal_agent", "aldo_gateway", "aldo_agent", "system")
+#: ``aldo_store`` is the simulated store desk ("ALDO Store Desk" in the UI): it is notified when an
+#: in-store exchange or return is approved (D7).
+ACTORS: tuple[str, ...] = ("personal_agent", "aldo_gateway", "aldo_agent", "system", "aldo_store")
 DEFAULT_ACTOR = "aldo_agent"
 
 #: The ONLY keys an event of the agent-to-agent stream may carry (PIVOT_ADDENDUM C3, contracts.md
 #: F.6, widened by the orchestrator so the UI and eval can read ``size_request_id``, ``approved_by``
-#: and the sizes). ``emit_a2a`` drops everything else, so no private rationale, owner reference,
-#: retailer name or token can reach the middle timeline even if a caller passes it, and the
-#: redactor still removes any token, secret, e-mail or customer-id key inside the allowed fields.
+#: and the sizes, plus the demo v2 types of addendum 11.4). ``emit_a2a`` drops everything else, so
+#: no private rationale, owner reference, retailer name, review text or token can reach the
+#: middle timeline even if a caller passes it, and the redactor still removes any token, secret,
+#: e-mail or customer-id key inside the allowed fields.
 A2A_PUBLIC_FIELDS: dict[str, frozenset[str]] = {
     "size_assist_requested": frozenset(
         {"size_request_id", "product_query", "color", "deadline_date", "channel_pref"}
@@ -106,6 +118,7 @@ A2A_PUBLIC_FIELDS: dict[str, frozenset[str]] = {
             "reason",
             "outcome",
             "provisional",
+            "fit_feedback",  # "size_ok" on a PREFERENCE (colour) exchange
         }
     ),
     "transaction_created": frozenset(
@@ -121,6 +134,41 @@ A2A_PUBLIC_FIELDS: dict[str, frozenset[str]] = {
             "fee_cents",
         }
     ),
+    # Demo v2 (PIVOT_ADDENDUM 11.4). No customer id and no review text in any of them.
+    "quote_created": frozenset({"quote_id", "primary_option_type", "option_types"}),
+    "reviews_shared": frozenset(
+        {
+            "style_id",
+            "product_name",
+            "n_reviews",
+            "n_flagged",  # reviews the server flagged as instruction-like text (the bot excludes them)
+            "flagged_review_ids",
+            "provenance",
+        }
+    ),
+    # The switch between the two ALDO bot workflows is internal routing (addendum 12.1): `mode` is
+    # the conversation mode afterwards ("returns" / "bot"); no field names a second agent.
+    "handoff_to_returns": frozenset({"order_id", "product_name", "size", "color", "mode"}),
+    "handback": frozenset({"order_id", "outcome", "transaction_id", "case_id", "mode"}),
+    # Addendum 12.3: only HOW MUCH memory was used and which kinds of fields, never their values.
+    "memory_consulted": frozenset({"n_entries", "fields"}),
+    "store_notified": frozenset({"store_name", "eta_minutes", "summary"}),
+    "benefit_applied": frozenset(
+        {
+            "type",  # the benefit kind, e.g. "free_return_shipping" (same value as "benefit")
+            "label",  # "Platinum free return shipping"
+            "benefit",
+            "tier_label",
+            "saved_cents",
+            "fee_cents",
+            "used",
+            "per_month",
+            "period",
+            "order_id",
+            "transaction_id",
+        }
+    ),
+    "delivered": frozenset({"order_id", "delivered_at", "product_name", "size"}),
 }
 
 #: Keys whose name says "credential or identity". Matched on snake_case words, so

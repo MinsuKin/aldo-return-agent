@@ -10,10 +10,12 @@
 
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { PERSONAS, VARIANTS, DEMO_TODAY, locationById, type Variant } from "./data.ts";
+import { PERSONAS, VARIANTS, DEMO_TODAY, INSTRUCTION_LIKE, MEN001, locationById, reviewsFor, type Variant } from "./data.ts";
 import { buildAldoRun, buildApprovalRun, buildRequoteRun } from "./agents.ts";
-import { buildPersonalRun } from "./personal.ts";
+import { buildBotTurn } from "./bot2.ts";
+import { buildReturnsTurn } from "./returns2.ts";
 import {
+  newConv,
   SCALE,
   atp,
   flushOutbox,
@@ -77,14 +79,16 @@ interface Route {
   re: RegExp;
   keys: string[];
   auth: boolean;
+  /** Token scope the route accepts: session tokens everywhere, delegated tokens only on /gateway/*. */
+  scope: "session" | "delegated_gateway";
   handler: Handler;
 }
 
 const routes: Route[] = [];
-function route(method: string, pattern: string, auth: boolean, handler: Handler): void {
+function route(method: string, pattern: string, auth: boolean, handler: Handler, scope: Route["scope"] = "session"): void {
   const keys: string[] = [];
   const re = new RegExp(`^${pattern.replace(/:([a-z_]+)/g, (_m, k: string) => (keys.push(k), "([^/]+)"))}$`);
-  routes.push({ method, re, keys, auth, handler });
+  routes.push({ method, re, keys, auth, scope, handler });
 }
 
 // ---- Tokens: b64url(payload).b64url(hmac) -----------------------------------------------------
@@ -92,13 +96,13 @@ function route(method: string, pattern: string, auth: boolean, handler: Handler)
 const b64 = (b: Buffer | string): string => Buffer.from(b).toString("base64url");
 const sign = (data: string): string => b64(createHmac("sha256", TOKEN_KEY).update(data).digest());
 
-function mintToken(customerId: string): { token: string; expires_at: string } {
-  const exp = now() + TOKEN_TTL_MS;
-  const payload = b64(JSON.stringify({ c: customerId, exp, scope: "session" }));
+function mintToken(customerId: string, scope: Route["scope"] = "session"): { token: string; expires_at: string } {
+  const exp = now() + (scope === "session" ? TOKEN_TTL_MS : 10 * 60 * 1000);
+  const payload = b64(JSON.stringify({ c: customerId, exp, scope }));
   return { token: `${payload}.${sign(payload)}`, expires_at: iso(exp) };
 }
 
-function customerFromHeader(header: string | undefined): string {
+function customerFromHeader(header: string | undefined, scope: Route["scope"] = "session"): string {
   const m = /^Bearer (.+)$/.exec(header ?? "");
   if (!m) throw new ApiError(401, "NOT_AUTHENTICATED", "Missing or malformed token.");
   const [payload, sig] = m[1].split(".");
@@ -106,8 +110,10 @@ function customerFromHeader(header: string | undefined): string {
   const expected = Buffer.from(sign(payload));
   const given = Buffer.from(sig);
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) throw new ApiError(401, "NOT_AUTHENTICATED", "Invalid token signature.");
-  const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { c: string; exp: number };
+  const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { c: string; exp: number; scope?: string };
   if (data.exp <= now()) throw new ApiError(401, "NOT_AUTHENTICATED", "Token expired.");
+  // Like the real API: a delegated token works only on the gateway routes, a session token everywhere else.
+  if ((data.scope ?? "session") !== scope) throw new ApiError(403, "NOT_AUTHORIZED", "This token cannot be used for that route.");
   return data.c;
 }
 
@@ -115,9 +121,9 @@ function customerFromHeader(header: string | undefined): string {
 
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
 
-function requireConv(customerId: string, convId: string, agent: Conv["agent"]): Conv {
+function requireConv(customerId: string, convId: string, agent?: Conv["agent"]): Conv {
   const conv = state.convs.get(convId);
-  if (!conv || conv.agent !== agent) throw new ApiError(404, "NOT_FOUND", "Conversation not found.");
+  if (!conv || (agent && conv.agent !== agent)) throw new ApiError(404, "NOT_FOUND", "Conversation not found.");
   if (conv.customer_id !== customerId) throw new ApiError(403, "NOT_AUTHORIZED", "Conversation not found for this customer.");
   return conv;
 }
@@ -158,6 +164,7 @@ function orderView(o: ReturnType<typeof orderById>) {
       line_id: l.line_id,
       sku: l.sku,
       product_name: l.product_name,
+      ...(l.category ? { category: l.category } : {}),
       style: l.style,
       size: l.size,
       color: l.color,
@@ -223,13 +230,28 @@ function serveEvents(run: Run, after: number) {
 
 route("GET", "/api/demo/personas", false, () => ({
   status: 200,
-  body: { personas: PERSONAS.map((p) => ({ customer_id: p.customer_id, display_name: p.display_name, description: p.description })) },
+  body: {
+    personas: PERSONAS.map((p) => ({
+      customer_id: p.customer_id,
+      display_name: p.display_name,
+      description: p.description,
+      tier: p.tier,
+      tier_label: p.tier_label,
+      location_label: p.location_label,
+    })),
+  },
 }));
 
 route("POST", "/api/demo/sessions", false, (c) => {
   const p = persona(str(c.body.customer_id) ?? "");
   if (!p) throw new ApiError(422, "VALIDATION_ERROR", "Unknown persona.");
-  return { status: 200, body: { ...mintToken(p.customer_id), customer: { customer_id: p.customer_id, display_name: p.display_name, home_region: p.home_region } } };
+  return {
+    status: 200,
+    body: {
+      ...mintToken(p.customer_id),
+      customer: { customer_id: p.customer_id, display_name: p.display_name, home_region: p.home_region, tier: p.tier, tier_label: p.tier_label, location_label: p.location_label },
+    },
+  };
 });
 
 route("POST", "/api/demo/reset", false, (c) => {
@@ -249,8 +271,13 @@ route("POST", "/api/demo/simulate-delivery", true, (c) => {
   if (!order) throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found.");
   if (order.customer_id !== c.customerId) throw new ApiError(403, "NOT_AUTHORIZED", "Order not found for this customer.");
   if (order.channel !== "agent") throw new ApiError(422, "VALIDATION_ERROR", "Only agent-placed orders can be marked delivered.");
+  const already = !!order.delivered_at;
   order.delivered_at = DEMO_TODAY;
-  return { status: 200, body: { ok: true, order_id: order.order_id, delivered_at: order.delivered_at } };
+  if (!already) {
+    const line = order.lines[0];
+    pushA2a(c.customerId, "delivered", "system", { order_id: order.order_id, delivered_at: DEMO_TODAY, product_name: line.product_name, size: line.size });
+  }
+  return { status: 200, body: { ok: true, order_id: order.order_id, delivered_at: order.delivered_at, already_delivered: already } };
 });
 
 route("POST", "/api/demo/simulate-pickup", true, (c) => {
@@ -295,7 +322,7 @@ route("POST", "/api/conversations", true, (c) => {
     if (!o) throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found.");
     if (o.customer_id !== c.customerId) throw new ApiError(403, "NOT_AUTHORIZED", "Order not found for this customer.");
   }
-  const conv: Conv = { conv_id: newId("CONV-", 10), customer_id: c.customerId, agent: "aldo", order_id: orderId, active_run_id: null, memo: {} };
+  const conv = newConv(newId("CONV-", 10), c.customerId, "aldo", orderId);
   state.convs.set(conv.conv_id, conv);
   return { status: 201, body: { conv_id: conv.conv_id } };
 });
@@ -316,13 +343,21 @@ route("POST", "/api/conversations/:conv/messages", true, (c) => {
 });
 
 route("POST", "/api/conversations/:conv/requote", true, (c) => {
-  const conv = requireConv(c.customerId, c.params.conv, "aldo");
+  materialize();
+  const conv = requireConv(c.customerId, c.params.conv);
   const quote = requireQuote(c.customerId, str(c.body.quote_id) ?? "");
   if (quote.conv_id !== conv.conv_id) throw new ApiError(403, "NOT_AUTHORIZED", "Quote does not belong to this conversation.");
   if (quoteStatus(quote) !== "expired") throw new ApiError(422, "VALIDATION_ERROR", "Only expired quotes can be refreshed.");
   if (activeRunOf(conv)) throw new ApiError(409, "RUN_IN_PROGRESS", "A run is already active for this conversation.", true);
   const runId = newId("RUN-", 10);
-  startRun(conv, c.customerId, runId, "requote", buildRequoteRun({ customerId: c.customerId, conv, runId, quote }));
+  if (quote.v2) {
+    // The return workflow already knows everything it needs: it makes fresh options with the same answers.
+    conv.ret.latestQuoteId = undefined;
+    const turn = buildReturnsTurn({ customerId: c.customerId, conv, runId, message: "Please refresh my options." });
+    startRun(conv, c.customerId, runId, "requote", turn.script);
+  } else {
+    startRun(conv, c.customerId, runId, "requote", buildRequoteRun({ customerId: c.customerId, conv, runId, quote }));
+  }
   return { status: 202, body: { run_id: runId, conv_id: conv.conv_id } };
 });
 
@@ -402,18 +437,30 @@ route("GET", "/api/cases", true, (c) => {
 // ---- Routes: personal agent and A2A feed ----------------------------------------------------------
 
 route("POST", "/api/personal-agent/conversations", true, (c) => {
-  const conv: Conv = { conv_id: newId("PCONV-", 10), customer_id: c.customerId, agent: "personal", order_id: null, active_run_id: null, memo: {} };
+  const conv = newConv(newId("PCONV-", 10), c.customerId, "personal");
   state.convs.set(conv.conv_id, conv);
-  return { status: 201, body: { conv_id: conv.conv_id } };
+  return { status: 201, body: { conv_id: conv.conv_id, mode: conv.mode } };
 });
 
+// One chat with ALDO bot (addendum 11.5): while the conversation is in the purchase workflow ("bot") a
+// message goes to ALDO bot; after a hand-off ("returns") it goes straight to the return workflow.
 route("POST", "/api/personal-agent/conversations/:conv/messages", true, (c) => {
+  materialize();
   const conv = requireConv(c.customerId, c.params.conv, "personal");
   const text = validateText(c.body);
-  if (activeRunOf(conv)) throw new ApiError(409, "RUN_IN_PROGRESS", "Your personal agent is still working.", true);
-  const runId = newId("PRUN-", 10);
-  startRun(conv, c.customerId, runId, "personal", buildPersonalRun({ customerId: c.customerId, conv, runId, message: text }));
-  return { status: 202, body: { run_id: runId, conv_id: conv.conv_id } };
+  if (activeRunOf(conv)) throw new ApiError(409, "RUN_IN_PROGRESS", "ALDO bot is still working.", true);
+  const mode = conv.mode;
+  const runId = newId(mode === "returns" ? "RUN-" : "PRUN-", 10);
+  const params = { customerId: c.customerId, conv, runId, message: text };
+  const turn = mode === "returns" ? buildReturnsTurn(params) : buildBotTurn(params);
+  startRun(conv, c.customerId, runId, turn.kind, turn.script);
+  return { status: 202, body: { run_id: runId, conv_id: conv.conv_id, agent: mode === "returns" ? "returns" : "personal", mode } };
+});
+
+route("GET", "/api/personal-agent/conversations/:conv", true, (c) => {
+  materialize();
+  const conv = requireConv(c.customerId, c.params.conv, "personal");
+  return { status: 200, body: { conv_id: conv.conv_id, mode: conv.mode, returns_order_id: conv.mode === "returns" ? conv.returns_order_id : null } };
 });
 
 route("GET", "/api/personal-agent/memory", true, (c) => {
@@ -431,6 +478,36 @@ route("GET", "/api/a2a/events", true, (c) => {
   const events = all.filter((e) => e.seq > after);
   return { status: 200, body: { events, next_after: events.length ? events[events.length - 1].seq : after } };
 });
+
+// ---- Route: product reviews for ALDO bot (delegated token only, addendum 11.5) ---------------------------
+
+route(
+  "POST",
+  "/api/gateway/reviews",
+  true,
+  (c) => {
+    const styleId = str(c.body.style_id);
+    const query = (str(c.body.product_query) ?? "").trim().toLowerCase();
+    const known = [MEN001.product, ...MEN001.aliases].map((a) => a.toLowerCase());
+    const matches = (styleId ? styleId === MEN001.style : query !== "" && known.some((a) => a.includes(query) || query.includes(a)));
+    if (!matches) throw new ApiError(422, "UNKNOWN_STYLE", "No reviews for that style. Try the style id or a product name.");
+    const limit = Math.min(Math.max(typeof c.body.limit === "number" ? Math.trunc(c.body.limit) : 20, 1), 50);
+    const reviews = reviewsFor(MEN001.style)
+      .slice(0, limit)
+      .map((r) => ({
+        review_id: r.review_id,
+        rating: r.rating,
+        title: r.title,
+        text: r.text,
+        language: r.language,
+        verified_purchase: r.verified_purchase,
+        helpful_votes: r.helpful_votes,
+        flags: INSTRUCTION_LIKE.test(`${r.title} ${r.text}`) ? ["instruction_like_text"] : [],
+      }));
+    return { status: 200, body: { style_id: MEN001.style, product_name: MEN001.product, n_reviews: reviews.length, reviews, provenance: "synthetic" } };
+  },
+  "delegated_gateway",
+);
 
 // ---- Routes: purchase proposals (ALDO bot proposes, only the owner's click orders) ---------------------
 
@@ -504,6 +581,13 @@ route("POST", "/api/purchases/:id/confirm", true, (c) => {
 });
 
 // ---- Mock-only controls (not part of the real API) ------------------------------------------------
+
+route("POST", "/__mock/delegated-token", false, (c) => {
+  // The real API mints delegated tokens server-side for ALDO bot; this lets a test call /api/gateway/reviews.
+  const p = persona(str(c.body.customer_id) ?? "");
+  if (!p) throw new ApiError(422, "VALIDATION_ERROR", "Unknown persona.");
+  return { status: 200, body: mintToken(p.customer_id, "delegated_gateway") };
+});
 
 route("POST", "/__mock/expire-quote", false, (c) => {
   const q = state.quotes.get(str(c.body.quote_id) ?? "");
@@ -619,7 +703,7 @@ const server = createServer((req, res) => {
       if (!matched) {
         throw new ApiError(pathKnown ? 405 : 404, pathKnown ? "VALIDATION_ERROR" : "NOT_FOUND", pathKnown ? "Method not allowed." : "Route not found.");
       }
-      const customerId = matched.r.auth ? customerFromHeader(req.headers.authorization) : "";
+      const customerId = matched.r.auth ? customerFromHeader(req.headers.authorization, matched.r.scope) : "";
       const body = method === "POST" ? await readBody(req) : {};
       const result = await matched.r.handler({ params: matched.params, query: url.searchParams, body, customerId, headers: req.headers });
       status = result.status;

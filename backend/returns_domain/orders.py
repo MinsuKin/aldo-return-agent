@@ -9,13 +9,17 @@ persisted as ``PCHK#{id}`` whatever the decision, because ``options.find_options
 Orders placed by the agent-to-agent purchase (id ``DEMO-A2A-XXXXXX``, channel ``agent``,
 ``delivered_at`` null until the delivery is simulated) have the same shape as fixture orders,
 so they work with every function here; the policy treats the missing date as ``needs_review``.
+
+``customer_profile`` is the one place that turns a customer's ``CUST#`` record into the member
+tier (label and authority limit from ``policy.json`` ``tiers``) and the minutes to each store;
+``check_policy`` passes the tier's authority limit to the policy.
 """
 
 from __future__ import annotations
 
 from typing import Any, Mapping
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_serializer
 
 from . import audit, clock, policy, store, taxonomy
 from .errors import DomainError, ErrorCode
@@ -36,6 +40,16 @@ class OrderLineView(BaseModel):
     final_sale: bool | None = None
     currency: str = "CAD"
     source: str = "synthetic"
+    #: What the shoe is ("boot", "sneaker", "loafer" ...) when the fixture says so; left out of the
+    #: JSON otherwise. Lets the agent resolve "the tan boot" when the style names do not say it.
+    category: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_category_when_none(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        if data.get("category") is None:
+            data.pop("category", None)
+        return data
 
 
 class OrderView(BaseModel):
@@ -127,21 +141,22 @@ def order_context(customer_id: str, order_id: str, *, run_id: str | None = None)
     lines = []
     for line in order.lines:
         remaining = line.purchased_qty - line.returned_or_reserved_qty
-        lines.append(
-            {
-                "line_id": line.line_id,
-                "sku": line.sku,
-                "product_name": line.product_name,
-                "size": line.size,
-                "color": line.color,
-                "purchased_qty": line.purchased_qty,
-                "returned_or_reserved_qty": line.returned_or_reserved_qty,
-                "already_returned_qty": line.returned_or_reserved_qty,
-                "remaining_qty": max(remaining, 0),
-                "unit_paid_cents": line.unit_paid_cents,
-                "final_sale": line.final_sale,
-            }
-        )
+        entry = {
+            "line_id": line.line_id,
+            "sku": line.sku,
+            "product_name": line.product_name,
+            "size": line.size,
+            "color": line.color,
+            "purchased_qty": line.purchased_qty,
+            "returned_or_reserved_qty": line.returned_or_reserved_qty,
+            "already_returned_qty": line.returned_or_reserved_qty,
+            "remaining_qty": max(remaining, 0),
+            "unit_paid_cents": line.unit_paid_cents,
+            "final_sale": line.final_sale,
+        }
+        if line.category:  # additive: only lines whose fixture names what the shoe is
+            entry["category"] = line.category
+        lines.append(entry)
     return store.json_safe(
         {
             "order_id": order.order_id,
@@ -153,6 +168,42 @@ def order_context(customer_id: str, order_id: str, *, run_id: str | None = None)
             + [f"ORDER#{order.order_id}/LINE#{line.line_id}" for line in order.lines],
         }
     )
+
+
+# ------------------------------------------------------------------------------ profile
+
+
+def customer_profile(customer_id: str) -> dict[str, Any]:
+    """Member tier and store travel times of one customer, read from their own ``CUST#`` record.
+
+    Returns ``display_name``, ``home_region``, ``tier`` (``none`` when the record has none or an
+    unknown one), ``tier_label`` and ``authority_limit_cents`` (from ``policy.json`` ``tiers``,
+    constant fallback) and ``travel_minutes`` (``{store location id: minutes}``, ``{}`` when the
+    record has none). A customer without a record is the plain ``none`` member with no travel
+    times. The result holds no customer id, so it is safe to hand to a tool or an event.
+    """
+    item = store.get_item(store.customer_key(customer_id)) or {}
+    tier = policy.tier_config(item.get("tier"))
+    display_name, home_region = item.get("display_name"), item.get("home_region")
+    return {
+        "display_name": display_name if isinstance(display_name, str) and display_name.strip() else None,
+        "home_region": home_region if isinstance(home_region, str) and home_region.strip() else None,
+        "tier": tier["tier"],
+        "tier_label": tier["label"],
+        "authority_limit_cents": tier["authority_refund_limit_cents"],
+        "travel_minutes": _travel_minutes(item.get("travel_minutes")),
+    }
+
+
+def _travel_minutes(raw: object) -> dict[str, int]:
+    """Whole, non-negative minutes per store location id; anything else is dropped (unknown)."""
+    if not isinstance(raw, Mapping):
+        return {}
+    return {
+        str(location): minutes
+        for location, minutes in raw.items()
+        if isinstance(minutes, int) and not isinstance(minutes, bool) and minutes >= 0
+    }
 
 
 # ------------------------------------------------------------------------------ policy
@@ -186,7 +237,14 @@ def check_policy(
         raise DomainError(ErrorCode.NOT_FOUND, "Order line not found on this order.")
     refund_cents = policy.gross_refund_cents(line, qty)
     result = policy.evaluate(
-        meta, line, qty, reason, item_condition, refund_cents, now=clock.demo_now()
+        meta,
+        line,
+        qty,
+        reason,
+        item_condition,
+        refund_cents,
+        now=clock.demo_now(),
+        authority_limit_cents=customer_profile(customer_id)["authority_limit_cents"],
     )
 
     policy_check_id = store.new_id("PCHK-", 8)

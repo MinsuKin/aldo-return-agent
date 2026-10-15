@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "customers": [
+    {
+      "customer_id": "DEMO-CUST-JOHN",
+      "display_name": "John",
+      "home_region": "QC",
+      "description": "Silver member, Downtown Montreal: buys the men's ALDO Men 001 through ALDO bot, then swaps the colour in store",
+      "tier": "silver",
+      "annual_spend_cents": 180000,
+      "travel_minutes": {
+        "DEMO-STORE-MTL-01": 5,
+        "DEMO-STORE-LAVAL-01": 24,
+        "DEMO-STORE-TOR-01": 540
+      },
+      "location_label": "Downtown Montreal",
+      "source": "synthetic"
+    },
+    {
+      "customer_id": "DEMO-CUST-DAVID",
+      "display_name": "David",
+      "home_region": "NB",
+      "description": "Platinum member, rural New Brunswick: returns 3 of the 10 items of order DEMO-3001 by mail",
+      "tier": "platinum",
+      "annual_spend_cents": 1240000,
+      "travel_minutes": {
+        "DEMO-STORE-MTL-01": 430,
+        "DEMO-STORE-LAVAL-01": 445,
+        "DEMO-STORE-TOR-01": 780
+      },
+      "location_label": "Rural New Brunswick",
+      "source": "synthetic"
+    }
+  ]
+}

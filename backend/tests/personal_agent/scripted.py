@@ -84,9 +84,16 @@ def good_policy(
     option_id: str = "SO-10",
     reply: str = "Your proposal is ready: size 8.0 Stessy2.0 in black, pickup at ALDO Demo Store Montreal on Sat Oct 17. "
     "ALDO says 80% of 582 fit returns were too small, so I went half a size up from your usual. "
-    "Please confirm it in the app. Prototype, simulated data, no payment is taken.",
+    "Please confirm it in the app.",
+    *,
+    reviews: bool = True,
 ) -> Policy:
-    """A well-behaved model: recall, ask, record, propose, then a compliant reply."""
+    """A well-behaved model: recall, ask, read the reviews, record, propose, then a compliant reply.
+
+    ``reviews=False`` is the old four-call flow (recall, ask, record, propose) for tests that only
+    care about the proposal.
+    """
+    offset = 1 if reviews else 0
 
     def policy(messages: list[dict[str, Any]], call: int) -> Action:
         found = tool_results(messages)
@@ -94,9 +101,11 @@ def good_policy(
             return "tools", [("recall_size_memory", {})]
         if call == 2:
             return "tools", [("ask_aldo_size_assist", {"product_query": "Stessy", "deadline_date": "2026-10-17"})]
-        if call == 3:
+        if reviews and call == 3:
+            return "tools", [("read_product_reviews", {"style_id": found[1]["data"]["style_id"]})]
+        if call == 3 + offset:
             return "tools", [("record_decision", {"summary": "Size 8.0: usual 7.5 plus half a size, the style runs small"})]
-        if call == 4:
+        if call == 4 + offset:
             request_id = found[1]["data"]["size_request_id"]
             return "tools", [
                 (
@@ -110,6 +119,56 @@ def good_policy(
                     },
                 )
             ]
+        return "text", reply
+
+    return policy
+
+
+def john_policy(
+    reply: str = "Your proposal is ready: size 9.5 ALDO Men 001 in black, pickup at ALDO Demo Store Laval on Sat Oct 17. "
+    "ALDO says 94% of 236 fit returns were too big and most reviewers say it runs half a size big, so I went half a size down "
+    "from your usual. I set aside one review that looked like an instruction. Please confirm it in the app.",
+    *,
+    chosen_size: str = "9.5",
+    rationale: str = "Style runs large per ALDO fit signal; half size down, pickup meets the deadline",
+) -> Policy:
+    """John's purchase (demo plan 11.2): recall, ask for the ALDO Men 001, read the reviews, propose 9.5 at Laval."""
+
+    def policy(messages: list[dict[str, Any]], call: int) -> Action:
+        found = tool_results(messages)
+        if call == 1:
+            return "tools", [("recall_size_memory", {}), ("ask_aldo_size_assist", {"product_query": "ALDO Men 001", "color": "black"})]
+        if call == 2:
+            return "tools", [("read_product_reviews", {"style_id": found[1]["data"]["style_id"]})]
+        if call == 3:
+            return "tools", [("record_decision", {"summary": "Size 9.5: usual 10, the style runs large and the reviews agree"})]
+        if call == 4:
+            ask = found[1]["data"]
+            entry = next(e for e in ask["sizes"] if e["size"] == chosen_size)
+            option = next(o for o in entry["options"] if o["type"] == "store_pickup")
+            return "tools", [
+                (
+                    "send_size_decision",
+                    {
+                        "size_request_id": ask["size_request_id"],
+                        "option_id": option["option_id"],
+                        "chosen_size": chosen_size,
+                        "rationale_public": rationale,
+                        "confidence": "high",
+                    },
+                )
+            ]
+        return "text", reply
+
+    return policy
+
+
+def hand_off_policy(order_id: str, reply: str = "Sure, let's sort out your return.") -> Policy:
+    """The owner wants to return something: one hand_off_to_returns call, then one short sentence."""
+
+    def policy(messages: list[dict[str, Any]], call: int) -> Action:
+        if call == 1:
+            return "tools", [("hand_off_to_returns", {"order_id": order_id})]
         return "text", reply
 
     return policy

@@ -91,6 +91,85 @@ def test_reason_for(aws_env, direction, original, new, expected):
     assert mu.reason_for(direction, original, new) == expected
 
 
+# ------------------------------------------------- domain v2: a colour exchange keeps the size
+
+
+@pytest.mark.parametrize("reason_category", ["EXPECTATION", "CHANGE_OF_MIND", "COMFORT", "OTHER", "UNKNOWN", "quality_damage"])
+def test_a_same_size_exchange_for_a_non_fit_reason_is_a_preference(aws_env, reason_category):
+    assert mu.reason_for("unknown", "9.5", "9.5", reason_category) == "PREFERENCE"
+    assert mu.reason_for("too_small", "9.5", "9.5", reason_category) == "PREFERENCE"  # a stored direction cannot make it a fit problem
+    assert mu.reason_for(None, 9.5, "9.50", reason_category) == "PREFERENCE"
+
+
+@pytest.mark.parametrize(
+    ("direction", "original", "new", "reason_category", "expected"),
+    [
+        ("unknown", "9.5", "9.5", "FIT_SIZE", "OTHER"),  # a fit reason with the same size is not a preference
+        ("unknown", "9.5", "9.5", None, "OTHER"),  # reason unknown: the old behaviour
+        ("too_small", "9.5", "9.5", "FIT_SIZE", "TOO_SMALL"),
+        ("too_small", "8.0", "8.5", "FIT_SIZE", "TOO_SMALL"),
+        ("unknown", "8.0", "8.5", "CHANGE_OF_MIND", "TOO_SMALL"),  # the size changed: it is about fit after all
+        ("too_big", "8.0", "7.5", "EXPECTATION", "TOO_BIG"),
+        ("unknown", "8.0", "7.5", None, "TOO_BIG"),
+    ],
+)
+def test_only_a_same_size_non_fit_exchange_becomes_a_preference(aws_env, direction, original, new, reason_category, expected):
+    assert mu.reason_for(direction, original, new, reason_category) == expected
+
+
+def test_a_preference_update_adds_fit_feedback_size_ok_and_nothing_else(aws_env, fixed_now):
+    update = build(original_size="9.5", new_size="9.5", reason="PREFERENCE")
+    assert update["reason"] == "PREFERENCE" and update["fit_feedback"] == "size_ok"
+    assert (update["original_size"], update["new_size"], update["outcome"], update["provisional"]) == ("9.5", "9.5", "exchange_created", True)
+    assert set(update) == {"update_id", "owner_ref", "order_id", "style_id", "product_name", "color", "original_size", "new_size",
+                           "reason", "outcome", "provisional", "source", "ts", "fit_feedback"}
+    assert mu.PREFERENCE_REASON == "PREFERENCE" and mu.FIT_FEEDBACK_SIZE_OK == "size_ok" and "PREFERENCE" in mu.REASONS
+    text = json.dumps(update).lower()
+    for private in ("typical", "hint", "retailer", "memory"):
+        assert private not in text
+
+
+def test_a_preference_update_has_the_same_id_and_provisional_rules_as_any_exchange(aws_env):
+    created = build(original_size="9.5", new_size="9.5", reason="PREFERENCE")
+    kept = build(original_size="9.5", new_size="9.5", reason="PREFERENCE", outcome="exchange_completed_kept")
+    assert created["update_id"] == build(original_size="9.5", new_size="9.5", reason="PREFERENCE")["update_id"]
+    assert created["update_id"] != kept["update_id"] and created["provisional"] is True and kept["provisional"] is False
+    assert kept["fit_feedback"] == "size_ok"
+    with pytest.raises(DomainError) as exc:
+        build(original_size="9.5", new_size="9.5", reason="PREFERENCE", provisional=False)
+    assert exc.value.code == ErrorCode.VALIDATION_ERROR
+
+
+def test_a_preference_update_must_keep_the_size(aws_env):
+    with pytest.raises(DomainError) as exc:
+        build(original_size="9.5", new_size="10.0", reason="PREFERENCE")
+    assert exc.value.code == ErrorCode.VALIDATION_ERROR and "keeps the size" in exc.value.message
+
+
+@pytest.mark.parametrize("reason", ["TOO_SMALL", "TOO_BIG", "OTHER"])
+def test_the_other_reasons_have_no_fit_feedback_field(aws_env, reason):
+    assert "fit_feedback" not in build(reason=reason)
+    assert "fit_feedback" not in build(original_size="9.5", new_size="9.5", reason=reason)
+
+
+def test_the_outbox_keeps_the_preference_payload_whole(ddb, fixed_now):
+    update = build(original_size="9.5", new_size="9.5", reason="PREFERENCE")
+    assert mu.enqueue(update) is True
+    row = outbox_row(update["update_id"])
+    assert row["payload"] == update and row["payload"]["fit_feedback"] == "size_ok"
+    assert (row["status"], row["attempts"]) == ("pending", 0) and [i["update_id"] for i in mu.list_pending(AVA)] == [update["update_id"]]
+
+
+def test_update_from_a_colour_exchange_transaction_item(aws_env):
+    item = txn_item(replacement_size="9.5", original_size="9.5", memory_reason="PREFERENCE", replacement_color="BROWN")
+    update = mu.update_from_txn_item(item)
+    assert (update["reason"], update["fit_feedback"], update["original_size"], update["new_size"], update["provisional"]) == (
+        "PREFERENCE", "size_ok", "9.5", "9.5", True)
+    assert update["color"] == "BLACK"  # the purchased colour: the feedback is about the size of the style
+    kept = mu.update_from_txn_item(item, outcome="exchange_completed_kept")
+    assert kept["fit_feedback"] == "size_ok" and kept["provisional"] is False and kept["update_id"] != update["update_id"]
+
+
 # --------------------------------------------------------------------------- outbox
 
 

@@ -1,0 +1,49 @@
+{
+  "style_id": "DEMO-STYLE-CONTRAST",
+  "product_name": "Clementinne",
+  "n_reviews": 4,
+  "n_flagged": 0,
+  "reviews": [
+    {
+      "review_id": "DEMO-REV-CONTRAST-01",
+      "rating": 4,
+      "title": "Cute but big",
+      "text": "Cute shoe but it runs big. My usual 8 had too much room around the heel, the 7.5 fits much better.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 8,
+      "flags": []
+    },
+    {
+      "review_id": "DEMO-REV-CONTRAST-02",
+      "rating": 3,
+      "title": "Half size too large",
+      "text": "Half a size too large for me. I would go down half a size, the leather is soft and the colour matches well.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 4,
+      "flags": []
+    },
+    {
+      "review_id": "DEMO-REV-CONTRAST-03",
+      "rating": 4,
+      "title": "Roomy fit",
+      "text": "Roomy fit overall. I sized down and it is comfortable now, no slipping when I walk. Good everyday black shoe.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 3,
+      "flags": []
+    },
+    {
+      "review_id": "DEMO-REV-CONTRAST-04",
+      "rating": 4,
+      "title": "Fine fit",
+      "text": "Fits fine in my normal size 8, although the heel was slightly loose at first. Fine once I wore thicker socks.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 1,
+      "flags": []
+    }
+  ],
+  "provenance": "synthetic"
+}

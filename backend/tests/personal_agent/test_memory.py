@@ -71,9 +71,55 @@ def test_seed_loads_the_fixture(repo: MemoryRepo) -> None:
     assert ava.updates == [] and ava.label == "Synthetic demo memory"
 
 
+def test_the_demo_v2_owners_are_seeded(repo: MemoryRepo) -> None:
+    john = repo.get_owner_memory("DEMO-CUST-JOHN")
+    assert (john.display_name, john.size_system, john.typical_size) == ("John", "US_M", "10.0")
+    assert [(m.retailer, m.item, m.size, m.outcome) for m in john.memory] == [
+        ("Retailer A (synthetic)", "loafer", "10.0", "kept"),
+        ("Retailer B (synthetic)", "boot", "10.5", "returned_too_big"),
+        ("Retailer C (synthetic)", "sneaker", "10.0", "kept"),
+    ]
+    david = repo.get_owner_memory("DEMO-CUST-DAVID")
+    assert (david.display_name, david.size_system, david.typical_size) == ("David", "US_M", "11.0")
+    assert [(m.size, m.outcome) for m in david.memory if m.outcome != "kept"] == [("11.5", "returned_too_big")]
+    assert repo.recall_size_memory("DEMO-CUST-JOHN")["typical_size"] == "10.0"
+
+
+def test_reset_restores_the_demo_v2_owners_too(repo: MemoryRepo) -> None:
+    repo._update("OWNER#DEMO-CUST-JOHN", "MEM#PM-2", "SET #s = :v", names={"#s": "size"}, values={":v": "9.0"})
+    repo._update("OWNER#DEMO-CUST-DAVID", "PROFILE", "SET #t = :v", names={"#t": "typical_size"}, values={":v": "9.0"})
+    repo.apply_update(update(owner_ref="DEMO-CUST-JOHN"))
+    repo.reset()
+    assert repo.get_owner_memory("DEMO-CUST-JOHN").memory[1].size == "10.5"
+    assert repo.get_owner_memory("DEMO-CUST-JOHN").updates == []
+    assert repo.get_owner_memory("DEMO-CUST-DAVID").typical_size == "11.0"
+
+
+def test_the_optional_colour_of_a_remembered_item_is_seeded_and_shown(repo: MemoryRepo) -> None:
+    john = repo.get_owner_memory("DEMO-CUST-JOHN")
+    assert [(m.item, m.color, m.outcome) for m in john.memory] == [
+        ("loafer", "BROWN", "kept"), ("boot", "BLACK", "returned_too_big"), ("sneaker", "WHITE", "kept"),
+    ]
+    assert all(m.color is None for m in repo.get_owner_memory(AVA).memory)  # the regression personas have none
+    assert {e["item"]: e["color"] for e in repo.recall_size_memory("DEMO-CUST-JOHN")["entries"]} == {
+        "loafer": "BROWN", "boot": "BLACK", "sneaker": "WHITE",
+    }
+    shown = repo.list_memory("DEMO-CUST-JOHN")["memory"]
+    assert [m["color"] for m in shown] == ["BROWN", "BLACK", "WHITE"]
+
+
+def test_a_colour_in_the_fixture_is_stored_upper_case(repo: MemoryRepo, tmp_path: Any) -> None:
+    fixture = tmp_path / "memory.json"
+    data = memory.load_fixture()
+    data["owners"][0]["memory"][0]["color"] = " tan "
+    fixture.write_text(json.dumps(data), encoding="utf-8")
+    repo.reset(fixture)
+    assert repo.get_owner_memory(AVA).memory[0].color == "TAN"
+
+
 def test_seed_is_repeatable_and_returns_counts(repo: MemoryRepo) -> None:
-    assert repo.seed() == {"owners": 3, "entries": 5}
-    assert len(all_items(repo)) == 8
+    assert repo.seed() == {"owners": 5, "entries": 11}
+    assert len(all_items(repo)) == 16  # 5 profiles + 11 remembered purchases
 
 
 def test_reset_restores_the_fixture_and_deletes_everything_else(repo: MemoryRepo) -> None:
@@ -83,8 +129,8 @@ def test_reset_restores_the_fixture_and_deletes_everything_else(repo: MemoryRepo
     repo.emit(AVA, "PRUN-AAA", "run_started", {})
     repo._update(f"OWNER#{AVA}", "MEM#PM-1", "SET #s = :v", names={"#s": "size"}, values={":v": "9.0"})
     summary = repo.reset()
-    assert summary["owners"] == 3 and summary["entries"] == 5 and summary["deleted"] >= 8
-    assert len(all_items(repo)) == 8
+    assert summary["owners"] == 5 and summary["entries"] == 11 and summary["deleted"] >= 16
+    assert len(all_items(repo)) == 16
     ava = repo.get_owner_memory(AVA)
     assert ava.updates == [] and ava.memory[0].size == "7.5"
     with pytest.raises(DomainError):
@@ -105,7 +151,7 @@ def test_reset_with_an_unusable_fixture_deletes_nothing(repo: MemoryRepo, tmp_pa
 def test_module_level_names_of_the_contract_exist(repo: MemoryRepo) -> None:
     assert memory.apply_memory_update is memory.apply_update
     assert memory.reset() == memory.reset_memory()
-    assert memory.seed_memory() == 3
+    assert memory.seed_memory() == 5
     assert memory.get_owner_memory(AVA).typical_size == "7.5"
     assert memory.list_memory(AVA)["owner_id"] == AVA
 
@@ -144,6 +190,36 @@ def test_a_replay_with_other_content_does_not_overwrite_the_first(repo: MemoryRe
     replay = repo.apply_update(update(new_size="9.0"))
     assert replay["duplicate"] is True
     assert repo.get_owner_memory(AVA).updates[0].new_size == "8.5"
+
+
+def test_a_colour_exchange_update_carries_fit_feedback_and_is_shown_and_recalled(repo: MemoryRepo) -> None:
+    """D11: a PREFERENCE update keeps the size and says it fit; the extra field must not be rejected."""
+    body = update(reason="PREFERENCE", original_size="9.5", new_size="9.5", fit_feedback="size_ok", owner_ref="DEMO-CUST-JOHN")
+    result = repo.apply_update(body)
+    assert result["applied"] is True and result["update"]["fit_feedback"] == "size_ok" and result["update"]["reason"] == "PREFERENCE"
+    shown = repo.get_owner_memory("DEMO-CUST-JOHN").updates[0]
+    assert (shown.fit_feedback, shown.original_size, shown.new_size, shown.confidence) == ("size_ok", "9.5", "9.5", "provisional")
+    recalled = repo.recall_size_memory("DEMO-CUST-JOHN")["aldo_updates"]
+    assert recalled == [{
+        "update_id": "MU-5C0A11", "product_name": "Stessy2.0", "color": "BLACK", "original_size": "9.5", "new_size": "9.5",
+        "reason": "PREFERENCE", "outcome": "exchange_created", "confidence": "provisional", "fit_feedback": "size_ok",
+    }]
+    assert repo.list_memory("DEMO-CUST-JOHN")["updates"][0]["fit_feedback"] == "size_ok"
+    assert repo.apply_update(body)["duplicate"] is True  # idempotent like every update
+
+
+def test_an_update_without_fit_feedback_has_none_and_the_recall_view_omits_it(repo: MemoryRepo) -> None:
+    repo.apply_update(update())
+    assert repo.get_owner_memory(AVA).updates[0].fit_feedback is None
+    assert "fit_feedback" not in repo.recall_size_memory(AVA)["aldo_updates"][0]
+
+
+@pytest.mark.parametrize("bad", ["size_bad", "", 5, True, ["size_ok"]])
+def test_fit_feedback_only_accepts_size_ok(repo: MemoryRepo, bad: Any) -> None:
+    with pytest.raises(DomainError) as caught:
+        repo.apply_update(update(fit_feedback=bad))
+    assert caught.value.code == "VALIDATION_ERROR" and "fit_feedback" in caught.value.message
+    assert repo.get_owner_memory(AVA).updates == []
 
 
 def test_provisional_updates_are_stored_with_lower_confidence(repo: MemoryRepo) -> None:
@@ -479,6 +555,15 @@ def test_event_payloads_are_redacted_and_capped(repo: MemoryRepo) -> None:
     assert "SECRET" not in dumped and AVA not in dumped
     assert len(events[0]["payload"]["args"]["note"]) == 500
     assert len(events[1]["payload"]["text"]) == 1400  # assistant messages keep up to 1500
+
+
+def test_the_hand_off_is_an_event_of_the_bots_run_and_the_stream_types_are_not(repo: MemoryRepo) -> None:
+    conv = repo.create_conversation(AVA)
+    repo.create_run(AVA, conv, "PRUN-8")
+    assert repo.emit(AVA, "PRUN-8", "handoff_to_returns", {"order_id": "DEMO-1001"}) == 1
+    for foreign in ("memory_consulted", "handback", "reviews_shared", "delivered"):  # A2A-only types
+        with pytest.raises(DomainError):
+            repo.emit(AVA, "PRUN-8", foreign, {})
 
 
 def test_emit_validates_type_actor_and_run(repo: MemoryRepo) -> None:

@@ -1,7 +1,7 @@
-"""ALDO bot -> ALDO Fit Gateway client (contracts.md F.8). Two calls, three transports.
+"""ALDO bot -> ALDO Fit Gateway client (contracts.md F.8). Three calls, three transports.
 
-``size_assist(request)`` and ``size_decision(request)`` take the C.8 request bodies (plain dicts)
-and return the gateway's JSON answer as a dict. Every failure is a ``GatewayCallError``, a
+``size_assist(request)``, ``reviews(request)`` and ``size_decision(request)`` take the C.8 request
+bodies (plain dicts) and return the gateway's JSON answer as a dict. Every failure is a ``GatewayCallError``, a
 ``DomainError`` subclass carrying the gateway's own error code (``UNKNOWN_STYLE`` with its
 candidates, ``INVALID_SIZE_CHOICE``, ``STOCK_CHANGED``, ``REQUEST_EXPIRED``,
 ``DELEGATION_LIMIT_EXCEEDED``, ``NOT_AUTHORIZED``, ...), so callers handle one error type.
@@ -9,9 +9,10 @@ candidates, ``INVALID_SIZE_CHOICE``, ``STOCK_CHANGED``, ``REQUEST_EXPIRED``,
 Transports (``GATEWAY_TRANSPORT``):
 
 * ``local``: lazy-imports ``returns_domain.gateway`` and calls ``size_assist(claims, request)`` /
-  ``decide_size(claims, request)`` with the claims verified from the delegated token (tests,
-  local runs, fallback). ``backend=`` injects any object with those two functions.
-* ``http``: ``POST {base}/api/gateway/size-assist`` and ``/size-decision`` with
+  ``get_reviews(claims, request)`` / ``decide_size(claims, request)`` with the claims verified from
+  the delegated token (tests, local runs, fallback). ``backend=`` injects any object with those
+  functions.
+* ``http``: ``POST {base}/api/gateway/size-assist``, ``/reviews`` and ``/size-decision`` with
   ``Authorization: Bearer <delegated token>``, 20 s timeout, ONE retry on a 5xx answer or a
   timeout, redirects refused (a bearer token must never follow a redirect), https required unless
   the host is loopback. The base URL is ``GATEWAY_BASE_URL`` or the SSM parameter
@@ -42,6 +43,7 @@ from .log import logger
 
 SIZE_ASSIST_PATH = "/api/gateway/size-assist"
 SIZE_DECISION_PATH = "/api/gateway/size-decision"
+REVIEWS_PATH = "/api/gateway/reviews"
 MAX_RESPONSE_BYTES = 1_000_000
 RETRY_DELAY_SECONDS = 0.3
 _CODE_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]{2,40}$")
@@ -73,6 +75,10 @@ class GatewayClient(Protocol):
 
     def size_decision(self, request: Mapping[str, Any]) -> dict[str, Any]: ...
 
+    def reviews(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        """Customer reviews of one style (``{"style_id", "limit"}``): untrusted text plus flags."""
+        ...
+
 
 # ----------------------------------------------------------------------------- local transport
 
@@ -103,6 +109,9 @@ class LocalGatewayClient:
 
     def size_decision(self, request: Mapping[str, Any]) -> dict[str, Any]:
         return self._call("decide_size", request)
+
+    def reviews(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        return self._call("get_reviews", request)
 
     def _call(self, function: str, request: Mapping[str, Any]) -> dict[str, Any]:
         try:
@@ -239,6 +248,9 @@ class HttpGatewayClient:
 
     def size_decision(self, request: Mapping[str, Any]) -> dict[str, Any]:
         return self._post(SIZE_DECISION_PATH, request)
+
+    def reviews(self, request: Mapping[str, Any]) -> dict[str, Any]:
+        return self._post(REVIEWS_PATH, request)
 
     def _url(self, path: str) -> str:
         base = self._base_url or resolve_base_url(self._ssm_client)

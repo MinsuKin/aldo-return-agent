@@ -1,5 +1,6 @@
-// Scripted stand-ins for the two agents. Each builder returns a timed list of run events (the same
-// event types and payload shapes as contracts.md B.4 plus the pivot's A2A events). Side effects
+// Scripted stand-ins for ALDO bot's return workflow (fit exchanges and returns for the regression
+// customers) and for the approval continuation. Each builder returns a timed list of run events (the
+// same event types and payload shapes as contracts.md B.4 plus the pivot's A2A events). Side effects
 // (quotes, orders, transactions, cases, memory) are applied when the event becomes visible, so
 // the UI sees exactly what a real run would show, in the same order.
 
@@ -17,11 +18,13 @@ import {
   hex,
   iso,
   newId,
+  newRetMemo,
   nextStepText,
   now,
   orderById,
   ordersOf,
   payloadHash,
+  persona,
   pushA2a,
   rankForQuote,
   script,
@@ -76,8 +79,18 @@ interface AldoParams {
   bodyOrderId: string | null;
 }
 
-export function buildAldoRun(p: AldoParams): Script {
-  const s = script();
+/**
+ * One turn of the return workflow for the regression customers. `into`: append to an existing script (a
+ * hand-off run that continues in the return workflow). Events without an actor belong to the workflow.
+ */
+export function buildAldoRun(p: AldoParams, into?: Script): Script {
+  const s = buildAldoTurn(p, into);
+  for (const ev of s.events) if (!ev.actor) ev.actor = "aldo_agent";
+  return s;
+}
+
+function buildAldoTurn(p: AldoParams, into?: Script): Script {
+  const s = into ?? script();
   const it = understand(p.message);
   const mentionedOrder = it.mentioned ? orderById(it.mentioned) : undefined;
   const foreign = !!it.mentioned && (!mentionedOrder || mentionedOrder.customer_id !== p.customerId);
@@ -338,6 +351,11 @@ function quoteFlow(s: Script, c: FlowCtx): void {
       for (const o of quote.options) o.payload_hash = payloadHash(quoteId, o, POLICY_VERSION);
       state.quotes.set(quoteId, quote);
       previous.latestQuoteId = quoteId;
+      pushA2a(customerId, "quote_created", "aldo_agent", {
+        quote_id: quoteId,
+        primary_option_type: quote.options[0]?.type ?? null,
+        option_types: quote.options.map((o) => o.type),
+      });
     },
   );
   s.emit(60, "tool_result", {
@@ -359,9 +377,9 @@ function quoteFlow(s: Script, c: FlowCtx): void {
   let text: string;
   if (top) {
     const later = exchanges.filter((o) => o.meets_deadline === false);
-    text = `${fitNote}${dcMissing ? "The distribution centre is out of that size. " : ""}${top.location_name} can have size ${top.replacement_size} ready ${weekdayText(top.eta_date)}${top.meets_deadline ? ", which meets your deadline" : ""}.${later.length ? " Shipping options arrive later." : ""} You can still return for a refund if you prefer. Review the options and approve one; nothing happens until you do.`;
+    text = `${fitNote}${dcMissing ? "The distribution centre is out of that size. " : ""}${top.location_name} can have size ${top.replacement_size} ready ${weekdayText(top.eta_date)}${top.meets_deadline ? ", which meets your deadline" : ""}.${later.length ? " Shipping options arrive later." : ""} You can still return for a refund if you prefer. Review the options and confirm one; nothing happens until you do.`;
   } else {
-    text = `${fitNote}I can't offer an exchange${cand.reasonNoExchange === "NO_SUCH_SIZE" ? " for this style" : ""}, but the return options are below. Review them and approve one; nothing happens until you do.`;
+    text = `${fitNote}I can't offer an exchange${cand.reasonNoExchange === "NO_SUCH_SIZE" ? " for this style" : ""}, but the return options are below. Review them and confirm one; nothing happens until you do.`;
   }
   assistant(s, text);
   finishRun(s, { rounds: round, tools });
@@ -415,25 +433,68 @@ export interface ApprovalParams {
   approval: Approval;
 }
 
+const money = (cents: number): string => `CAD ${(cents / 100).toFixed(2)}`;
+
+function doneText(opt: QuoteOption, who: { name: string; minutes: number | null }): string {
+  const n = opt.lines?.length ?? 0;
+  if (opt.type === "return_mail" && n > 0) {
+    const what = n === 1 ? "the item" : `all ${n} items`;
+    const shipping = opt.benefit
+      ? `, and shipping was free with your ${opt.benefit.note.replace(/ perk.*/i, "")} perk (${opt.benefit.used} of ${opt.benefit.per_month} this month)`
+      : opt.fee_cents > 0
+        ? `, with the standard ${money(opt.fee_cents)} shipping fee`
+        : "";
+    return `Done. Your return label for ${what} is created${shipping}. Pack the parcel and drop it at any carrier point. Your refund of ${money(opt.refund_cents)} follows once ALDO receives it.`;
+  }
+  if (opt.type === "exchange_store_pickup") {
+    const swap = opt.replacement_color ? `your ${opt.replacement_color.toLowerCase()} ${opt.replacement_size}` : `size ${opt.replacement_size}`;
+    const near = who.minutes !== null ? `, ${who.minutes} min away` : "";
+    return `Done. Your exchange is confirmed: ${swap} will be ready at ${opt.location_name}${near}. I've notified the store, so it's waiting for you. ${nextStepText(opt)}`;
+  }
+  if (opt.type === "return_in_store") return `Done. Your return is confirmed. ${nextStepText(opt)} I've notified the store.`;
+  return `Done. Your ${opt.type.startsWith("exchange") ? "exchange" : "return"} is confirmed. ${nextStepText(opt)}`;
+}
+
+/** Continuation after the owner's confirm click: execute, read the record back, say what happened. */
 export function buildApprovalRun(p: ApprovalParams): Script {
   const s = script();
+  const A = "aldo_agent";
   const { quote, approval } = p;
   const opt = quote.options.find((o) => o.option_id === approval.option_id) as QuoteOption;
   const order = orderById(quote.order_id) as MockOrder;
-  const line = order.lines.find((l) => l.line_id === quote.line_id) as MockLine;
+  const lineIds = quote.line_ids ?? [quote.line_id];
+  const lines = lineIds.map((id) => order.lines.find((l) => l.line_id === id) as MockLine);
+  const line = lines[0];
   const isExchange = opt.type.startsWith("exchange");
   const txnId = isExchange ? `DEMO-RMA-${hex(6)}` : `DEMO-RET-${hex(6)}`;
   const updateId = isExchange ? `MU-${hex(6)}` : null;
+  const who = persona(p.customerId);
+  const minutes = opt.minutes_away ?? null;
+  const store = opt.type === "exchange_store_pickup" || opt.type === "return_in_store";
 
-  s.emit(0, "approval_received", { approval_id: approval.approval_id, quote_id: quote.quote_id, option_id: approval.option_id });
-  s.emit(350, "run_started", { kind: "approval", conv_id: p.conv.conv_id, order_id: order.order_id, model_id: MODEL_ID, max_rounds: 8 });
+  s.emit(0, "approval_received", { approval_id: approval.approval_id, quote_id: quote.quote_id, option_id: approval.option_id }, undefined, "system");
+  s.emit(350, "run_started", { kind: "approval", conv_id: p.conv.conv_id, order_id: order.order_id, model_id: MODEL_ID, max_rounds: 8 }, undefined, A);
 
-  s.emit(700, "tool_call", { tool: "execute_approved_resolution", args: { quote_id: quote.quote_id, option_id: approval.option_id }, round: 1 });
+  s.emit(700, "tool_call", { tool: "execute_approved_resolution", args: { quote_id: quote.quote_id, option_id: approval.option_id }, round: 1 }, undefined, A);
   s.emit(
     380,
     "transaction_created",
     { transaction_id: txnId, state: "completed", option_type: opt.type, quote_id: quote.quote_id, replayed: false },
     () => {
+      const created = iso(now());
+      const swapColour = isExchange && opt.replacement_color ? opt.replacement_color : null;
+      const notice = store
+        ? {
+            store_id: opt.location_id,
+            store_name: opt.location_name,
+            eta_minutes: minutes,
+            summary:
+              isExchange && swapColour
+                ? `${who?.display_name ?? "A customer"} (${who?.tier_label ?? "member"}) is coming to swap ${line.color.toLowerCase()} ${line.size} for ${swapColour.toLowerCase()} ${opt.replacement_size}. Please hold ${swapColour.toLowerCase()} ${opt.replacement_size} at the desk.`
+                : `${who?.display_name ?? "A customer"} (${who?.tier_label ?? "member"}) is bringing a pair back to the store.`,
+            notified_at: created,
+          }
+        : null;
       const txn: Txn = {
         transaction_id: txnId,
         customer_id: p.customerId,
@@ -446,6 +507,7 @@ export function buildApprovalRun(p: ApprovalParams): Script {
         location_id: opt.location_id,
         location_name: opt.location_name,
         replacement_size: opt.replacement_size,
+        replacement_color: swapColour,
         refund_cents: opt.refund_cents,
         fee_cents: opt.fee_cents,
         currency: opt.currency,
@@ -453,72 +515,123 @@ export function buildApprovalRun(p: ApprovalParams): Script {
         eta_text: opt.eta_text,
         next_step: nextStepText(opt),
         simulated: true,
-        created_at: iso(now()),
+        created_at: created,
         quote_id: quote.quote_id,
         update_id: updateId,
+        ...(opt.lines ? { lines: opt.lines } : {}),
+        ...(opt.benefit ? { benefit: opt.benefit } : {}),
+        store_notice: notice,
       };
       state.txns.set(txnId, txn);
       quote.stored_status = "executed";
       approval.consumed_txn_id = txnId;
-      line.returned_or_reserved_qty += opt.qty;
+      for (const l of lines) l.returned_or_reserved_qty += opt.lines ? 1 : opt.qty;
       if (isExchange) takeStock(opt.sku, opt.location_id, opt.qty);
-      pushA2a(p.customerId, "transaction_created", "aldo_agent", { transaction_id: txnId, state: "completed", option_type: opt.type, order_id: order.order_id, replayed: false });
-    },
-  );
-  s.emit(80, "tool_result", {
-    tool: "execute_approved_resolution",
-    ok: true,
-    code: null,
-    latency_ms: 420,
-    evidence: { transaction_id: txnId, replayed: false },
-    source_refs: [`TXN#${txnId}/META`],
-    provenance: "synthetic",
-    round: 1,
-  });
-
-  // The write-back to the personal agent happens right after an exchange is created (provisional).
-  if (isExchange && updateId) {
-    s.emit(
-      300,
-      "decision",
-      { summary: "Execution succeeded. Reading the saved record back before I tell the customer." },
-      () => {
-        const originalSize = line.size;
-        const newSize = opt.replacement_size ?? originalSize;
-        const reasonCode = Number(newSize) > Number(originalSize) ? "TOO_SMALL" : "TOO_BIG";
-        // Queued, not delivered: the real API delivers it when ALDO bot's memory is next read.
-        enqueueWriteback(p.customerId, {
-          update_id: updateId,
-          order_id: order.order_id,
-          style_id: line.style,
-          product_name: line.product_name,
-          color: line.color,
-          original_size: originalSize,
-          new_size: newSize,
-          reason: reasonCode,
-          outcome: "exchange_created",
-          provisional: true,
-          source: "ALDO_CA",
-          ts: iso(now()),
+      pushA2a(p.customerId, "transaction_created", A, {
+        transaction_id: txnId,
+        state: "completed",
+        option_type: opt.type,
+        order_id: order.order_id,
+        original_size: line.size,
+        new_size: opt.replacement_size ?? line.size,
+        location_id: opt.location_id,
+        fee_cents: opt.fee_cents,
+        replayed: false,
+      });
+      if (notice) {
+        pushA2a(p.customerId, "store_notified", "aldo_store", {
+          store_name: notice.store_name,
+          eta_minutes: notice.eta_minutes,
+          summary: notice.summary,
+          transaction_id: txnId,
         });
-      },
-    );
-  } else {
-    s.emit(300, "decision", { summary: "Execution succeeded. Reading the saved record back before I tell the customer." });
-  }
+      }
+      if (opt.benefit) {
+        const key = `${p.customerId}|${DEMO_TODAY.slice(0, 7)}`;
+        const used = (state.ledger.get(key) ?? 0) + 1;
+        state.ledger.set(key, used);
+        pushA2a(p.customerId, "benefit_applied", A, {
+          benefit: opt.benefit.type,
+          label: opt.benefit.label,
+          saved_cents: opt.benefit.saved_cents,
+          used,
+          per_month: opt.benefit.per_month,
+          transaction_id: txnId,
+        });
+      }
+    },
+    A,
+  );
+  s.emit(
+    80,
+    "tool_result",
+    {
+      tool: "execute_approved_resolution",
+      ok: true,
+      code: null,
+      latency_ms: 420,
+      evidence: { transaction_id: txnId, replayed: false },
+      source_refs: [`TXN#${txnId}/META`],
+      provenance: "synthetic",
+      round: 1,
+    },
+    undefined,
+    A,
+  );
+
+  // The write-back to ALDO bot happens right after an exchange is created (provisional).
+  s.emit(
+    300,
+    "decision",
+    { summary: "Execution succeeded. Reading the saved record back before I tell the customer." },
+    isExchange && updateId
+      ? () => {
+          const originalSize = line.size;
+          const newSize = opt.replacement_size ?? originalSize;
+          const colourSwap = !!opt.replacement_color && opt.replacement_color.toLowerCase() !== line.color.toLowerCase() && newSize === originalSize;
+          const reasonCode = colourSwap ? "PREFERENCE" : Number(newSize) > Number(originalSize) ? "TOO_SMALL" : "TOO_BIG";
+          // Queued, not delivered: the real API delivers it when ALDO bot's memory is next read.
+          enqueueWriteback(p.customerId, {
+            update_id: updateId,
+            order_id: order.order_id,
+            style_id: line.style,
+            product_name: line.product_name,
+            color: opt.replacement_color ?? line.color,
+            original_size: originalSize,
+            new_size: newSize,
+            reason: reasonCode,
+            outcome: "exchange_created",
+            provisional: true,
+            fit_feedback: colourSwap ? "size_ok" : null,
+            source: "ALDO_CA",
+            ts: iso(now()),
+          });
+        }
+      : undefined,
+    A,
+  );
 
   toolStep(
     s,
     "get_resolution_status",
     { transaction_id: txnId },
     { latency: 110, evidence: { state: "completed", location_id: opt.location_id }, refs: [`TXN#${txnId}/META`] },
-    { round: 2, think: 450 },
+    {
+      round: 2,
+      think: 450,
+      actor: A,
+      onResult: () => {
+        // Back to the purchase workflow once the return is done.
+        if (p.conv.agent !== "personal") return;
+        const prev = p.conv.ret;
+        p.conv.mode = "bot";
+        p.conv.returns_order_id = null;
+        p.conv.ret = { ...newRetMemo(), lastReason: prev.reason ?? prev.lastReason, lastCondition: prev.condition ?? prev.lastCondition };
+        pushA2a(p.customerId, "handback", A, { reason: "completed" });
+      },
+    },
   );
-  assistant(
-    s,
-    `Done: simulated ${isExchange ? "exchange" : "return"} ${txnId} created. ${nextStepText(opt)} This is a prototype record only: no money moved and no parcel was sent.`,
-  );
-  finishRun(s, { rounds: 3, tools: 2 });
+  assistant(s, doneText(opt, { name: who?.display_name ?? "", minutes }), A);
+  finishRun(s, { rounds: 3, tools: 2, actor: "system" });
   return s;
 }
-

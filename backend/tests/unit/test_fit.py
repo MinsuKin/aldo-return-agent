@@ -382,6 +382,9 @@ def test_thresholds_agree_with_every_signal_in_the_derived_file():
     checked = 0
     for name, scopes in data["products"].items():
         for scope_name, entry in scopes.items():
+            if not isinstance(entry, dict):  # a demo alias entry (scripts/add_fit_aliases.py) adds "alias_of" and "note"
+                assert scope_name in {"alias_of", "note"} and "alias_of" in scopes, (name, scope_name)
+                continue
             recomputed = fit.classify(entry["too_small"], entry["too_big"])
             assert recomputed == entry["signal"], (name, scope_name, entry)
             assert entry["n_fit"] == entry["too_small"] + entry["too_big"], (name, scope_name)

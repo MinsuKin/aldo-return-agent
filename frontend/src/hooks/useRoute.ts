@@ -1,10 +1,10 @@
 import { useSyncExternalStore } from "react";
 
-export type Route = "assistant" | "impact" | "cases";
+export type Route = "assistant" | "cases";
 
 function parse(): Route {
   const h = window.location.hash.replace(/^#\/?/, "");
-  return h === "impact" ? "impact" : h === "cases" ? "cases" : "assistant";
+  return h === "cases" ? "cases" : "assistant";
 }
 
 function subscribe(fn: () => void): () => void {
@@ -15,8 +15,4 @@ function subscribe(fn: () => void): () => void {
 /** Hash routing keeps deep links working on S3/CloudFront without server rewrites. */
 export function useRoute(): Route {
   return useSyncExternalStore(subscribe, parse, () => "assistant" as Route);
-}
-
-export function routeHref(route: Route): string {
-  return route === "assistant" ? "#/" : `#/${route}`;
 }

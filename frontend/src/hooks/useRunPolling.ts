@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { RunEvent } from "../api/types";
 import { POLL_INTERVAL_MS } from "../config";
-import { isTerminal } from "../lib/events";
+import { isTerminal } from "../lib/runs";
 
 type OnEvents = (runId: string, events: RunEvent[], status: string) => void;
 

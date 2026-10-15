@@ -44,6 +44,28 @@ class FakeGateway:
             "summary": {"size": request.get("chosen_size")},
         }
 
+    def get_reviews(self, claims, request):
+        self._call("get_reviews", claims, request)
+        return {
+            "style_id": request.get("style_id", "DEMO-STYLE-MEN001"),
+            "product_name": "ALDO Men 001",
+            "n_reviews": 1,
+            "n_flagged": 0,
+            "reviews": [
+                {
+                    "review_id": "DEMO-REV-MEN001-01",
+                    "rating": 4,
+                    "title": "Runs big",
+                    "text": "Half a size big.",
+                    "language": "en",
+                    "verified_purchase": True,
+                    "helpful_votes": 3,
+                    "flags": [],
+                }
+            ],
+            "provenance": "synthetic",
+        }
+
     def get_proposal(self, customer_id, size_request_id):
         self._call("get_proposal", customer_id, size_request_id)
         return {"size_request_id": size_request_id, "status": "proposed", "price_cents": 12999}
@@ -62,7 +84,7 @@ class FakeGateway:
 
     def agent_card(self, base_url):
         self._call("agent_card", base_url)
-        return {"name": "ALDO Fit Gateway", "url": f"{base_url}/api/gateway"}
+        return {"name": "ALDO bot", "url": f"{base_url}/api/gateway"}
 
     def flush_outbox(self, customer_id=None, limit=10, client=None):
         self._call("flush_outbox", customer_id, limit=limit)

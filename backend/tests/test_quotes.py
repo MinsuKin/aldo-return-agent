@@ -93,6 +93,19 @@ def test_quote_created_event_is_emitted_once(flow):
                                     "expires_at": hq.quote.expires_at}
 
 
+def test_quote_created_is_mirrored_to_the_a2a_stream_without_amounts_or_people(flow):
+    """Domain v2: the middle timeline shows which kind of resolution leads; a retry mirrors nothing."""
+    hq = flow.hero_quote(types=("exchange_ship_from_dc", "exchange_store_pickup", "return_in_store"))
+    (event,) = trace.list_a2a_events(AVA).events
+    assert (event["type"], event["actor"]) == ("quote_created", "aldo_agent")
+    assert event["payload"] == {"quote_id": hq.quote_id, "primary_option_type": "exchange_ship_from_dc",
+                                "option_types": ["exchange_ship_from_dc", "exchange_store_pickup", "return_in_store"]}
+    assert "DEMO-CUST" not in str(event) and "cents" not in str(event)
+    quotes.create_quote(AVA, hq.run_id, hq.conv_id, hq.candidates.candidate_set_id, [o.option_id for o in hq.quote.options])
+    assert len(trace.list_a2a_events(AVA).events) == 1  # the same quote again: no second event
+    assert trace.list_a2a_events(BEN).events == []  # the stream belongs to its owner
+
+
 def test_create_quote_idempotent_and_supersedes(flow):
     hq = flow.hero_quote()
     ids = [o.option_id for o in hq.quote.options]

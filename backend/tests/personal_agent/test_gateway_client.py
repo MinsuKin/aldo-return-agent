@@ -22,7 +22,7 @@ from personal_agent.gateway_client import (
 from returns_domain import auth
 from returns_domain.errors import DomainError
 
-from .canned import DEMO_TOKEN, CannedGateway, load_assist, proposed_response
+from .canned import DEMO_TOKEN, CannedGateway, load_assist, load_reviews, proposed_response
 
 AVA = "DEMO-CUST-AVA"
 BASE = "https://d111.cloudfront.net"
@@ -92,6 +92,23 @@ def test_http_size_decision_uses_its_own_path() -> None:
     opener = FakeOpener((200, proposed_response()))
     http_client(opener).size_decision({"size_request_id": "SZR-3F9A1C"})
     assert opener.calls[0][0].full_url == f"{BASE}/api/gateway/size-decision"
+
+
+def test_http_reviews_use_their_own_path_with_the_same_token_and_timeout() -> None:
+    opener = FakeOpener((200, load_reviews("men001")))
+    answer = http_client(opener).reviews({"style_id": "DEMO-STYLE-MEN001", "limit": 20})
+    request, timeout = opener.calls[0]
+    assert request.full_url == f"{BASE}/api/gateway/reviews" and request.get_method() == "POST"
+    assert request.get_header("Authorization") == f"Bearer {DEMO_TOKEN}" and timeout == 20.0
+    assert json.loads(request.data) == {"style_id": "DEMO-STYLE-MEN001", "limit": 20}
+    assert answer["n_reviews"] == 16 and answer["n_flagged"] == 1 and answer["provenance"] == "synthetic"
+
+
+def test_http_reviews_errors_keep_the_gateway_code() -> None:
+    opener = FakeOpener((422, error_body("UNKNOWN_STYLE", "No style has that id.", candidates=[])))
+    with pytest.raises(GatewayCallError) as caught:
+        http_client(opener).reviews({"style_id": "NOPE"})
+    assert caught.value.code == "UNKNOWN_STYLE" and caught.value.status == 422
 
 
 def test_the_token_is_never_visible_in_repr_or_errors() -> None:
@@ -311,6 +328,35 @@ def test_local_decision_is_a_proposal_that_creates_no_order() -> None:
     )
     assert (proposal["status"], proposal["awaiting"]) == ("proposed", "owner_confirmation")
     assert "order_id" not in proposal and backend.proposals[0]["option_id"] == "SO-10"
+
+
+def test_local_reviews_verify_the_token_and_call_get_reviews_with_the_claims() -> None:
+    backend = CannedGateway("men001")
+    client = LocalGatewayClient(delegated_token("DEMO-CUST-JOHN"), backend=backend)
+    answer = client.reviews({"style_id": "DEMO-STYLE-MEN001", "limit": 20})
+    assert (answer["style_id"], answer["n_reviews"], answer["n_flagged"]) == ("DEMO-STYLE-MEN001", 16, 1)
+    assert backend.review_requests == [{"style_id": "DEMO-STYLE-MEN001", "limit": 20}]
+
+
+def test_local_reviews_reject_a_session_token_and_unknown_fields_and_styles() -> None:
+    with pytest.raises(GatewayCallError) as caught:
+        LocalGatewayClient(auth.sign_token(AVA).token, backend=CannedGateway("men001")).reviews({"style_id": "DEMO-STYLE-MEN001"})
+    assert caught.value.code == "NOT_AUTHORIZED"
+    client = LocalGatewayClient(delegated_token(), backend=CannedGateway("men001"))
+    with pytest.raises(GatewayCallError) as caught:
+        client.reviews({"style_id": "DEMO-STYLE-MEN001", "customer_id": AVA})
+    assert caught.value.code == "VALIDATION_ERROR"
+    with pytest.raises(GatewayCallError) as caught:
+        client.reviews({"style_id": "DEMO-STYLE-OTHER"})
+    assert caught.value.code == "UNKNOWN_STYLE"
+
+
+def test_local_reviews_against_the_real_gateway_module_need_the_delegated_scope() -> None:
+    from returns_domain import gateway
+
+    with pytest.raises(GatewayCallError) as caught:
+        LocalGatewayClient(auth.sign_token(AVA).token, backend=gateway).reviews({"style_id": "DEMO-STYLE-HERO"})
+    assert caught.value.code == "NOT_AUTHORIZED"
 
 
 def test_local_rejects_a_session_token() -> None:

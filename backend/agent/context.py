@@ -53,7 +53,15 @@ class RunContext:
     # Not part of the contract: collaborators and bookkeeping private to the agent package.
     services: Services = field(default_factory=Services, repr=False)
     case_id: str | None = None  # set when escalate_case succeeds
+    cache_read_tokens: int = 0
+    cache_write_tokens: int = 0
+    #: Validated ``memory_context`` of the payload (``owner_context.sanitize``); None when absent.
+    #: Trusted server data, never filled from model or owner text.
+    memory_context: dict[str, Any] | None = field(default=None, repr=False)
     rank_orders: dict[str, list[str]] = field(default_factory=dict, repr=False)
+    #: candidate_set_id -> ``{"options": [...], "reason_no_exchange", "preferred_channel"}`` of the
+    #: finds of THIS run (JSON-safe). Later runs read the persisted candidate set instead.
+    offered: dict[str, dict[str, Any]] = field(default_factory=dict, repr=False)
     pending_call: dict[str, Any] | None = field(default=None, repr=False)
     seen_message_count: int = field(default=-1, repr=False)
 

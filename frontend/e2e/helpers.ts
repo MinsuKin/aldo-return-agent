@@ -3,15 +3,14 @@ import { expect, type APIRequestContext, type Locator, type Page } from "@playwr
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-/** "mock" (default) runs everything, including mock-only controls; "deployed" skips those. */
+/** "mock" (default) runs everything, including mock-only controls and scripted wording; "deployed" skips those. */
 export const IS_MOCK = (process.env.E2E_TARGET ?? "mock") === "mock";
 export const MOCK_URL = process.env.MOCK_URL ?? "http://127.0.0.1:3001";
 export const ADMIN_SECRET = process.env.E2E_ADMIN_SECRET ?? "mock-admin";
-export const SHOT_DIR = process.env.E2E_SHOT_DIR ?? join(process.cwd(), "..", "docs", "eval", "screenshots", "ui-mock");
-
-mkdirSync(SHOT_DIR, { recursive: true });
+export const SHOT_DIR = process.env.E2E_SHOT_DIR ?? join(process.cwd(), "..", "docs", "eval", "screenshots", "ui-v2");
 
 export async function shot(page: Page, name: string, opts: { fullPage?: boolean } = {}): Promise<void> {
+  mkdirSync(SHOT_DIR, { recursive: true });
   await page.screenshot({ path: join(SHOT_DIR, `${name}.png`), fullPage: opts.fullPage ?? false });
 }
 
@@ -35,10 +34,11 @@ export async function resetDemo(request: APIRequestContext, variant: "default" |
   expect(res.ok(), `reset ${variant} -> ${res.status()}`).toBeTruthy();
 }
 
-export async function signInAs(page: Page, name: string): Promise<void> {
-  await page.goto("/");
-  await page.getByRole("button", { name: `Sign in as ${name}` }).click();
-  await expect(page.getByTestId("workspace")).toBeVisible();
+/** Pick a customer on the phone's first screen ("Who is using ALDO bot?"). */
+export async function signInAs(page: Page, name: string, query = ""): Promise<void> {
+  await page.goto(`/${query}`);
+  await page.getByRole("button", { name: new RegExp(`^${name}\\b`) }).click();
+  await expect(page.getByTestId("chat-screen")).toBeVisible();
 }
 
 /** Press Tab until `target` has focus (a keyboard-only way to reach a control). */
@@ -49,13 +49,6 @@ export async function tabTo(page: Page, target: Locator, maxTabs = 150): Promise
     await page.keyboard.press("Tab");
   }
   throw new Error(`Could not reach ${target} with ${maxTabs} Tab presses`);
-}
-
-export const firstApprove = (page: Page): Locator => page.locator('[data-testid^="option-card-"]').first().getByRole("button", { name: /^Approve/ });
-
-/** Wait until the ALDO assistant has finished its run (the working indicator is gone). */
-export async function waitAldoIdle(page: Page): Promise<void> {
-  await expect(page.getByTestId("aldo-working")).toHaveCount(0);
 }
 
 export async function mockPost(request: APIRequestContext, path: string, data: unknown): Promise<void> {
@@ -74,26 +67,7 @@ export async function latestSizeRequestId(page: Page): Promise<string> {
   });
 }
 
-/** Scroll a card to the top of its own scrolling column, so the screenshot starts at its heading. */
-export async function revealTop(locator: Locator): Promise<void> {
-  await locator.evaluate((el) => el.scrollIntoView({ block: "start" }));
-}
-
-/** Run assertions that depend on the mock's scripted agent text and data; skipped against a real deployment. */
+/** Run assertions that depend on the mock's scripted text and data; skipped against a real deployment. */
 export async function onMock(fn: () => Promise<void>): Promise<void> {
   if (IS_MOCK) await fn();
 }
-
-/** `actual` contains all of `expected`, in that order (other items may be interleaved). */
-export function expectInOrder(actual: string[], expected: string[]): void {
-  let from = 0;
-  for (const want of expected) {
-    const at = actual.indexOf(want, from);
-    expect(at, `${want} in ${JSON.stringify(actual)} after position ${from}`).toBeGreaterThanOrEqual(0);
-    from = at + 1;
-  }
-}
-
-/** Approve button of the first exchange card (the write-back only happens for exchanges). */
-export const firstExchangeApprove = (page: Page): Locator =>
-  page.locator('[data-option-type^="exchange_"]').first().getByRole("button", { name: /^Approve/ });

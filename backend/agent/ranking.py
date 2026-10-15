@@ -1,8 +1,13 @@
-"""Deterministic option order and display text for the ALDO returns agent.
+"""Deterministic option order and display text for the return workflow of ALDO bot.
 
 PIVOT_ADDENDUM C9: rank store-pickup exchange first, then the other exchanges, then returns.
-Eligible refund options are never dropped here, only ordered. In-store exchange is free
-(the fee comes from the option itself, CAD 0 in the demo logistics).
+Eligible refund options are never dropped here, only ordered (requirement R6.5). In-store exchange
+is free (the fee comes from the option itself, CAD 0 in the demo logistics).
+
+The owner's chosen path (S19, addendum 11.5) moves that path to the front and keeps everything else
+behind it in the default order: ``preferred_channel`` is ``store_pickup`` (the default order),
+``ship`` (exchanges shipped by mail first) or ``return`` (the refund options first). Nothing is
+removed, so a refund option stays visible whatever the owner chose.
 
 These are pure helpers over the option dicts returned by ``options.find_options``. The
 ``find_resolution_options`` tool attaches the result as ``ranking`` so the model follows one
@@ -23,7 +28,15 @@ SHIP_EXCHANGES: tuple[str, ...] = ("exchange_ship_from_store", "exchange_ship_fr
 RETURN_TYPES: tuple[str, ...] = ("return_in_store", "return_mail")
 EXCHANGE_TYPES: tuple[str, ...] = (PICKUP_EXCHANGE, *SHIP_EXCHANGES)
 
+#: Values of ``preferred_channel`` (the same names as the domain and the tool schema).
+CHANNELS: tuple[str, ...] = ("ship", "store_pickup", "return")
+
 _GROUP: dict[str, int] = {PICKUP_EXCHANGE: 0, **{t: 1 for t in SHIP_EXCHANGES}, **{t: 2 for t in RETURN_TYPES}}
+#: Group order per chosen path: the chosen kind of option first, the rest in the default order.
+_GROUP_BY_CHANNEL: dict[str, dict[str, int]] = {
+    "ship": {PICKUP_EXCHANGE: 1, **{t: 0 for t in SHIP_EXCHANGES}, **{t: 2 for t in RETURN_TYPES}},
+    "return": {PICKUP_EXCHANGE: 1, **{t: 2 for t in SHIP_EXCHANGES}, **{t: 0 for t in RETURN_TYPES}},
+}
 _LABELS: dict[str, str] = {
     "exchange_ship_from_store": "Ship-from-store exchange",
     "exchange_ship_from_dc": "Ship-from-warehouse exchange",
@@ -32,6 +45,7 @@ _LABELS: dict[str, str] = {
 }
 _MEETS_RANK = {True: 0, None: 1, False: 2}
 _LAST = "9999-12-31"
+_UNKNOWN_MINUTES = 10**9
 
 
 def money_text(cents: object) -> str | None:
@@ -43,62 +57,104 @@ def money_text(cents: object) -> str | None:
 
 
 def add_money_text(option: Mapping[str, Any]) -> dict[str, Any]:
-    """Copy of ``option`` with ``refund_text`` / ``fee_text`` next to the cents fields."""
+    """Copy of ``option`` with ``refund_text`` / ``fee_text`` next to the cents fields.
+
+    A ``benefit`` the domain attached (a tier perk) gets ``saved_text`` next to ``saved_cents``;
+    nothing else in it is touched or invented.
+    """
     enriched = dict(option)
     for cents_key, text_key in (("refund_cents", "refund_text"), ("fee_cents", "fee_text")):
         text = money_text(option.get(cents_key))
         if text is not None:
             enriched[text_key] = text
+    benefit = option.get("benefit")
+    if isinstance(benefit, Mapping):
+        saved = money_text(benefit.get("saved_cents"))
+        if saved is not None:
+            enriched["benefit"] = {**benefit, "saved_text": saved}
     return enriched
 
 
-def rank_group(option_type: str) -> int:
-    """0 store pickup, 1 other exchange, 2 return, 3 unknown (kept last)."""
-    return _GROUP.get(option_type, 3)
+def normalize_channel(preferred_channel: object) -> str | None:
+    """The channel if it is one of ``CHANNELS``, else None (the default order)."""
+    return preferred_channel if isinstance(preferred_channel, str) and preferred_channel in CHANNELS else None
 
 
-def _sort_key(index: int, option: Mapping[str, Any]) -> tuple[Any, ...]:
-    group = rank_group(str(option.get("type")))
+def rank_group(option_type: str, preferred_channel: str | None = None) -> int:
+    """0 chosen kind (store pickup by default), 1 and 2 the rest, 3 unknown (kept last)."""
+    table = _GROUP_BY_CHANNEL.get(preferred_channel or "", _GROUP)
+    return table.get(option_type, 3)
+
+
+def _minutes(option: Mapping[str, Any]) -> int:
+    value = option.get("minutes_away")
+    return value if isinstance(value, int) and not isinstance(value, bool) else _UNKNOWN_MINUTES
+
+
+def _sort_key(index: int, option: Mapping[str, Any], preferred_channel: str | None) -> tuple[Any, ...]:
+    kind = str(option.get("type"))
+    group = rank_group(kind, preferred_channel)
     eta = str(option.get("eta_date") or _LAST)
     fee = option.get("fee_cents")
     fee_rank = fee if isinstance(fee, int) and not isinstance(fee, bool) else 0
-    if group <= 1:
+    if kind in EXCHANGE_TYPES:
         meets = _MEETS_RANK.get(option.get("meets_deadline"), 1)
-        return (group, meets, eta, fee_rank, index)
-    return (group, 0, fee_rank, eta, index)
+        return (group, meets, eta, fee_rank, _minutes(option), index)
+    if kind == "return_in_store":  # in-store before mail-in, whichever group they are in
+        return (group, 0, 0, fee_rank, eta, index)
+    return (group, 0, 1, fee_rank, eta, index)
 
 
-def rank_options(options: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+def rank_options(
+    options: Sequence[Mapping[str, Any]], preferred_channel: str | None = None
+) -> list[dict[str, Any]]:
     """Options in the order they should be presented (stable for ties)."""
-    ordered = sorted(enumerate(options), key=lambda pair: _sort_key(*pair))
+    channel = normalize_channel(preferred_channel)
+    ordered = sorted(enumerate(options), key=lambda pair: _sort_key(pair[0], pair[1], channel))
     return [dict(option) for _, option in ordered]
 
 
-def ranking_reason(ordered: Sequence[Mapping[str, Any]], deadline_date: str | None = None) -> str:
+def ranking_reason(
+    ordered: Sequence[Mapping[str, Any]],
+    deadline_date: str | None = None,
+    preferred_channel: str | None = None,
+) -> str:
     """One server-authored line explaining why the first option leads (<= 240 characters)."""
     if not ordered:
         return ""
+    channel = normalize_channel(preferred_channel)
     top = ordered[0]
     top_type = str(top.get("type"))
     has_return = any(str(o.get("type")) in RETURN_TYPES for o in ordered)
     has_exchange = any(str(o.get("type")) in EXCHANGE_TYPES for o in ordered)
     if top_type in RETURN_TYPES:
-        reason = (
-            "No exchange is available for this size, so the refund options are listed."
-            if not has_exchange
-            else "Refund options lead because no exchange option applies."
-        )
+        if channel == "return":
+            reason = "Refund options lead because you asked for a refund."
+        elif not has_exchange:
+            reason = "No exchange is available for this size, so the refund options are listed."
+        else:
+            reason = "Refund options lead because no exchange option applies."
         return reason[:240]
 
     where = str(top.get("location_name") or top.get("location_id") or "the selected location")
     eta = str(top.get("eta_text") or top.get("eta_date") or "soon")
     fee = top.get("fee_cents")
     fee_phrase = "free" if fee == 0 else (money_text(fee) or "fee shown on the card")
+    color = top.get("replacement_color")
+    pair = f" of the {color.strip().title()} pair" if isinstance(color, str) and color.strip() else ""
+    away = _minutes(top)
+    away_phrase = (
+        f", {away} minute{'' if away == 1 else 's'} away"
+        if away != _UNKNOWN_MINUTES and top_type == PICKUP_EXCHANGE
+        else ""
+    )
     if top_type == PICKUP_EXCHANGE:
-        core = f"Store pickup at {where} is {fee_phrase} and ready {eta}"
+        core = f"Store pickup{pair} at {where} is {fee_phrase} and ready {eta}{away_phrase}"
     else:
-        core = f"{_LABELS.get(top_type, 'Exchange')} from {where} is {fee_phrase} and arrives {eta}"
+        core = f"{_LABELS.get(top_type, 'Exchange')}{pair} from {where} is {fee_phrase} and arrives {eta}"
     core += _deadline_clause(top.get("meets_deadline"), deadline_date)
+    if channel == "ship" and top_type in SHIP_EXCHANGES:
+        core += ", as you asked for delivery by mail"
     tail = " Refund options stay available." if has_return else ""
     return f"{core}.{tail}"[:240]
 
@@ -118,13 +174,15 @@ def _deadline_clause(meets: object, deadline_date: str | None) -> str:
 
 
 def ranking_summary(
-    options: Sequence[Mapping[str, Any]], deadline_date: str | None = None
+    options: Sequence[Mapping[str, Any]],
+    deadline_date: str | None = None,
+    preferred_channel: str | None = None,
 ) -> dict[str, Any]:
-    """``{"order": [option_id, ...], "reason": str}`` for the tool result."""
-    ordered = rank_options(options)
+    """``{"order": [option_id, ...], "reason": str, "rule": str}`` for the tool result."""
+    ordered = rank_options(options, preferred_channel)
     return {
         "order": [str(o.get("option_id")) for o in ordered],
-        "reason": ranking_reason(ordered, deadline_date),
+        "reason": ranking_reason(ordered, deadline_date, preferred_channel),
         "rule": "store pickup exchange first, then other exchanges, then returns; refund options stay visible",
     }
 

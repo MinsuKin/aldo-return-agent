@@ -86,6 +86,67 @@ def test_summary_has_order_reason_and_rule() -> None:
     assert "refund options stay visible" in summary["rule"]
 
 
+def test_the_owner_chosen_path_goes_first_and_nothing_is_dropped() -> None:
+    opts = options()
+    assert ids(ranking.rank_options(opts, "store_pickup")) == ["OPT-3", "OPT-2", "OPT-1", "OPT-4", "OPT-5"]  # default
+    assert ids(ranking.rank_options(opts, None)) == ids(ranking.rank_options(opts))
+    by_mail = ranking.rank_options(opts, "ship")
+    assert ids(by_mail) == ["OPT-2", "OPT-1", "OPT-3", "OPT-4", "OPT-5"]  # shipped exchanges, then pickup, then refunds
+    refund_first = ranking.rank_options(opts, "return")
+    assert ids(refund_first) == ["OPT-4", "OPT-5", "OPT-3", "OPT-2", "OPT-1"]  # in-store before mail-in
+    for channel in (None, "store_pickup", "ship", "return"):
+        ordered = ranking.rank_options(opts, channel)
+        assert sorted(ids(ordered)) == ["OPT-1", "OPT-2", "OPT-3", "OPT-4", "OPT-5"]  # R6.5: all options stay
+        assert {"return_in_store", "return_mail"} <= {o["type"] for o in ordered}
+
+
+def test_an_unknown_channel_means_the_default_order() -> None:
+    assert ranking.normalize_channel("teleport") is None and ranking.normalize_channel(None) is None
+    assert ids(ranking.rank_options(options(), "teleport")) == ids(ranking.rank_options(options()))
+
+
+def test_nearest_store_breaks_ties_and_unknown_distance_goes_last() -> None:
+    stores = [
+        {"option_id": "FAR", "type": "exchange_store_pickup", "eta_date": "2026-10-17", "fee_cents": 0, "minutes_away": 24},
+        {"option_id": "NOWHERE", "type": "exchange_store_pickup", "eta_date": "2026-10-17", "fee_cents": 0},
+        {"option_id": "NEAR", "type": "exchange_store_pickup", "eta_date": "2026-10-17", "fee_cents": 0, "minutes_away": 5},
+    ]
+    assert ids(ranking.rank_options(stores)) == ["NEAR", "FAR", "NOWHERE"]
+
+
+def test_reason_for_a_colour_pickup_names_the_colour_and_how_far() -> None:
+    opts = [
+        {"option_id": "OPT-2", "type": "exchange_store_pickup", "location_name": "ALDO Demo Store Montreal",
+         "eta_date": "2026-10-17", "eta_text": "Sat Oct 17", "fee_cents": 0, "replacement_color": "BROWN",
+         "minutes_away": 5, "meets_deadline": None},
+        {"option_id": "OPT-4", "type": "return_in_store"},
+    ]
+    reason = ranking.ranking_reason(ranking.rank_options(opts))
+    assert reason == (
+        "Store pickup of the Brown pair at ALDO Demo Store Montreal is free and ready Sat Oct 17, "
+        "5 minutes away. Refund options stay available."
+    )
+    one = [{**opts[0], "minutes_away": 1}]
+    assert "1 minute away" in ranking.ranking_reason(one) and "1 minutes" not in ranking.ranking_reason(one)
+
+
+def test_reason_for_the_other_chosen_paths() -> None:
+    opts = options()
+    by_mail = ranking.ranking_reason(ranking.rank_options(opts, "ship"), None, "ship")
+    assert by_mail.startswith("Ship-from-store exchange from ALDO Demo Store Montreal is free and arrives Mon Oct 19")
+    assert "as you asked for delivery by mail" in by_mail
+    refund = ranking.ranking_reason(ranking.rank_options(opts, "return"), None, "return")
+    assert refund == "Refund options lead because you asked for a refund."
+
+
+def test_a_benefit_gets_a_money_text_and_is_otherwise_left_alone() -> None:
+    perk = {"type": "free_return_shipping", "saved_cents": 595, "used": 1, "per_month": 1}
+    enriched = ranking.add_money_text({"option_id": "OPT-1", "fee_cents": 0, "benefit": perk})
+    assert enriched["benefit"] == {**perk, "saved_text": "CAD 5.95"}
+    assert "benefit" not in ranking.add_money_text({"option_id": "OPT-1", "fee_cents": 595})
+    assert ranking.add_money_text({"benefit": "not a mapping"})["benefit"] == "not a mapping"
+
+
 def test_money_text_formats_cents_and_rejects_other_values() -> None:
     assert ranking.money_text(12999) == "CAD 129.99"
     assert ranking.money_text(0) == "CAD 0.00"

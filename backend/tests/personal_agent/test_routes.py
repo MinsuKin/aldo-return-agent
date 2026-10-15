@@ -316,6 +316,13 @@ def test_each_persona_sees_only_its_own_memory(api: Api) -> None:
     assert "Ava" not in json.dumps(body)
 
 
+@pytest.mark.parametrize("owner,name,typical", [("DEMO-CUST-JOHN", "John", "10.0"), ("DEMO-CUST-DAVID", "David", "11.0")])
+def test_the_demo_v2_personas_have_a_memory_to_read(api: Api, owner: str, name: str, typical: str) -> None:
+    body = api.call("GET", "/personal-agent/memory", token=session(owner))[1]
+    assert (body["display_name"], body["size_system"], body["typical_size"], len(body["memory"])) == (name, "US_M", typical, 3)
+    assert api.call("POST", "/personal-agent/conversations", token=session(owner), body={})[0] == 201
+
+
 def test_a_failing_before_memory_read_hook_does_not_fail_the_read(repo: MemoryRepo) -> None:
     api = Api(repo)
     api.app = APIGatewayHttpResolver(strip_prefixes=["/api"], enable_validation=False)

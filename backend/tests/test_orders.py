@@ -197,6 +197,101 @@ def test_latest_policy_check_for_a_line_in_a_run(seeded, fixed_now):
     assert first.policy_check_id != second.policy_check_id
 
 
+# ------------------------------------------------------------ domain v2: the customer profile
+
+
+MTL, LAVAL, TOR = "DEMO-STORE-MTL-01", "DEMO-STORE-LAVAL-01", "DEMO-STORE-TOR-01"
+
+
+def test_a_base_persona_is_a_plain_member_with_no_travel_times(seeded):
+    assert orders.customer_profile(AVA) == {
+        "display_name": "Ava", "home_region": "QC", "tier": "none", "tier_label": "Member",
+        "authority_limit_cents": 25000, "travel_minutes": {}}
+    assert orders.customer_profile(BEN)["home_region"] == "ON"
+
+
+@pytest.mark.parametrize(
+    ("tier", "label", "limit"),
+    [("none", "Member", 25000), ("silver", "Silver member", 25000), ("platinum", "Platinum member", 75000),
+     ("Platinum", "Platinum member", 75000), (" silver ", "Silver member", 25000)],
+)
+def test_the_profile_reads_the_tier_from_the_customer_record(seeded, tier, label, limit):
+    store.update_item(store.customer_key(AVA), set={"tier": tier})
+    profile = orders.customer_profile(AVA)
+    assert (profile["tier"], profile["tier_label"], profile["authority_limit_cents"]) == (tier.strip().lower(), label, limit)
+
+
+@pytest.mark.parametrize("stored", ["diamond", "", None, 7, ["platinum"]])
+def test_an_unknown_or_unusable_tier_is_a_plain_member(seeded, stored):
+    store.update_item(store.customer_key(AVA), set={"tier": stored})
+    profile = orders.customer_profile(AVA)
+    assert (profile["tier"], profile["tier_label"], profile["authority_limit_cents"]) == ("none", "Member", 25000)
+
+
+def test_the_profile_reads_the_travel_minutes_per_store(seeded):
+    store.update_item(store.customer_key(AVA), set={"travel_minutes": {MTL: 5, LAVAL: 24, TOR: 540}})
+    profile = orders.customer_profile(AVA)
+    assert profile["travel_minutes"] == {MTL: 5, LAVAL: 24, TOR: 540}
+    assert all(type(minutes) is int for minutes in profile["travel_minutes"].values())  # never Decimal
+    store.update_item(store.customer_key(AVA), set={"travel_minutes": {MTL: 0}})
+    assert orders.customer_profile(AVA)["travel_minutes"] == {MTL: 0}  # 0 minutes is a known distance
+
+
+@pytest.mark.parametrize(
+    "stored",
+    [None, "far", 5, [5, 24], {}, {MTL: -5}, {MTL: True}, {MTL: "5"}, {MTL: 5.5}, {MTL: None}],
+)
+def test_unusable_travel_minutes_mean_unknown_not_an_error(seeded, stored):
+    store.update_item(store.customer_key(AVA), set={"travel_minutes": stored})
+    assert orders.customer_profile(AVA)["travel_minutes"] == {}
+
+
+def test_a_customer_without_a_record_is_the_default_profile(ddb):
+    assert orders.customer_profile("DEMO-CUST-NOBODY") == {
+        "display_name": None, "home_region": None, "tier": "none", "tier_label": "Member",
+        "authority_limit_cents": 25000, "travel_minutes": {}}
+
+
+def test_the_profile_holds_no_customer_id_and_is_json_safe(seeded):
+    store.update_item(store.customer_key(AVA), set={"tier": "platinum", "travel_minutes": {MTL: 5}})
+    profile = orders.customer_profile(AVA)
+    assert store.json_safe(profile) == profile and "DEMO-CUST" not in json.dumps(profile)
+    assert set(profile) == {"display_name", "home_region", "tier", "tier_label", "authority_limit_cents", "travel_minutes"}
+
+
+def test_the_tier_labels_and_limits_follow_policy_json(seeded, tmp_path, monkeypatch):
+    from returns_domain import fixtures
+
+    demo = tmp_path / "demo"
+    demo.mkdir()
+    (demo / "policy.json").write_text(json.dumps(
+        {"tiers": {"gold": {"label": "Gold member", "authority_refund_limit_cents": 50000}}}))
+    monkeypatch.setenv("FIXTURES_DIR", str(tmp_path))
+    fixtures.clear_cache()
+    store.update_item(store.customer_key(AVA), set={"tier": "gold"})
+    profile = orders.customer_profile(AVA)
+    assert (profile["tier"], profile["tier_label"], profile["authority_limit_cents"]) == ("gold", "Gold member", 50000)
+    monkeypatch.setenv("FIXTURES_DIR", str(tmp_path / "nowhere"))  # no policy file at all: the constants apply
+    fixtures.clear_cache()
+    store.update_item(store.customer_key(AVA), set={"tier": "platinum"})
+    assert orders.customer_profile(AVA)["authority_limit_cents"] == 75000
+
+
+def test_policy_checks_use_the_tier_limit_and_report_it(seeded):
+    """The CAD 289.00 boot: over the default limit, within a platinum member's."""
+    plain = check(BEN, "DEMO-1005", "DEMO-1005-L1", reason="CHANGE_OF_MIND")
+    assert plain.result["decision"] == "needs_review" and plain.result["facts"]["authority_limit_cents"] == 25000
+    store.update_item(store.customer_key(BEN), set={"tier": "silver"})
+    assert check(BEN, "DEMO-1005", "DEMO-1005-L1", reason="CHANGE_OF_MIND").result["decision"] == "needs_review"
+    store.update_item(store.customer_key(BEN), set={"tier": "platinum"})
+    rich = check(BEN, "DEMO-1005", "DEMO-1005-L1", reason="CHANGE_OF_MIND")
+    assert rich.result["decision"] == "eligible" and rich.result["facts"]["authority_limit_cents"] == 75000
+    assert rich.refund_cents == 28900 and rich.result["rule_ids"] == ["window.ok"]
+    # the preference reason allows exchanges now; the tier does not change what is allowed
+    assert rich.result["allowed_option_types"] == ["exchange_ship_from_dc", "exchange_ship_from_store",
+                                                    "exchange_store_pickup", "return_in_store", "return_mail"]
+
+
 # ------------------------------------------------- orders placed by the agent-to-agent purchase
 
 

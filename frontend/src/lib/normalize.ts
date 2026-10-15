@@ -1,4 +1,4 @@
-import type { CaseWire, MemoryWire, Provenance, PurchaseWire, QuoteWire, TransactionWire } from "../api/types";
+import type { CaseWire, MemoryWire, Persona, Provenance, PurchaseWire, QuoteWire, TransactionWire } from "../api/types";
 import { fitHeadline } from "./fit";
 import { formatScalar } from "./format";
 import { bool, humanize, isObj, num, pick, str, strList } from "./util";
@@ -27,19 +27,52 @@ export function provenanceKinds(...values: unknown[]): Provenance[] {
   return [...found];
 }
 
+/** Badge wording. "synthetic" is only a type label: the UI shows badges for the other kinds, where they add credibility. */
 export const PROVENANCE_LABEL: Record<Provenance, string> = {
   synthetic: "synthetic",
-  derived: "derived from provided data",
-  provided_csv: "provided data (CSV)",
-  provided_doc: "provided document",
+  derived: "derived from provided ALDO data",
+  provided_csv: "provided ALDO data (CSV)",
+  provided_doc: "provided ALDO document",
 };
 
-// ---- Quote options (contracts.md A.9, A.10) --------------------------------------------
+/** Provenance kinds worth a badge in the UI (synthetic is covered by the prototype strip). */
+export const credibleProvenance = (kinds: Provenance[]): Provenance[] => kinds.filter((k) => k !== "synthetic");
+
+// ---- Personas (addendum 11.5: tier_label and location_label) --------------------------------
+
+export interface PersonaView {
+  customerId: string;
+  displayName: string;
+  description?: string;
+  homeRegion?: string;
+  tier: string;
+  tierLabel?: string;
+  locationLabel?: string;
+  /** John and David (tiered demo personas). The regression personas Ava, Ben and Chloe are admin-only. */
+  isDemo: boolean;
+}
+
+export function normalizePersona(p: Persona): PersonaView {
+  const tier = (str(p.tier) ?? "none").toLowerCase();
+  const tiered = tier !== "none" && tier !== "";
+  return {
+    customerId: p.customer_id,
+    displayName: p.display_name,
+    description: str(p.description),
+    homeRegion: str(p.home_region),
+    tier,
+    tierLabel: str(p.tier_label) ?? (tiered ? `${humanize(tier)} member` : undefined),
+    locationLabel: str(p.location_label),
+    isDemo: tiered || /(JOHN|DAVID)$/i.test(p.customer_id),
+  };
+}
+
+// ---- Quote options (contracts.md A.9, A.10; addendum 11.4) ------------------------------------
 
 export const OPTION_TYPE_LABEL: Record<string, string> = {
-  exchange_ship_from_dc: "Exchange, ship from distribution centre",
-  exchange_ship_from_store: "Exchange, ship from store",
-  exchange_store_pickup: "Exchange, pick up in store",
+  exchange_ship_from_dc: "Exchange by mail",
+  exchange_ship_from_store: "Exchange by mail from a store",
+  exchange_store_pickup: "Exchange in store",
   return_in_store: "Return in store",
   return_mail: "Return by mail",
 };
@@ -49,6 +82,24 @@ const EVIDENCE_LABEL: Record<string, string> = {
   rate_id: "Rate",
 };
 const EVIDENCE_HIDDEN = new Set(["inventory_version"]);
+
+export interface OptionLine {
+  lineId: string;
+  productName: string;
+  /** What kind of shoe it is ("boot", "sneaker"), when the server says. */
+  kind?: string;
+  color?: string;
+  size?: string;
+  qty: number;
+  refundCents?: number;
+}
+
+export interface BenefitView {
+  label: string;
+  /** For example "Platinum perk 1 of 1 this month". */
+  note: string;
+  savedCents?: number;
+}
 
 export interface OptionView {
   optionId: string;
@@ -71,11 +122,26 @@ export interface OptionView {
   evidence: { label: string; value: string }[];
   provenance: Provenance[];
   payloadHash: string;
+  /** Colour exchange: the pair the customer has and the pair they get (same style and size). */
+  fromColor?: string;
+  toColor?: string;
+  fromSize?: string;
+  isColorSwap: boolean;
+  /** Travel time to the store, when the server knows it (addendum 11.1 D6). */
+  minutesAway?: number;
+  /** Items of a bundle option (one shipment for several lines of one order, addendum 11.1 D9). */
+  lines: OptionLine[];
+  benefit?: BenefitView;
+  /** One-line ranking reason for the option, when the server provides one. */
+  rankingNote?: string;
 }
 
 export interface LineFallback {
   productName?: string;
   color?: string;
+  size?: string;
+  /** Look up an order line by id (bundle options may list only line ids). */
+  lookup?: (lineId: string) => { productName?: string; color?: string; size?: string } | undefined;
 }
 
 function locationName(raw: Record<string, unknown>): string | undefined {
@@ -92,17 +158,63 @@ function evidenceChips(ev: unknown): { label: string; value: string }[] {
     .map(([k, v]) => ({ label: EVIDENCE_LABEL[k] ?? humanize(k), value: formatScalar(v) }));
 }
 
+/** DEMO-SKU-MEN001-BROWN-095 -> BROWN. */
+export function colorFromSku(sku: string | undefined): string | undefined {
+  return sku ? /-([A-Z]+)-\d{3}$/.exec(sku)?.[1] : undefined;
+}
+
+function normalizeLines(raw: unknown, line: LineFallback): OptionLine[] {
+  if (!Array.isArray(raw)) return [];
+  const out: OptionLine[] = [];
+  for (const item of raw) {
+    if (typeof item === "string") {
+      const found = line.lookup?.(item);
+      out.push({ lineId: item, productName: found?.productName ?? item, color: found?.color, size: found?.size, qty: 1 });
+    } else if (isObj(item)) {
+      const lineId = str(pick(item, ["line_id", "id"])) ?? `line-${out.length + 1}`;
+      const found = line.lookup?.(lineId);
+      out.push({
+        lineId,
+        productName: str(pick(item, ["product_name", "name"])) ?? found?.productName ?? lineId,
+        kind: str(pick(item, ["category", "kind", "product_type"])),
+        color: str(item.color) ?? found?.color,
+        size: str(item.size) ?? found?.size,
+        qty: num(item.qty) ?? 1,
+        refundCents: num(pick(item, ["refund_cents", "unit_paid_cents"])),
+      });
+    }
+  }
+  return out;
+}
+
+function normalizeBenefit(raw: unknown): BenefitView | undefined {
+  if (!isObj(raw)) return undefined;
+  const label = str(pick(raw, ["label", "title", "name"])) ?? "Free return shipping";
+  const used = num(raw.used);
+  const perMonth = num(raw.per_month);
+  const tier = str(pick(raw, ["tier_label", "tier"]));
+  const prefix = tier ? humanize(tier.replace(/ member$/i, "")) : "Member";
+  const note =
+    str(pick(raw, ["note", "text", "description"])) ??
+    (used !== undefined && perMonth !== undefined ? `${prefix} perk ${used} of ${perMonth} this month` : label);
+  return { label, note, savedCents: num(pick(raw, ["saved_cents", "saved"])) };
+}
+
 export function normalizeOption(raw: Record<string, unknown>, fallbackCurrency: string, line: LineFallback = {}): OptionView {
   const type = str(raw.type) ?? "unknown";
+  const isExchange = type.startsWith("exchange");
+  const lines = normalizeLines(raw.lines ?? raw.line_ids, line);
+  const toColor = isExchange ? (str(pick(raw, ["replacement_color", "color"])) ?? colorFromSku(str(raw.sku)) ?? line.color) : undefined;
+  const fromColor = isExchange ? (str(raw.original_color) ?? line.color) : undefined;
   return {
     optionId: str(pick(raw, ["option_id", "id"])) ?? "OPT-?",
     type,
     typeLabel: OPTION_TYPE_LABEL[type] ?? humanize(type),
-    isExchange: type.startsWith("exchange"),
+    isExchange,
     qty: num(raw.qty) ?? 1,
     productName: str(pick(raw, ["replacement_product_name", "product_name"])) ?? line.productName,
     replacementSize: str(raw.replacement_size),
-    color: str(raw.color) ?? line.color,
+    color: str(pick(raw, ["replacement_color", "color"])) ?? line.color,
     sku: str(raw.sku),
     locationName: locationName(raw),
     refundCents: num(raw.refund_cents) ?? 0,
@@ -115,6 +227,14 @@ export function normalizeOption(raw: Record<string, unknown>, fallbackCurrency: 
     evidence: evidenceChips(raw.evidence),
     provenance: provenanceKinds(raw.provenance, raw.source_refs),
     payloadHash: str(raw.payload_hash) ?? "",
+    fromColor,
+    toColor,
+    fromSize: str(raw.original_size) ?? line.size,
+    isColorSwap: isExchange && !!fromColor && !!toColor && fromColor.toLowerCase() !== toColor.toLowerCase(),
+    minutesAway: num(pick(raw, ["minutes_away", "travel_minutes", "eta_minutes"])),
+    lines,
+    benefit: normalizeBenefit(raw.benefit),
+    rankingNote: str(pick(raw, ["ranking_note", "rank_reason", "ranking_reason"])),
   };
 }
 
@@ -126,6 +246,8 @@ export interface QuoteView {
   currency: string;
   orderId?: string;
   lineId?: string;
+  /** Conversation the quote belongs to; needed to ask for fresh options after expiry. */
+  convId?: string;
   options: OptionView[];
   approvedOptionId?: string;
 }
@@ -142,12 +264,19 @@ export function normalizeQuote(q: QuoteWire, line: LineFallback = {}): QuoteView
     currency,
     orderId: str(q.order_id),
     lineId: str(q.line_id),
+    convId: str(q.conv_id),
     options: (Array.isArray(q.options) ? q.options : []).filter(isObj).map((o) => normalizeOption(o, currency, line)),
     approvedOptionId: approval ? str(approval.option_id) : undefined,
   };
 }
 
-// ---- Transactions and cases (contracts.md A.11, A.12) -----------------------------------
+// ---- Transactions and cases (contracts.md A.11, A.12; addendum 11.4) ----------------------------
+
+export interface StoreNoticeView {
+  storeName?: string;
+  etaMinutes?: number;
+  summary?: string;
+}
 
 export interface TransactionView {
   transactionId: string;
@@ -155,11 +284,20 @@ export interface TransactionView {
   state: string;
   nextStep?: string;
   createdAt?: string;
+  optionType?: string;
   optionLabel?: string;
   locationName?: string;
   replacementSize?: string;
+  replacementColor?: string;
   etaDate?: string;
   orderId?: string;
+  refundCents?: number;
+  feeCents?: number;
+  currency: string;
+  lines: OptionLine[];
+  benefit?: BenefitView;
+  /** The store notice created in the same transaction (addendum 11.1 D7). */
+  storeNotice?: StoreNoticeView;
 }
 
 export function transactionKind(id: string, optionType?: string): "exchange" | "return" {
@@ -168,19 +306,38 @@ export function transactionKind(id: string, optionType?: string): "exchange" | "
   return optionType?.startsWith("return") ? "return" : "exchange";
 }
 
-export function normalizeTransaction(t: TransactionWire): TransactionView {
+function normalizeStoreNotice(raw: unknown): StoreNoticeView | undefined {
+  if (!isObj(raw)) return undefined;
+  const notice = {
+    storeName: str(pick(raw, ["store_name", "store", "location_name"])),
+    etaMinutes: num(pick(raw, ["eta_minutes", "minutes_away"])),
+    summary: str(pick(raw, ["summary", "text", "message"])),
+  };
+  return notice.storeName || notice.summary ? notice : undefined;
+}
+
+export function normalizeTransaction(t: TransactionWire, line: LineFallback = {}): TransactionView {
   const type = str(pick(t, ["option_type", "type"]));
+  const currency = str(t.currency) ?? "CAD";
   return {
     transactionId: t.transaction_id,
     kind: transactionKind(t.transaction_id, type),
     state: str(t.state) ?? "completed",
     nextStep: str(t.next_step),
     createdAt: str(t.created_at),
+    optionType: type,
     optionLabel: type ? (OPTION_TYPE_LABEL[type] ?? humanize(type)) : undefined,
     locationName: str(t.location_name),
     replacementSize: str(t.replacement_size),
+    replacementColor: str(pick(t, ["replacement_color", "color"])) ?? colorFromSku(str(t.sku)),
     etaDate: str(t.eta_date),
     orderId: str(t.order_id),
+    refundCents: num(t.refund_cents),
+    feeCents: num(t.fee_cents),
+    currency,
+    lines: normalizeLines(t.lines, line),
+    benefit: normalizeBenefit(t.benefit),
+    storeNotice: normalizeStoreNotice(t.store_notice),
   };
 }
 
@@ -208,8 +365,8 @@ export function normalizeCase(c: CaseWire): CaseView {
 
 export const PURCHASE_OPTION_LABEL: Record<string, string> = {
   store_pickup: "Pick up in store",
-  ship_from_store: "Ship from store",
-  ship_from_dc: "Ship from distribution centre",
+  ship_from_store: "Delivery from a store",
+  ship_from_dc: "Delivery from our distribution centre",
 };
 
 export interface PurchaseView {
@@ -267,7 +424,7 @@ export function normalizePurchase(id: string, w: PurchaseWire): PurchaseView {
   };
 }
 
-// ---- Personal-agent memory (pivot addendum 5.4, 5.5, 5.8) -------------------------------
+// ---- Personal-agent memory (pivot addendum 5.4, 5.5, 5.8; 11.1 D11) -------------------------------
 
 export interface MemoryEntry {
   id: string;
@@ -275,6 +432,8 @@ export interface MemoryEntry {
   item: string;
   size: string;
   outcome: string;
+  /** Optional colour of the item (addendum 12.3): lets ALDO bot offer colours the owner usually keeps. */
+  color?: string;
 }
 
 export interface MemoryUpdateView {
@@ -285,6 +444,9 @@ export interface MemoryUpdateView {
   toSize?: string;
   outcome: string;
   provisional: boolean;
+  /** "size_ok": the owner kept the same size when exchanging colour (addendum 11.1 D11). */
+  fitFeedback?: string;
+  reason?: string;
 }
 
 export interface MemoryView {
@@ -305,6 +467,9 @@ const OUTCOME_LABEL: Record<string, string> = {
 
 export const outcomeLabel = (o: string): string => OUTCOME_LABEL[o] ?? humanize(o).toLowerCase();
 
+/** Retailer labels come as "Retailer A (synthetic)"; the prototype strip already says the data is simulated. */
+export const cleanLabel = (s: string): string => s.replace(/\s*\((synthetic|simulated)\)\s*$/i, "");
+
 function listAt(data: unknown, keys: string[]): Record<string, unknown>[] {
   const v = pick(data, keys);
   return Array.isArray(v) ? v.filter(isObj) : [];
@@ -322,6 +487,7 @@ export function normalizeMemory(data: MemoryWire): MemoryView {
       item: str(m.item) ?? "item",
       size: str(m.size) ?? "?",
       outcome: str(m.outcome) ?? "kept",
+      color: str(m.color),
     })),
     updates: listAt(data, ["updates", "aldo_updates", "writebacks", "write_backs"]).map((u, i) => ({
       id: str(pick(u, ["update_id", "id"])) ?? `upd-${i}`,
@@ -331,6 +497,8 @@ export function normalizeMemory(data: MemoryWire): MemoryView {
       toSize: str(pick(u, ["new_size", "to_size"])),
       outcome: str(u.outcome) ?? "exchange_created",
       provisional: bool(u.provisional) ?? true,
+      fitFeedback: str(u.fit_feedback),
+      reason: str(u.reason),
     })),
   };
 }

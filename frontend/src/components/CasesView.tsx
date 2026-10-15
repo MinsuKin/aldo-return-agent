@@ -1,38 +1,51 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { formatDateTime } from "../lib/format";
 import { describeError } from "../lib/errors";
-import { normalizeCase } from "../lib/normalize";
-import { SimulatedBadge } from "./Badge";
-import { CaseRow } from "./ResultPanels";
+import { normalizeCase, type CaseView } from "../lib/normalize";
 
-/** Minimal read-only list of the signed-in customer's escalation cases. */
+function CaseRow({ c }: { c: CaseView }) {
+  return (
+    <tr>
+      <th scope="row" className="mono">
+        {c.caseId}
+      </th>
+      <td>{c.reasonCode || "n/a"}</td>
+      <td className="mono nowrap">{c.orderId ?? "n/a"}</td>
+      <td>{c.status}</td>
+      <td>{formatDateTime(c.createdAt) || "n/a"}</td>
+      <td>{c.summary || "n/a"}</td>
+    </tr>
+  );
+}
+
+/** Minimal read-only list of the signed-in customer's cases that ALDO bot passed to a person. */
 export function CasesView() {
   const cases = useQuery({ queryKey: ["cases", "list"], queryFn: api.cases, retry: 1, refetchOnMount: "always" });
   const rows = (cases.data ?? []).map(normalizeCase);
 
   return (
-    <section className="card page-card" aria-labelledby="cases-title" data-testid="cases-view">
-      <div className="card-head">
-        <h2 id="cases-title">Cases</h2>
-        <SimulatedBadge />
-      </div>
+    <section className="page-card" aria-labelledby="cases-title" data-testid="cases-view">
+      <p>
+        <a href="#/" className="back-link">
+          Back to ALDO bot
+        </a>
+      </p>
+      <h2 id="cases-title">Cases</h2>
       <p className="muted">
-        Cases the ALDO Returns Agent sent to a person for review. Read-only in this prototype, and the agent never promises an
-        outcome.
+        Requests ALDO bot passed to a person for review. This list is read-only, and ALDO bot never promises an outcome.
       </p>
 
       {cases.isPending && <p role="status">Loading cases...</p>}
       {cases.isError && (
         <div className="alert alert-error" role="alert">
           <p>{describeError(cases.error).message}</p>
-          <button type="button" className="btn" onClick={() => void cases.refetch()}>
+          <button type="button" className="btn btn-small" onClick={() => void cases.refetch()}>
             Try again
           </button>
         </div>
       )}
-      {cases.data && rows.length === 0 && (
-        <p data-testid="cases-empty">No cases yet. When the ALDO Returns Agent escalates a request, it appears here.</p>
-      )}
+      {cases.data && rows.length === 0 && <p data-testid="cases-empty">No cases yet. When ALDO bot passes a request to a person, it appears here.</p>}
       {rows.length > 0 && (
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Cases table">
           <table className="table">

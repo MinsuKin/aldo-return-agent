@@ -1,0 +1,89 @@
+{
+  "style_id": "DEMO-STYLE-HERO",
+  "product_name": "Stessy2.0",
+  "n_reviews": 8,
+  "n_flagged": 0,
+  "reviews": [
+    {
+      "review_id": "DEMO-REV-HERO-01",
+      "rating": 4,
+      "title": "Gorgeous but snug",
+      "text": "Gorgeous heel, but they run small. My usual 7.5 pinched across the toes so I exchanged for an 8 and it was perfect.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 13,
+      "flags": []
+    },
+    {
+      "review_id": "DEMO-REV-HERO-04",
+      "rating": 4,
+      "title": "Tight in the toe box",
+      "text": "Beautiful shoe, tight in the toe box. Going up half a size solved it for me and now I can wear them all evening.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 10,
+      "flags": []
+    },
+    {
+      "review_id": "DEMO-REV-HERO-02",
+      "rating": 4,
+      "title": "Great for a wedding",
+      "text": "Wore these to a wedding. Order a half size up: my regular 7 was too snug after an hour of dancing.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 9,
+      "flags": []
+    },
+    {
+      "review_id": "DEMO-REV-HERO-03",
+      "rating": 3,
+      "title": "Size up",
+      "text": "Fit is on the small side. I normally take an 8 and needed an 8.5 for comfort. The height and finish are lovely.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 7,
+      "flags": []
+    },
+    {
+      "review_id": "DEMO-REV-HERO-08",
+      "rating": 5,
+      "title": "Worth the exchange",
+      "text": "Comfortable for a heel once I sized up half a size. The first pair was too small, the exchange in store took minutes.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 6,
+      "flags": []
+    },
+    {
+      "review_id": "DEMO-REV-HERO-05",
+      "rating": 3,
+      "title": "Runs small",
+      "text": "These run small, I would size up half a size. The black looks elegant and goes with everything in my closet.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 5,
+      "flags": []
+    },
+    {
+      "review_id": "DEMO-REV-HERO-06",
+      "rating": 4,
+      "title": "True to size for me",
+      "text": "True to size for me in a 7, but I have narrow feet. Most people seem to say size up, so try them on if you can.",
+      "language": "en",
+      "verified_purchase": true,
+      "helpful_votes": 2,
+      "flags": []
+    },
+    {
+      "review_id": "DEMO-REV-HERO-07",
+      "rating": 3,
+      "title": "Pretty but tight",
+      "text": "Pretty but tight. I returned my usual size and ordered one size up, much better. Customer service was quick.",
+      "language": "en",
+      "verified_purchase": false,
+      "helpful_votes": 1,
+      "flags": []
+    }
+  ],
+  "provenance": "synthetic"
+}

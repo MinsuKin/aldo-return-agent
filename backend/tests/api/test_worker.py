@@ -360,7 +360,7 @@ def test_personal_runs_execute_in_process_without_touching_the_returns_run_table
     result = worker.process(dict(PERSONAL))
 
     assert result == runner.result
-    assert runner.payloads == [PERSONAL]
+    assert runner.payloads == [{**PERSONAL, "orders": []}]  # the worker adds the owner's ALDO orders (none here)
     assert agentcore.calls == []  # never goes to the ALDO returns agent
     assert run_ids_in_returns_table() == set()  # no claim in the ALDO table
 

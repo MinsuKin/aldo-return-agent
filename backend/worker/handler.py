@@ -34,7 +34,7 @@ from botocore.exceptions import (
     ReadTimeoutError,
 )
 
-from api import providers, wiring
+from api import providers, returns_chat, wiring
 from returns_domain import config
 from returns_domain.errors import DomainError, ErrorCode
 
@@ -165,6 +165,7 @@ def _run_aldo(payload: Mapping[str, Any], remaining_ms: int | None) -> dict[str,
         code = error_code_for(exc)
         logger.exception("runtime_invoke_failed", run_id=run_id, error_code=code)
         _fail_if_running(customer_id, run_id, code)
+        returns_chat.settle_after_run(customer_id, payload["conv_id"], run_id)
         return {"run_id": run_id, "status": "error", "error_code": code}
 
     if result.get("status") == "duplicate":
@@ -172,6 +173,8 @@ def _run_aldo(payload: Mapping[str, Any], remaining_ms: int | None) -> dict[str,
         return {"run_id": run_id, "status": "duplicate"}
     # The agent finishes its own run. A run that is still "running" here was left behind.
     _fail_if_running(customer_id, run_id, ErrorCode.INTERNAL_ERROR.value)
+    # A return that reached a transaction or a case ends the hand-off: the chat goes back to ALDO bot.
+    returns_chat.settle_after_run(customer_id, payload["conv_id"], run_id)
     return {"run_id": run_id, "status": result.get("status", "completed")}
 
 
@@ -306,13 +309,28 @@ def _run_personal(payload: Mapping[str, Any]) -> dict[str, Any]:
         runner = providers.optional("personal_agent.runner")
         if runner is None:
             raise DomainError(ErrorCode.INTERNAL_ERROR, "the personal agent is not installed")
-        result = runner.run(dict(payload))
+        result = runner.run(_with_orders(payload))
     except Exception as exc:
         code = error_code_for(exc)
         logger.exception("personal_run_failed", run_id=run_id, error_code=code)
         _fail_personal_run(payload, code)
         return {"run_id": run_id, "status": "error", "error_code": code}
     return result if isinstance(result, dict) else {"run_id": run_id, "status": "completed"}
+
+
+def _with_orders(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """The bot's payload plus the owner's recent ALDO orders, read here as trusted server data.
+
+    The bot needs them to pick the order for a return (``hand_off_to_returns``) and to build the
+    return workflow's memory context. A request can never supply them: any ``orders`` key in the
+    incoming payload is replaced, and when the read fails the run simply has no order list.
+    """
+    enriched = {key: value for key, value in payload.items() if key != "orders"}
+    try:
+        enriched["orders"] = returns_chat.recent_orders(payload["customer_id"])
+    except Exception:
+        logger.exception("orders_context_failed", run_id=payload["run_id"])
+    return enriched
 
 
 def _fail_personal_run(payload: Mapping[str, Any], code: str) -> None:

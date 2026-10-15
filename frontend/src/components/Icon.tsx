@@ -15,7 +15,23 @@ export type IconName =
   | "clock"
   | "signal"
   | "question"
-  | "memory";
+  | "memory"
+  | "handoff"
+  | "reviews"
+  | "store"
+  | "benefit"
+  | "delivered"
+  | "policy"
+  | "preferences"
+  | "chevron-right"
+  | "chevron-down"
+  | "send"
+  | "back"
+  | "user"
+  | "truck"
+  | "bell"
+  | "close"
+  | "lock";
 
 // Simple 24x24 stroke icons. Decorative: meaning is always carried by adjacent text.
 const PATHS: Record<IconName, ReactNode> = {
@@ -85,6 +101,58 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <ellipse cx="12" cy="6" rx="7" ry="3" />
       <path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6" />
+    </>
+  ),
+  handoff: <path d="M7 7h12l-3-3M17 17H5l3 3" />,
+  reviews: (
+    <>
+      <path d="M4 5h16v11H9l-5 4z" />
+      <path d="M8 9h8M8 12.5h5" />
+    </>
+  ),
+  store: (
+    <>
+      <path d="M3 9l2-5h14l2 5H3z" />
+      <path d="M5 9v11h14V9M10 20v-6h4v6" />
+    </>
+  ),
+  benefit: <path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z" />,
+  delivered: (
+    <>
+      <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" />
+      <path d="M8.5 12l2.5 2.5 4.5-5" />
+    </>
+  ),
+  policy: (
+    <>
+      <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9.5C7.5 20.5 4 17 4 12V6z" />
+      <path d="M9 12l2 2 4-4" />
+    </>
+  ),
+  preferences: <path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 5v4M8 15v4" />,
+  "chevron-right": <path d="M9 6l6 6-6 6" />,
+  "chevron-down": <path d="M6 9l6 6 6-6" />,
+  send: <path d="M12 19V6M6 12l6-6 6 6" />,
+  back: <path d="M15 5l-7 7 7 7" />,
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0116 0" />
+    </>
+  ),
+  truck: (
+    <>
+      <path d="M2 7h12v9H2zM14 10h4.5L21 13v3h-7" />
+      <circle cx="6.5" cy="17.5" r="2" />
+      <circle cx="17.5" cy="17.5" r="2" />
+    </>
+  ),
+  bell: <path d="M6 16v-5a6 6 0 1112 0v5l1.5 2h-15zM10 20.5a2 2 0 004 0" />,
+  close: <path d="M6 6l12 12M18 6L6 18" />,
+  lock: (
+    <>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 118 0v3" />
     </>
   ),
 };

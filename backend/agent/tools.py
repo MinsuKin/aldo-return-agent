@@ -33,7 +33,7 @@ from strands import tool
 from returns_domain import config, fit, taxonomy
 from returns_domain.errors import DomainError, ErrorCode
 
-from . import ranking
+from . import owner_context, ranking
 from .context import RunContext
 from .envelope import emit_tool_call, emit_tool_result, fail, limit_envelope, ok
 from .log import logger
@@ -68,6 +68,15 @@ ConditionArg = Literal[taxonomy.CONDITIONS]  # type: ignore[valid-type]
 SizeDirectionArg = Literal[taxonomy.SIZE_DIRECTIONS]  # type: ignore[valid-type]
 PreferredChannelArg = Literal[PREFERRED_CHANNELS]  # type: ignore[valid-type]
 CaseReasonArg = Literal[CASE_REASONS]  # type: ignore[valid-type]
+
+#: Caps for the find_resolution_options result the model reads (the first option and every refund option stay).
+MAX_OPTIONS_IN_RESULT = 8
+MAX_OTHER_SIZES_IN_RESULT = 5
+MAX_COLOR_CHOICES = 8
+#: Option fields the model does not need (they stay in the trace and in the stored candidate set).
+_OPTION_FIELDS_NOT_FOR_THE_MODEL = ("evidence", "source_refs", "provenance", "sku", "replacement_sku", "qty", "currency")
+#: Fields of a store notice the model may use (no names of people, no tier).
+_STORE_NOTICE_FIELDS = ("store_name", "eta_minutes", "summary")
 
 FIT_LABEL = "derived from provided data"
 INTERNAL_MESSAGE = "Something went wrong while running this step. Please try again."
@@ -304,6 +313,83 @@ def _unique(refs: list[str]) -> list[str]:
     return list(seen)
 
 
+def _compact_options(
+    offered: list[dict[str, Any]], order: list[str], limit: int = MAX_OPTIONS_IN_RESULT
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Options as the model reads them, plus the matching ranking order.
+
+    Drops fields the model does not need. Past ``limit`` options the tail of the ranking goes, but the
+    first option and every refund option always stay (R6.5). Facts are not changed.
+    """
+    kept_ids = {str(o.get("option_id")) for o in offered}
+    if len(offered) > limit:
+        returns = [str(o.get("option_id")) for o in offered if o.get("type") in ranking.RETURN_TYPES]
+        keep: list[str] = []
+        for option_id in [*order[:1], *returns, *order]:
+            if option_id not in keep and len(keep) < max(limit, len(returns) + 1):
+                keep.append(option_id)
+        kept_ids = set(keep)
+    options = [
+        {k: v for k, v in option.items() if k not in _OPTION_FIELDS_NOT_FOR_THE_MODEL}
+        for option in offered
+        if str(option.get("option_id")) in kept_ids
+    ]
+    return options, [option_id for option_id in order if option_id in kept_ids]
+
+
+def _color_choices(needs_choice: Any, preferred: list[str]) -> Any:
+    """``needs_choice`` with the owner's usual colours first (marked ``preferred``) and a length cap."""
+    if not isinstance(needs_choice, Mapping) or not isinstance(needs_choice.get("replacement_color"), list):
+        return needs_choice
+    rank = {color: index for index, color in enumerate(preferred)}
+    entries = [dict(e) for e in needs_choice["replacement_color"] if isinstance(e, Mapping)]
+
+    def key(entry: Mapping[str, Any]) -> int:
+        return rank.get(str(entry.get("color", "")).strip().upper(), len(rank))
+
+    entries.sort(key=key)  # stable: the domain's colour order is kept inside each group
+    for entry in entries:
+        if key(entry) < len(rank):
+            entry["preferred"] = True
+    return {**needs_choice, "replacement_color": entries[:MAX_COLOR_CHOICES]}
+
+
+def _public_store_notice(data: Any) -> Any:
+    """``data`` with its store notice cut to the fields the model may use."""
+    notice = data.get("store_notice") if isinstance(data, Mapping) else None
+    if not isinstance(notice, Mapping):
+        return data
+    return {**data, "store_notice": {k: notice[k] for k in _STORE_NOTICE_FIELDS if k in notice}}
+
+
+def _candidate(ctx: RunContext, candidate_set_id: str) -> dict[str, Any] | None:
+    """Options, reason_no_exchange and channel of a candidate set: this run's find, else the stored one.
+
+    Each owner message is its own run, so the quote step usually runs after the find step of an earlier
+    run; the stored candidate set (the owner's own, checked here and again by the domain) fills the gap.
+    Returns None when it cannot be read: the model's order is then used as given.
+    """
+    known = ctx.offered.get(candidate_set_id)
+    if known is not None:
+        return known
+    try:
+        services_store = ctx.services.store
+        item = services_store.get_item(services_store.cand_key(candidate_set_id))
+        if not isinstance(item, Mapping) or item.get("customer_id") != ctx.customer_id:
+            return None
+        item = _js(ctx, dict(item))
+        options = item.get("options")
+        if not isinstance(options, list):
+            return None
+        return {
+            "options": [dict(o) for o in options if isinstance(o, Mapping)],
+            "reason_no_exchange": (item.get("availability") or {}).get("reason_no_exchange"),
+            "preferred_channel": item.get("preferred_channel"),
+        }
+    except Exception:  # noqa: BLE001 - a missing hint must never stop the quote
+        return None
+
+
 # -------------------------------------------------------------------------------- tools
 
 
@@ -463,20 +549,25 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
         replacement_size: str | None = None,
         deadline_date: str | None = None,
         preferred_channel: PreferredChannelArg | None = None,
+        replacement_color: str | None = None,
     ) -> dict:
-        """Find the eligible resolution options for an ELIGIBLE policy check: store-pickup, ship-from-store and ship-from-warehouse exchanges (only when stock exists) plus in-store and mail-in returns, each with fee, refund, location, ETA and conditions. Also returns ranking (order and reason) that follows the ranking rule, and other_sizes_in_stock as information only.
+        """Find the eligible resolution options for an ELIGIBLE policy check: store-pickup, ship-from-store and ship-from-warehouse exchanges (only when stock exists) plus in-store and mail-in returns, each with fee, refund, location, minutes_away (stores only, when known), ETA, conditions and any benefit. Also returns ranking (order and reason) that follows the ranking rule, and other_sizes_in_stock as information only.
+
+        For a colour exchange (reason EXPECTATION or CHANGE_OF_MIND) call it WITHOUT replacement_color first: the result then has no exchange options but needs_choice.replacement_color, the colours in stock in the owner's size (usual colours first, marked preferred). Ask the owner which colour, then call it again with replacement_color. A fit problem never takes a colour.
 
         Args:
             policy_check_id: The policy_check_id returned by evaluate_return_policy.
-            replacement_size: A STRING with one decimal such as "8.5". Leave it out to use the server default (current size plus one half for too_small, minus one half for too_big). Pass it only when the customer asks for a specific different size.
+            replacement_size: A STRING with one decimal such as "8.5". Leave it out to use the server default (current size plus one half for too_small, minus one half for too_big). Pass it only when the customer asks for a specific different size. Never pass it for a colour exchange.
             deadline_date: The customer's deadline as YYYY-MM-DD, if they gave one. Options then show meets_deadline.
             preferred_channel: ship, store_pickup or return, only if the customer stated a preference.
+            replacement_color: The colour the owner chose from needs_choice.replacement_color, exactly as listed, for a colour exchange only.
         """
         args = {
             "policy_check_id": policy_check_id,
             "replacement_size": replacement_size,
             "deadline_date": deadline_date,
             "preferred_channel": preferred_channel,
+            "replacement_color": replacement_color,
         }
 
         def call() -> Out:
@@ -488,6 +579,7 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                     replacement_size,
                     deadline_date,
                     preferred_channel,
+                    replacement_color,
                     run_id=ctx.run_id,
                 ),
             )
@@ -495,42 +587,85 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                 ranking.add_money_text(option) for option in found.get("options", [])
             ]
             deadline = found.get("deadline_date") or deadline_date
-            summary = ranking.ranking_summary(offered, deadline)
-            data = {**found, "options": offered, "ranking": summary}
+            channel = ranking.normalize_channel(found.get("preferred_channel") or preferred_channel)
+            summary = ranking.ranking_summary(offered, deadline, channel)
             candidate_set_id = found.get("candidate_set_id")
+            availability = dict(found.get("availability") or {})
             if candidate_set_id:
                 ctx.rank_orders[str(candidate_set_id)] = summary["order"]
-            availability = found.get("availability") or {}
+                ctx.offered[str(candidate_set_id)] = {
+                    "options": offered,
+                    "reason_no_exchange": availability.get("reason_no_exchange"),
+                    "preferred_channel": channel,
+                }
+            shown, shown_order = _compact_options(offered, summary["order"])
+            data = {k: v for k, v in found.items() if k not in ("inventory_versions", "created_at")}
+            availability.pop("atp_by_location", None)
+            data["availability"] = availability
+            data["options"] = shown
+            data["ranking"] = {**summary, "order": shown_order}
+            data["other_sizes_in_stock"] = list(found.get("other_sizes_in_stock") or [])[:MAX_OTHER_SIZES_IN_RESULT]
+            if "needs_choice" in found:
+                data["needs_choice"] = _color_choices(
+                    found["needs_choice"], owner_context.preferred_colors(ctx.memory_context)
+                )
             refs = _unique(
                 [ref for option in offered for ref in option.get("source_refs", [])]
             ) or [f"CAND#{candidate_set_id}/META"]
-            return Out(
-                data,
-                refs=refs,
-                evidence={
-                    "candidate_set_id": candidate_set_id,
-                    "option_types": [option.get("type") for option in offered],
-                    "dc_atp": availability.get("dc_atp"),
-                    "replacement_size": availability.get("replacement_size"),
-                },
-            )
+            evidence = {
+                "candidate_set_id": candidate_set_id,
+                "option_types": [option.get("type") for option in offered],
+                "dc_atp": availability.get("dc_atp"),
+                "replacement_size": availability.get("replacement_size"),
+            }
+            if availability.get("replacement_color"):
+                evidence["replacement_color"] = availability["replacement_color"]
+            return Out(data, refs=refs, evidence=evidence)
 
         return _run_tool(ctx, "find_resolution_options", args, call, retry=True)
 
     @tool
-    def create_quote(candidate_set_id: str, option_ids: list[str]) -> dict:
-        """Create the quote the customer will review and approve. The server recomputes every amount from the database; you only choose which options to present. Present the options best first (follow ranking.order), include at least one return option whenever returns are allowed, and never hide an eligible refund option.
+    def create_quote(
+        candidate_set_id: str, option_ids: list[str], preferred_channel: PreferredChannelArg | None = None
+    ) -> dict:
+        """Create the quote the owner will review and confirm. The server recomputes every amount from the database; you only choose which options to present. Call it ONCE, after the owner chose their path. Pass preferred_channel = store_pickup (exchange in store), ship (exchange by mail) or return (refund): that path is shown first and the other options stay behind it. Include at least one return option whenever returns are allowed, and never hide an eligible refund option (the server adds the refund options if you forget them).
 
-        Returns quote_id, expires_at (about 15 minutes) and the option ids in the order shown. After this, tell the customer to review the option cards and press Approve, then stop.
+        For a colour exchange the owner must have named a colour first (find_resolution_options with replacement_color); without it only preferred_channel return is accepted.
+
+        Returns quote_id, expires_at (about 15 minutes) and the option ids in the order shown. After this, tell the owner to review the option card and confirm it there, then stop.
 
         Args:
             candidate_set_id: The candidate_set_id returned by find_resolution_options.
             option_ids: The option ids to present, for example ["OPT-3", "OPT-1", "OPT-4"].
+            preferred_channel: The owner's chosen path: store_pickup, ship or return. Leave it out only when they have no preference.
         """
-        args = {"candidate_set_id": candidate_set_id, "option_ids": list(option_ids)}
+        args = {
+            "candidate_set_id": candidate_set_id,
+            "option_ids": list(option_ids),
+            "preferred_channel": preferred_channel,
+        }
 
         def call() -> Out:
-            ordered = ranking.reorder_ids(option_ids, ctx.rank_orders.get(candidate_set_id, []))
+            candidate = _candidate(ctx, candidate_set_id)
+            channel = ranking.normalize_channel(preferred_channel) or ranking.normalize_channel(
+                (candidate or {}).get("preferred_channel")
+            )
+            if candidate is None:
+                ordered = ranking.reorder_ids(option_ids, ctx.rank_orders.get(candidate_set_id, []))
+            else:
+                if candidate.get("reason_no_exchange") == "NEEDS_COLOR_CHOICE" and channel != "return":
+                    raise DomainError(
+                        ErrorCode.VALIDATION_ERROR,
+                        "No colour has been chosen yet. Ask the owner which colour they want from "
+                        "needs_choice.replacement_color and call find_resolution_options again with "
+                        "replacement_color, or pass preferred_channel return if they want a refund.",
+                    )
+                known = ranking.rank_options(candidate["options"], channel)
+                wanted = [str(i) for i in option_ids]
+                return_ids = [str(o.get("option_id")) for o in known if o.get("type") in ranking.RETURN_TYPES]
+                if return_ids and not any(i in return_ids for i in wanted):
+                    wanted = [*wanted, *return_ids]  # R6.5: a refund option is never left out
+                ordered = ranking.reorder_ids(wanted, [str(o.get("option_id")) for o in known])
             quote = _js(
                 ctx,
                 ctx.services.quotes.create_quote(
@@ -553,7 +688,7 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
 
     @tool
     def execute_approved_resolution(quote_id: str, option_id: str | None = None) -> dict:
-        """Execute the option the customer approved. Use it ONLY after a message that starts with [server] says the customer approved an option on a quote. The server checks the stored approval; the executed option always comes from that approval, and a different option_id is refused with APPROVAL_REQUIRED. Calling it again returns the same transaction.
+        """Execute the option the customer approved. Use it ONLY after a message that starts with [server] says the customer approved an option on a quote. The server checks the stored approval; the executed option always comes from that approval, and a different option_id is refused with APPROVAL_REQUIRED. Calling it again returns the same transaction. For an in-store option the result carries store_notice (store_name, eta_minutes, summary): the store has been notified.
 
         Args:
             quote_id: The quote id from the [server] message.
@@ -573,6 +708,7 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                     ctx.customer_id, use_quote, use_option, run_id=ctx.run_id
                 ),
             )
+            result = _public_store_notice(result)  # store name, minutes away and summary reach the model
             return Out(
                 result,
                 refs=[f"TXN#{result.get('transaction_id')}/META", f"QUOTE#{use_quote}/META"],
@@ -593,7 +729,7 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
 
     @tool
     def get_resolution_status(transaction_id: str) -> dict:
-        """Read the stored record of a transaction: state, option type, location, replacement size, refund, fee, ETA and next step. Always call it after execute_approved_resolution and report only what this record says.
+        """Read the stored record of a transaction: state, option type, location, replacement size and colour, refund, fee, ETA, next step and, for an in-store option, store_notice (store_name, eta_minutes, summary: the store has been told). Always call it after execute_approved_resolution and report only what this record says.
 
         Args:
             transaction_id: The transaction_id returned by execute_approved_resolution.
@@ -604,7 +740,9 @@ def build_tools(ctx: RunContext) -> list[Callable[..., Any]]:
                 ctx,
                 ctx.services.execution.get_status(ctx.customer_id, transaction_id, run_id=ctx.run_id),
             )
-            data = _with_money(view, (("refund_cents", "refund_text"), ("fee_cents", "fee_text")))
+            data = _public_store_notice(
+                _with_money(view, (("refund_cents", "refund_text"), ("fee_cents", "fee_text")))
+            )
             return Out(
                 data,
                 refs=[f"TXN#{transaction_id}/META"],

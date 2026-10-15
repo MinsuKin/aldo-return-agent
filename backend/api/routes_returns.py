@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Any
+from typing import Any, Callable, Mapping
 
 from returns_domain import config
 from returns_domain.errors import DomainError, ErrorCode
@@ -170,6 +170,10 @@ def _checked_text(raw: str) -> str:
     return text
 
 
+#: The owner's text checked the same way for every chat route (length, no server marker on any line).
+checked_text = _checked_text
+
+
 def run_payload(
     *,
     run_id: str,
@@ -181,9 +185,17 @@ def run_payload(
     quote_id: str | None = None,
     option_id: str | None = None,
     approval_id: str | None = None,
+    memory_context: Mapping[str, Any] | None = None,
+    selected_order_id: str | None = None,
 ) -> dict[str, Any]:
-    """contracts.md C.6 worker payload for the ALDO returns agent."""
-    return {
+    """contracts.md C.6 worker payload for the ALDO return workflow.
+
+    The runs of a hand-off (the single chat) add two trusted server fields; both keys are absent
+    on every other run: ``memory_context`` (addendum 12.3, the summary of the owner's ALDO bot
+    memory) and ``selected_order_id`` (the order ``hand_off_to_returns`` named, the same value as
+    ``order_id``; without it the return workflow looks up the owner's recent delivered orders).
+    """
+    payload = {
         "run_id": run_id,
         "conv_id": conv_id,
         "customer_id": customer_id,
@@ -195,12 +207,22 @@ def run_payload(
         "approval_id": approval_id,
         "agent": "aldo",
     }
+    if memory_context:
+        payload["memory_context"] = dict(memory_context)
+    if selected_order_id:
+        payload["selected_order_id"] = selected_order_id
+    return payload
 
 
 def _enqueue(api: Api, payload: dict[str, Any]) -> None:
     """Hand a payload to the worker; every failure becomes a retryable UPSTREAM_TIMEOUT."""
+    enqueue_payload(api.enqueue, payload)
+
+
+def enqueue_payload(enqueue: Callable[[dict[str, Any]], None], payload: dict[str, Any]) -> None:
+    """Hand a payload to the worker through ``enqueue``; every failure is a retryable UPSTREAM_TIMEOUT."""
     try:
-        api.enqueue(payload)
+        enqueue(payload)
     except DomainError:
         raise
     except Exception as exc:
@@ -220,6 +242,36 @@ def _start_run(
     quote_id: str | None = None,
 ) -> str:
     """lease -> create run -> enqueue. Undoes what it did when a later step fails."""
+    return start_customer_run(
+        api.enqueue,
+        customer_id=customer_id,
+        conv_id=conv_id,
+        kind=kind,
+        order_id=order_id,
+        message=message,
+        quote_id=quote_id,
+        annotate=req.annotate,
+    )
+
+
+def start_customer_run(
+    enqueue: Callable[[dict[str, Any]], None],
+    *,
+    customer_id: str,
+    conv_id: str,
+    kind: str,
+    order_id: str | None,
+    message: str = "",
+    quote_id: str | None = None,
+    memory_context: Mapping[str, Any] | None = None,
+    selected_order_id: str | None = None,
+    annotate: Callable[..., None] | None = None,
+) -> str:
+    """lease -> create run -> enqueue the return workflow's run. Undoes what it did when a step fails.
+
+    RUN_IN_PROGRESS when the ALDO-side conversation already has an active run. The one function
+    behind ``POST /conversations/<conv>/messages`` and the hand-off messages of the single chat.
+    """
     run_id = store.new_id("RUN-", 10)
     if not runs.try_acquire_lease(conv_id, run_id):
         raise DomainError(ErrorCode.RUN_IN_PROGRESS, RUN_BUSY_MESSAGE)
@@ -228,7 +280,8 @@ def _start_run(
     except Exception:
         _release_lease(conv_id, run_id)
         raise
-    req.annotate(run_id=run_id)
+    if annotate is not None:
+        annotate(run_id=run_id)
     payload = run_payload(
         run_id=run_id,
         conv_id=conv_id,
@@ -237,9 +290,11 @@ def _start_run(
         order_id=order_id,
         message=message,
         quote_id=quote_id,
+        memory_context=memory_context,
+        selected_order_id=selected_order_id,
     )
     try:
-        _enqueue(api, payload)
+        enqueue_payload(enqueue, payload)
     except DomainError:
         _abandon_unstarted_run(run_id, conv_id)
         raise

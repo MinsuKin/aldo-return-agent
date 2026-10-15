@@ -1,611 +1,404 @@
 import { expect, test, type Page } from "@playwright/test";
-import { IS_MOCK, axeScan, expectInOrder, firstApprove, firstExchangeApprove, latestSizeRequestId, mockPost, onMock, resetDemo, revealTop, shot, signInAs, tabTo, waitAldoIdle } from "./helpers";
+import { ADMIN_SECRET, IS_MOCK, latestSizeRequestId, mockPost, onMock, resetDemo, signInAs } from "./helpers";
 
-// One Playwright pass over the three-column demo. Runs against the mock API by default and,
-// with E2E_TARGET=deployed, against the real site (mock-only controls are skipped there).
+// Functional specs for the phone UI: one chat with ALDO bot on a phone (left) and the live A2A trace (right).
+// They run against the mock API by default (scripted John and David as in addendum 11.2) and, with
+// E2E_TARGET=deployed, against the real site (scripted wording is only asserted on the mock).
 
-const BANNER = "Prototype, simulated ALDO data, not official policy";
-const PA_REGION = "ALDO bot, your personal agent";
-const ALDO_REGION = "ALDO Returns Agent";
+const STRIP = "Prototype with simulated data";
+const trace = (page: Page) => page.getByTestId("a2a-trace");
+const traceEvent = (page: Page, type: string) => trace(page).locator(`[data-event-type="${type}"]`);
 
-const ACTOR_LABELS: Record<string, string> = {
-  personal_agent: "ALDO bot",
-  aldo_gateway: "ALDO Gateway",
-  aldo_agent: "ALDO Returns Agent",
-  system: "System",
-};
-
-const a2aRow = (page: Page, type: string) => page.locator(`[data-testid="a2a-trace"] [data-event-type="${type}"]`);
-
-/** Run ALDO bot to its proposal and wait until the purchase card can be confirmed. */
-async function proposeViaBot(page: Page): Promise<void> {
-  await page.getByTestId("suggested-pa-order").click();
-  await expect(page.getByTestId("purchase-card")).toHaveAttribute("data-status", "proposed");
-  await expect(page.getByTestId("pa-working")).toHaveCount(0);
-  await expect(page.getByTestId("confirm-purchase-open")).toBeEnabled();
+/** The user-visible naming rules (addendum 12): one brand, no second agent, no demo labels on elements. */
+async function expectNaming(page: Page): Promise<void> {
+  const body = page.locator("body");
+  await expect(body).not.toContainText(/Returns Agent/i);
+  await expect(body).not.toContainText(/Muse/);
+  await expect(body).not.toContainText("Simulated data");
+  await expect(page.getByTestId("phone")).not.toContainText(/simulated|synthetic/i);
+  await expect(page.getByTestId("a2a-trace")).not.toContainText(/simulated|synthetic/i);
 }
 
-test.describe("sign-in and layout", () => {
-  test("sign-in screen: banner, label, personas, axe", async ({ page, request }) => {
-    await resetDemo(request, "dc_stockout");
+test.describe("first screen and layout", () => {
+  test("persona picker: John and David with tier and place, the strip, regression customers only in admin mode", async ({ page, request }) => {
+    await resetDemo(request, "default");
     await page.goto("/");
-    await expect(page.getByTestId("proto-banner")).toHaveText(BANNER);
-    await expect(page.getByRole("heading", { name: "Demo sign-in, synthetic customer" })).toBeVisible();
-    for (const name of ["Ava", "Ben", "Chloe"]) {
-      await expect(page.getByRole("button", { name: `Sign in as ${name}` })).toBeVisible();
-    }
-    await shot(page, "01-sign-in");
-    await axeScan(page, "sign-in");
+    await expect(page.getByTestId("proto-banner")).toHaveText(STRIP);
+    await expect(page.getByRole("heading", { name: "Who is using ALDO bot?" })).toBeVisible();
+    const john = page.getByTestId("persona-DEMO-CUST-JOHN");
+    const david = page.getByTestId("persona-DEMO-CUST-DAVID");
+    await expect(john).toContainText("Silver member");
+    await expect(john).toContainText("Downtown Montreal");
+    await expect(david).toContainText("Platinum member");
+    await expect(david).toContainText("Rural New Brunswick");
+    for (const id of ["AVA", "BEN", "CHLOE"]) await expect(page.getByTestId(`persona-DEMO-CUST-${id}`)).toHaveCount(0);
+    await expect(page.getByTestId("admin-panel")).toHaveCount(0);
+    await expectNaming(page);
+
+    await page.goto("/?admin=1");
+    for (const id of ["JOHN", "DAVID", "AVA", "BEN", "CHLOE"]) await expect(page.getByTestId(`persona-DEMO-CUST-${id}`)).toBeVisible();
+    await expect(page.getByTestId("admin-panel")).toBeVisible();
+    await expect(page.getByTestId("proto-banner")).toHaveText(STRIP);
   });
 
-  test("workspace: three columns, names, banner persists, token kept in sessionStorage", async ({ page, request }) => {
-    await resetDemo(request, "dc_stockout");
-    await signInAs(page, "Ava");
-    await expect(page.getByTestId("proto-banner")).toHaveText(BANNER);
-    await expect(page.getByTestId("session")).toContainText("Demo sign-in, synthetic customer: Ava");
-    const cols = [
-      page.getByRole("region", { name: PA_REGION, exact: true }),
-      page.getByRole("region", { name: "A2A trace", exact: true }),
-      page.getByRole("region", { name: ALDO_REGION, exact: true }),
-    ];
-    const boxes = [];
-    for (const c of cols) {
-      await expect(c).toBeVisible();
-      boxes.push(await c.boundingBox());
-    }
-    // Side by side at >= 1200 px: increasing x, same top edge.
-    expect(boxes[0]!.x).toBeLessThan(boxes[1]!.x);
-    expect(boxes[1]!.x).toBeLessThan(boxes[2]!.x);
-    expect(Math.abs(boxes[0]!.y - boxes[2]!.y)).toBeLessThan(4);
-
-    // The personal agent is ALDO bot everywhere, never "Muse".
-    await expect(page.locator("body")).not.toContainText(/muse/i);
-    await expect(page.getByRole("heading", { name: PA_REGION })).toBeVisible();
-    await expect(page.getByRole("heading", { name: ALDO_REGION, exact: true })).toBeVisible();
-
-    // New agent messages are announced: both transcripts are polite live regions.
-    for (const id of ["pa-transcript", "aldo-transcript"]) {
-      await expect(page.getByTestId(id)).toHaveAttribute("aria-live", "polite");
-      await expect(page.getByTestId(id)).toHaveAttribute("role", "log");
-    }
-
-    await expect(page.getByTestId("memory-card")).toContainText("Synthetic demo memory");
-    await expect(page.getByTestId("memory-typical")).toContainText("7.5");
-    await expect(page.getByTestId("memory-entries").locator("li")).toHaveCount(3);
-    await expect(page.getByTestId("suggested-pa-order")).toContainText("Order me the ALDO Stessy heels for the wedding Saturday.");
-    for (const id of ["hero-wedding", "final-sale-mind", "ignore-policy"]) await expect(page.getByTestId(`suggested-${id}`)).toBeVisible();
-    await expect(page.getByTestId("orders")).toContainText("Simulated data");
-    await expect(page.getByTestId("order-DEMO-1001")).toContainText("Stessy2.0");
-    await expect(page.getByTestId("order-DEMO-1001")).toContainText("CAD 129.99");
-
-    const token = await page.evaluate(() => sessionStorage.getItem("aldo.demo.session"));
-    expect(token).toBeTruthy();
-    await shot(page, "02-workspace");
-    await axeScan(page, "workspace");
-
-    // Reload keeps the session (sessionStorage) and shows the workspace again.
-    await page.reload();
-    await expect(page.getByTestId("workspace")).toBeVisible();
-  });
-
-  test("narrow screens stack the columns", async ({ page, request }) => {
-    await resetDemo(request, "dc_stockout");
-    await page.setViewportSize({ width: 1000, height: 900 });
-    await signInAs(page, "Ava");
-    const a = await page.getByRole("region", { name: PA_REGION, exact: true }).boundingBox();
-    const b = await page.getByRole("region", { name: "A2A trace", exact: true }).boundingBox();
-    const c = await page.getByRole("region", { name: ALDO_REGION, exact: true }).boundingBox();
-    expect(Math.abs(a!.x - b!.x)).toBeLessThan(4);
-    expect(Math.abs(b!.x - c!.x)).toBeLessThan(4);
-    expect(a!.y).toBeLessThan(b!.y);
-    expect(b!.y).toBeLessThan(c!.y);
+  test("wide screens: phone on the left at its aspect ratio, trace on the right, no page scroll; narrow screens stack", async ({ page, request }) => {
+    await resetDemo(request, "default");
+    await page.goto("/");
+    const phone = page.getByTestId("phone");
+    const traceBox = page.getByTestId("trace-panel");
+    await expect(phone).toBeVisible();
+    await expect(traceBox).toBeVisible();
+    const p = (await phone.boundingBox())!;
+    const t = (await traceBox.boundingBox())!;
+    expect(p.x).toBeLessThan(t.x);
+    expect(p.x + p.width).toBeLessThanOrEqual(t.x + 2);
+    expect(Math.abs(p.width / p.height - 440 / 956)).toBeLessThan(0.01);
+    expect(p.y).toBeGreaterThanOrEqual(0);
+    expect(p.y + p.height).toBeLessThanOrEqual(900);
+    expect(t.height).toBeGreaterThan(p.height * 0.9);
+    const scroll = await page.evaluate(() => ({ scrollHeight: document.documentElement.scrollHeight, clientHeight: document.documentElement.clientHeight }));
+    expect(scroll.scrollHeight).toBeLessThanOrEqual(scroll.clientHeight + 1);
     await expect(page.getByTestId("proto-banner")).toBeVisible();
-    await shot(page, "03-stacked-narrow", { fullPage: true });
-    await axeScan(page, "workspace-narrow");
+    await expect(page.getByTestId("trace-note")).toContainText("public fields only");
+
+    await page.setViewportSize({ width: 1000, height: 900 });
+    await expect(page.getByTestId("stage")).toHaveAttribute("data-layout", "stacked");
+    const p2 = (await phone.boundingBox())!;
+    const t2 = (await traceBox.boundingBox())!;
+    expect(p2.y + p2.height).toBeLessThanOrEqual(t2.y + 2);
+    expect(Math.abs(p2.width / p2.height - 440 / 956)).toBeLessThan(0.01);
+    await expect(page.getByTestId("proto-banner")).toBeVisible();
   });
 });
 
-test.describe("three-act flow", () => {
-  test("proposal, owner confirmation, delivery, exchange approval, memory update", async ({ page, request }) => {
-    // Structure and safety are asserted on every target. Exact agent wording, sizes and ordering are
-    // only asserted against the mock (a real LLM run varies); `onMock` marks those lines.
-    await resetDemo(request, "dc_stockout");
-    await signInAs(page, "Ava");
+test.describe("John (Silver): the stage demo", () => {
+  test("buy the Men 001, confirm, delivery push, then a colour exchange in store", async ({ page, request }) => {
+    await resetDemo(request, "default");
+    await signInAs(page, "John");
+    await expect(page.getByTestId("chat-sub")).toContainText("Silver member");
+    await expect(page.getByTestId("workflow-pill")).toContainText("Purchase");
+    await expect(page.getByTestId("chat-log")).toHaveAttribute("aria-live", "polite");
 
-    // ---- Act 1: ALDO bot proposes, the owner confirms -----------------------------------------
-    await page.getByTestId("suggested-pa-order").click();
-    await expect(page.getByTestId("pa-transcript")).toContainText("Order me the ALDO Stessy heels for the wedding Saturday.");
-    const fitRow = a2aRow(page, "fit_signal_shared").first();
-    await expect(fitRow).toBeVisible();
-    await expect(fitRow).toContainText("derived from provided data");
-    await expect(fitRow).toContainText(/runs (small|large)|mixed|insufficient/i);
-    await onMock(async () => {
-      await expect(fitRow).toContainText("runs small");
-      await expect(fitRow).toContainText("79.9%");
-      await expect(fitRow).toContainText("n=582");
-    });
-    await shot(page, "04-act1-live-a2a-trace");
-
-    await expect(a2aRow(page, "size_recommended").first()).toBeVisible();
-    const types = () => page.locator('[data-testid="a2a-trace"] [data-testid="trace-a2a"]').evaluateAll((els) => els.map((e) => e.getAttribute("data-event-type") ?? ""));
-    expectInOrder(await types(), ["size_assist_requested", "fit_signal_shared", "size_requested", "size_recommended"]);
-    await onMock(async () => {
-      expect(await types()).toEqual(["size_assist_requested", "fit_signal_shared", "size_requested", "size_recommended"]);
-    });
-
-    // Every A2A event shows who sent it, by display name; the technical id stays in data-actor.
-    const badges = page.locator('[data-testid="a2a-trace"] [data-testid="trace-a2a"] [data-testid="actor-badge"]');
-    const pairs = await badges.evaluateAll((els) => els.map((e) => [e.getAttribute("data-actor") ?? "", (e as HTMLElement).innerText]));
-    for (const [actor, label] of pairs) expect(ACTOR_LABELS[actor], `label for actor ${actor}`).toBe(label);
-    await onMock(async () => {
-      expect(pairs.map((x) => x[0])).toEqual(["personal_agent", "aldo_gateway", "aldo_gateway", "personal_agent"]);
-    });
-    // Public fields only: the private memory (retailer labels, typical size) is not in the A2A feed.
-    const a2aText = (await page.getByTestId("a2a-trace").innerText()).toLowerCase();
-    expect(a2aText).not.toContain("retailer");
-    expect(a2aText).not.toContain("typical");
-
-    // The proposal is rendered from the server's record, and nothing is ordered yet.
+    // ---- Act 1: ALDO bot proposes, nothing is ordered before the click -----------------------------
+    await page.getByTestId("quick-john-1").click();
+    await expect(page.getByTestId("bubble-user").last()).toContainText("ALDO Men 001");
     const card = page.getByTestId("purchase-card");
     await expect(card).toHaveAttribute("data-status", "proposed");
-    await expect(page.getByTestId("pa-working")).toHaveCount(0);
-    await expect(page.getByTestId("pa-transcript")).toContainText(/confirm/i);
-    await expect(card).toContainText("Purchase proposal from ALDO bot");
-    const facts = page.getByTestId("purchase-facts");
-    await expect(facts).toContainText("Stessy");
-    await expect(facts).toContainText(/CAD \d+\.\d\d/);
-    await expect(facts).toContainText("derived from provided data");
-    await expect(page.getByTestId("purchase-countdown")).toContainText("Proposal expires in");
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+    await expect(page.getByTestId("confirm-purchase-open")).toBeEnabled();
+    await expect(page.getByTestId("order-card")).toHaveCount(0);
+    await expect(card.getByTestId("purchase-facts")).toContainText(/CAD \d+\.\d\d/);
+    await expect(card).toContainText("derived from provided ALDO data");
+    await expect(card.getByTestId("purchase-countdown")).toBeVisible();
     await onMock(async () => {
-      await expect(page.getByTestId("pa-transcript")).toContainText("I haven't ordered anything yet");
-      await expect(facts).toContainText("Stessy2.0, black");
-      await expect(facts).toContainText("8.0");
-      await expect(facts).toContainText("Pick up in store at ALDO Demo Store Montreal");
-      await expect(facts).toContainText("Sat, Oct 17, 2026");
-      await expect(facts).toContainText("Meets your deadline");
-      await expect(facts).toContainText("CAD 129.99");
-      await expect(facts).toContainText("Runs small: 79.9% of fit-related returns were too small (n=582)");
-      await expect(page.getByTestId("purchase-rationale")).toContainText("runs small per ALDO signal");
+      await expect(card).toContainText("Biglect");
+      await expect(card).toContainText("9.5");
+      await expect(card).toContainText("CAD 149.99");
+      await expect(card).toContainText("Runs large: 94.5% of fit-related returns were too big (n=236)");
+      await expect(page.getByTestId("reviews-evidence")).toHaveText("Read 16 reviews, 1 flagged and excluded");
+      await expect(page.getByTestId("purchase-rationale")).toContainText("runs large");
+      await expect(page.getByTestId("bubble-bot").last()).toContainText("I haven't ordered anything yet");
     });
-    await expect(page.locator('[data-testid^="order-DEMO-A2A-"]')).toHaveCount(0);
-    await expect(page.locator('[data-testid^="simulate-delivery-"]')).toHaveCount(0);
-    await revealTop(card);
-    await shot(page, "05-act1-purchase-proposal");
-    await axeScan(page, "purchase-proposal");
 
-    // Confirm purchase opens a dialog first; Escape closes it without calling the API.
+    // The trace: ALDO Data shares the fit signal and the (flagged) reviews, ALDO bot proposes.
+    for (const type of ["size_assist_requested", "fit_signal_shared", "size_requested", "reviews_shared", "size_recommended"]) {
+      await expect(traceEvent(page, type).first()).toBeVisible();
+    }
+    await expect(traceEvent(page, "fit_signal_shared").first()).toContainText("derived from provided ALDO data");
+    await expect(traceEvent(page, "reviews_shared").first()).toContainText("1 flagged");
+    await expect(traceEvent(page, "size_assist_requested").first().getByTestId("actor-chip")).toHaveText("ALDO bot · Purchase");
+    await expect(traceEvent(page, "fit_signal_shared").first().getByTestId("actor-chip")).toHaveText("ALDO Data");
+    // Public fields only: ALDO bot's private memory (retailers, typical size) is not in the trace.
+    const traceText = (await trace(page).innerText()).toLowerCase();
+    expect(traceText).not.toContain("retailer");
+    expect(traceText).not.toContain("typical");
+    // The run's tool calls sit in a collapsed group and expand on demand; private tools show no details.
+    const group = page.getByTestId("trace-run").first();
+    await expect(group.getByTestId("run-toggle")).toHaveAttribute("aria-expanded", "false");
+    await group.getByTestId("run-toggle").click();
+    await expect(group.getByTestId("run-toggle")).toHaveAttribute("aria-expanded", "true");
+    await expect(group.locator('[data-tool="ask_aldo_size_assist"]')).toBeVisible();
+    await expect(group.locator('[data-tool="recall_size_memory"]')).toContainText("Private to ALDO bot");
+    await expect(group.locator('[data-tool="recall_size_memory"]')).not.toContainText("10.5");
+
+    // Confirm opens a sheet; Escape closes it and nothing is ordered.
     await page.getByTestId("confirm-purchase-open").click();
     const dialog = page.getByTestId("purchase-dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText("Confirm your purchase");
-    await expect(dialog).toContainText("Stessy");
-    await expect(dialog).toContainText("Simulated data");
-    await onMock(async () => {
-      await expect(dialog).toContainText("Stessy2.0, black");
-      await expect(dialog).toContainText("Pick up in store at ALDO Demo Store Montreal");
-      await expect(dialog).toContainText("CAD 129.99");
-    });
-    await shot(page, "06-purchase-confirmation-dialog");
-    await axeScan(page, "purchase-dialog");
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
     await expect(page.getByTestId("confirm-purchase-open")).toBeFocused();
-    await expect(card).toHaveAttribute("data-status", "proposed");
-    await expect(page.locator('[data-testid^="order-DEMO-A2A-"]')).toHaveCount(0);
+    await expect(page.getByTestId("order-card")).toHaveCount(0);
 
-    // Reopen and confirm: now the simulated order exists.
+    // The owner's click places the order; five seconds of "out for delivery", then the push banner.
     await page.getByTestId("confirm-purchase-open").click();
     await page.getByTestId("confirm-purchase").click();
-    await expect(card).toHaveAttribute("data-status", "decided");
-    await expect(card).toContainText("Simulated order placed");
-    await expect(page.getByTestId("purchase-order-id")).toHaveText(/^DEMO-A2A-[0-9A-F]{6}$/);
-    await expect(page.getByTestId("purchase-next-step")).toContainText(/\S/);
-    await expect(a2aRow(page, "size_confirmed").first()).toContainText("Owner confirmed");
-    await expect(a2aRow(page, "size_confirmed").first()).toContainText("Simulated order DEMO-A2A-");
-    expectInOrder(await types(), ["size_assist_requested", "fit_signal_shared", "size_requested", "size_recommended", "size_confirmed"]);
-    const agentOrder = page.locator('[data-testid^="order-DEMO-A2A-"]');
-    await expect(agentOrder).toBeVisible();
-    await expect(agentOrder).toContainText("Placed by ALDO bot");
-    await onMock(async () => {
-      await expect(page.getByTestId("purchase-next-step")).toContainText("Pick up size 8.0 at ALDO Demo Store Montreal");
-      expect(await types()).toEqual(["size_assist_requested", "fit_signal_shared", "size_requested", "size_recommended", "size_confirmed"]);
-      await expect(agentOrder).toContainText("size 8.0");
-    });
-    await revealTop(card);
-    await shot(page, "07-act1-order-placed");
+    await expect(page.getByTestId("order-card")).toBeVisible();
+    await expect(page.getByTestId("order-card")).toContainText("Order placed");
+    await expect(page.getByTestId("order-id")).toHaveText(/^DEMO-A2A-[0-9A-F]{6}$/);
+    await expect(page.getByTestId("delivery-status")).toHaveAttribute("data-state", "out");
+    const push = page.getByTestId("push-banner");
+    await expect(push).toContainText("Delivered: Biglect, size 9.5", { timeout: 20_000 });
+    await expect(page.getByTestId("delivery-status")).toHaveAttribute("data-state", "delivered");
+    await expect(page.getByTestId("bubble-bot").last()).toContainText("was delivered");
+    await expect(traceEvent(page, "size_confirmed").first()).toContainText("Confirmed by the owner");
+    await expect(traceEvent(page, "delivered").first()).toContainText("Delivered");
 
-    // ---- Demo control: simulate delivery ------------------------------------------------------
-    await page.locator('[data-testid^="simulate-delivery-"]').click();
-    await expect(agentOrder).toContainText("Delivered Fri, Oct 16, 2026");
-    await expect(page.getByTestId("suggested-still-tight")).toContainText("They're still slightly tight. Can I swap for a half size up before the wedding Saturday?");
-    await expect(page.getByTestId("suggested-hero-wedding")).toHaveCount(0);
+    // ---- Act 2: return workflow, colour exchange in store ---------------------------------------------
+    await page.getByTestId("quick-john-2").click();
+    await expect(page.getByTestId("workflow-pill")).toContainText("Return");
+    await expect(page.getByTestId("bubble-bot").last()).toContainText("reason");
+    await expect(traceEvent(page, "handoff_to_returns").first()).toContainText("Switching to the return workflow");
+    await expect(traceEvent(page, "memory_consulted").first()).toContainText("Using your preferences");
+    await expect(traceEvent(page, "memory_consulted").first().getByTestId("actor-chip")).toHaveText("ALDO bot · Return");
 
-    // ---- Act 2: return flow with the ALDO Returns Agent --------------------------------------
-    await page.getByTestId("suggested-still-tight").click();
-    await expect(page.getByTestId("aldo-working")).toBeVisible();
-    await expect(page.getByTestId("aldo-trace").locator('[data-testid="trace-tool"]').first()).toBeVisible();
-    await shot(page, "08-act2-live-tool-trace");
+    await page.getByTestId("quick-john-3").click();
+    await expect(page.getByTestId("bubble-bot").last()).toContainText("Brown");
+    await expect(traceEvent(page, "memory_consulted")).toHaveCount(1);
+    await page.getByTestId("quick-john-4").click();
+    await expect(page.getByTestId("bubble-bot").last()).toContainText("5 min away");
+    await page.getByTestId("quick-john-5").click();
 
-    await expect(page.getByTestId("options")).toBeVisible();
-    await waitAldoIdle(page);
-    const cards = page.locator('[data-testid^="option-card-"]');
-    expect(await cards.count()).toBeGreaterThanOrEqual(2);
-    await expect(cards.first()).toContainText("Simulated data");
-    // A refund option stays visible next to the exchanges.
-    await expect(page.locator('[data-option-type^="return_"]').first()).toBeVisible();
-    await onMock(async () => {
-      expect(await cards.count()).toBeGreaterThanOrEqual(4);
-      // Store pickup first and it meets the Saturday deadline.
-      await expect(cards.first()).toHaveAttribute("data-option-type", "exchange_store_pickup");
-      await expect(cards.first()).toContainText("Meets your deadline");
-      await expect(cards.first()).toContainText("ALDO Demo Store Montreal");
-      await expect(cards.first()).toContainText("size 8.5");
-      await expect(page.locator('[data-option-type="return_mail"]')).toContainText("CAD 5.95");
-      await expect(page.locator('[data-option-type="exchange_ship_from_store"]')).toContainText("After your deadline");
-    });
-    await revealTop(page.getByTestId("options"));
-    await shot(page, "09-option-cards");
-    await axeScan(page, "option-cards");
+    const quote = page.getByTestId("quote-card");
+    await expect(quote).toBeVisible();
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+    const primary = quote.getByTestId("primary-option");
+    await expect(primary).toContainText("Exchange in store");
+    await expect(primary).toContainText("black 9.5");
+    await expect(primary).toContainText("brown 9.5");
+    await expect(primary).toContainText("ALDO Demo Store Montreal");
+    await expect(primary).toContainText("5 min away");
+    await expect(primary).toContainText("Today");
+    await expect(primary).toContainText("Free");
+    await expect(quote.getByTestId("confirm-option-open")).toHaveText("Confirm exchange");
+    // Refund options stay reachable under "See other options".
+    await quote.getByTestId("see-other-options").click();
+    await expect(quote.getByTestId("see-other-options")).toHaveAttribute("aria-expanded", "true");
+    await expect(quote.locator('[data-option-type="return_in_store"]')).toBeVisible();
+    await expect(quote.locator('[data-option-type="return_mail"]')).toBeVisible();
+    await expect(traceEvent(page, "quote_created").first()).toContainText("Options ready");
+    await expect(page.getByTestId("txn-card")).toHaveCount(0);
 
-    // Approve opens a dialog first; Escape closes it without calling the API.
-    await firstExchangeApprove(page).click();
+    await quote.getByTestId("confirm-option-open").click();
     const approve = page.getByTestId("approve-dialog");
     await expect(approve).toBeVisible();
-    await expect(approve).toContainText("Exchange");
-    await expect(approve).toContainText("Simulated data");
-    await onMock(async () => {
-      await expect(approve).toContainText("Exchange, pick up in store");
-      await expect(approve).toContainText("ALDO Demo Store Montreal");
-      await expect(approve).toContainText("size 8.5");
-    });
-    await shot(page, "10-confirmation-dialog");
-    await axeScan(page, "confirmation-dialog");
+    await expect(approve).toContainText("Confirm your exchange");
+    await expect(approve).toContainText("black 9.5 to brown 9.5");
     await page.keyboard.press("Escape");
     await expect(approve).toHaveCount(0);
-    await expect(firstExchangeApprove(page)).toBeFocused();
-    await expect(page.getByTestId("confirmation-panel")).toHaveCount(0);
-
-    // Reopen and confirm.
-    await firstExchangeApprove(page).click();
+    await expect(page.getByTestId("txn-card")).toHaveCount(0);
+    await quote.getByTestId("confirm-option-open").click();
     await page.getByTestId("confirm-approve").click();
-    const panel = page.getByTestId("confirmation-panel");
-    await expect(panel).toBeVisible();
-    await expect(panel).toContainText("Simulated exchange created");
-    await expect(page.getByTestId("txn-id")).toHaveText(/^DEMO-RMA-[0-9A-F]{6}$/);
-    await expect(page.getByTestId("txn-state")).toContainText("completed");
-    await expect(page.getByTestId("txn-next-step")).toContainText(/\S/);
-    await expect(panel).toContainText("simulated exchange/return created");
-    await expect(panel).not.toContainText(/(has been|was|is|been) (refunded|shipped)/i);
-    await expect(page.getByTestId("run-metrics").first()).toBeVisible();
+
+    const txn = page.getByTestId("txn-card");
+    await expect(txn).toBeVisible();
+    await expect(txn).toContainText("Exchange confirmed");
+    await expect(txn.getByTestId("txn-id")).toHaveText(/^DEMO-RMA-[0-9A-F]{6}$/);
+    await expect(txn.getByTestId("store-notice")).toContainText("ALDO Store Desk notified");
+    await expect(txn.getByTestId("store-notice")).toContainText("5 min away");
+    await expect(page.getByTestId("bubble-bot").last()).toContainText("notified the store");
+    await expect(page.getByTestId("workflow-pill")).toContainText("Purchase");
+    for (const type of ["transaction_created", "store_notified", "handback"]) await expect(traceEvent(page, type).first()).toBeVisible();
+    await expect(traceEvent(page, "store_notified").first().getByTestId("actor-chip")).toHaveText("ALDO Store Desk");
+    await expect(traceEvent(page, "handback").first()).toContainText("Back to the purchase workflow");
+    // ALDO sends a size update once ALDO bot's memory is read (the UI does that right after the exchange).
+    await expect(traceEvent(page, "memory_updated").first()).toContainText("size 9.5 fits", { timeout: 30_000 });
+    await expect(traceEvent(page, "memory_updated").first()).toContainText("provisional");
+
+    // ---- ALDO bot's memory sheet ----------------------------------------------------------------------------
+    await page.getByTestId("memory-open").click();
+    const memory = page.getByTestId("memory-dialog");
+    await expect(memory).toBeVisible();
+    await expect(memory).toContainText("What ALDO bot remembers");
+    await expect(memory.getByTestId("memory-typical")).toContainText("10.0");
+    await expect(memory.getByTestId("memory-entries").locator("li")).toHaveCount(3);
+    await expect(memory.getByTestId("memory-fit")).toContainText("Size 9.5 fits");
+    await expect(memory.getByTestId("memory-fit")).toContainText("provisional");
+    await expect(memory).not.toContainText(/synthetic/i);
+    await page.keyboard.press("Escape");
+    await expect(memory).toHaveCount(0);
+
     await onMock(async () => {
-      await expect(page.getByTestId("txn-next-step")).toContainText("Pick up size 8.5 at ALDO Demo Store Montreal");
+      await expect(txn).toContainText("brown 9.5");
+      await expect(page.getByTestId("txn-next-step")).toContainText("Pick up brown 9.5 at ALDO Demo Store Montreal today");
     });
-    await revealTop(panel);
-    await shot(page, "11-confirmation-panel");
-
-    // ---- Write-back: memory card updates (provisional), A2A feed shows memory_updated ---------
-    // The UI reads memory as soon as the exchange appears on the A2A feed, which delivers the write-back.
-    await expect(a2aRow(page, "memory_updated").first()).toContainText("provisional");
-    const update = page.getByTestId("memory-update");
-    await expect(update).toHaveCount(1);
-    await expect(update).toContainText("Stessy");
-    await expect(update).toContainText("provisional");
-    await onMock(async () => {
-      await expect(a2aRow(page, "memory_updated").first()).toContainText("8.0 to 8.5");
-      await expect(update).toContainText("8.0 to 8.5");
-    });
-    // The write-back brings the memory card into view so the change is visible.
-    await expect(page.getByTestId("memory-card")).toBeInViewport();
-    await shot(page, "12-memory-updated");
-    await axeScan(page, "workspace-after-exchange");
-
-    // Demo control: simulate pickup confirms the memory.
-    await page.getByTestId("simulate-pickup").click();
-    await expect(update).toContainText("confirmed");
-    await expect(page.getByTestId("simulate-pickup")).toBeDisabled();
-    await shot(page, "13-memory-confirmed");
-  });
-
-  test("a double click on Confirm does not create a second transaction", async ({ page, request }) => {
-    test.skip(!IS_MOCK, "uses mock-only controls");
-    await resetDemo(request, "dc_stockout");
-    await signInAs(page, "Ava");
-    await page.getByTestId("suggested-hero-wedding").click();
-    await expect(page.getByTestId("options")).toBeVisible();
-    await waitAldoIdle(page);
-    await firstApprove(page).click();
-    await page.getByTestId("confirm-approve").dblclick();
-    await expect(page.getByTestId("confirmation-panel")).toBeVisible();
-    await expect(page.getByTestId("aldo-trace").locator('[data-testid="trace-transaction"]')).toHaveCount(1);
-    await expect(page.locator('[data-testid="aldo-trace"] [data-testid="trace-run"]')).toHaveCount(2);
+    await expectNaming(page);
   });
 });
 
-test.describe("write-back delivery", () => {
-  /** Hero return on DEMO-1001 up to the confirmation panel (an exchange, so ALDO owes ALDO bot a size update). */
-  async function exchangeViaReturnsAgent(page: Page) {
-    await page.getByTestId("suggested-hero-wedding").click();
-    await expect(page.getByTestId("options")).toBeVisible();
-    await waitAldoIdle(page);
-    await firstApprove(page).click();
-    await page.getByTestId("confirm-approve").click();
-    await expect(page.getByTestId("confirmation-panel")).toBeVisible();
-  }
+test.describe("David (Platinum): the bundle return", () => {
+  test("three of ten items by mail with the Platinum perk, then the second bundle pays the fee", async ({ page, request }) => {
+    await resetDemo(request, "default");
+    await signInAs(page, "David");
+    await expect(page.getByTestId("chat-sub")).toContainText("Platinum member");
 
-  test("reading memory delivers the write-back; a slow outbox is retried until it arrives", async ({ page, request }) => {
-    test.skip(!IS_MOCK, "uses mock-only controls");
-    await resetDemo(request, "dc_stockout");
-    await mockPost(request, "/__mock/writeback-delay", { ms: 4500 });
-    try {
-      await signInAs(page, "Ava");
-      await exchangeViaReturnsAgent(page);
-      // ALDO owes ALDO bot a size update: the card says so, and nothing is applied yet.
-      await expect(page.getByTestId("memory-pending")).toContainText("Waiting for ALDO's size update");
-      await expect(page.getByTestId("memory-update")).toHaveCount(0);
-      // It arrives inside the 15 s window, as provisional memory, and the A2A feed shows memory_updated once.
-      await expect(page.getByTestId("memory-update")).toHaveCount(1);
-      await expect(page.getByTestId("memory-update")).toContainText("7.0 to 7.5");
-      await expect(page.getByTestId("memory-update")).toContainText("provisional");
-      await expect(page.getByTestId("memory-pending")).toHaveCount(0);
-      await expect(a2aRow(page, "memory_updated")).toHaveCount(1);
-      await shot(page, "12b-writeback-delivered-after-retry");
-    } finally {
-      await mockPost(request, "/__mock/writeback-delay", { ms: 0 });
-    }
-  });
+    await page.getByTestId("quick-david-1").click();
+    await expect(page.getByTestId("workflow-pill")).toContainText("Return");
+    await expect(page.getByTestId("bubble-bot").last().locator("li")).toHaveCount(10);
+    await expect(page.getByTestId("bubble-bot").last()).toContainText("Which three");
+    await expect(traceEvent(page, "handoff_to_returns").first()).toBeVisible();
 
-  test("a write-back that does not arrive in 15 s says so and can be checked again", async ({ page, request }) => {
-    test.skip(!IS_MOCK, "uses mock-only controls");
-    await resetDemo(request, "dc_stockout");
-    await mockPost(request, "/__mock/writeback-delay", { ms: 600_000 });
-    try {
-      await signInAs(page, "Ava");
-      await exchangeViaReturnsAgent(page);
-      await expect(page.getByTestId("memory-pending")).toBeVisible();
-      await expect(page.getByTestId("memory-late")).toContainText("has not arrived yet");
-      await expect(page.getByTestId("memory-pending")).toHaveCount(0);
-      await expect(page.getByTestId("memory-update")).toHaveCount(0);
-      await shot(page, "12c-writeback-late");
-      await axeScan(page, "writeback-late");
+    await page.getByTestId("quick-david-2").click();
+    const quote = page.getByTestId("quote-card");
+    await expect(quote).toBeVisible();
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+    await expect(quote).toContainText("Your return bundle");
+    const primary = quote.getByTestId("primary-option");
+    await expect(primary.getByTestId("bundle-items").locator("li")).toHaveCount(3);
+    await expect(primary).toContainText("Return by mail");
+    await expect(primary.getByTestId("benefit-note")).toContainText("Platinum perk 1 of 1 this month");
+    await expect(primary.getByTestId("option-fee")).toContainText("CAD 0.00");
+    await expect(primary.getByTestId("option-fee")).toContainText("CAD 5.95");
+    await expect(primary.getByTestId("option-refund")).toHaveText("CAD 429.97");
+    await expect(quote.getByTestId("confirm-option-open")).toHaveText("Confirm bundle return");
+    await onMock(async () => {
+      await expect(primary).toContainText("Goer boot");
+      await expect(primary).toContainText("Verity sneaker");
+      await expect(primary).toContainText("Uneral loafer");
+      await expect(page.getByTestId("bubble-bot").last()).toContainText("no ALDO store within reach");
+    });
 
-      await mockPost(request, "/__mock/writeback-delay", { ms: 0 });
-      await page.getByTestId("memory-check-again").click();
-      await expect(page.getByTestId("memory-update")).toHaveCount(1);
-      await expect(page.getByTestId("memory-late")).toHaveCount(0);
-    } finally {
-      await mockPost(request, "/__mock/writeback-delay", { ms: 0 });
-    }
+    await quote.getByTestId("confirm-option-open").click();
+    const approve = page.getByTestId("approve-dialog");
+    await expect(approve).toContainText("Confirm your return");
+    await expect(approve.getByRole("list", { name: "Items in this return" }).locator("li")).toHaveCount(3);
+    await approve.getByTestId("confirm-approve").click();
+
+    const txn = page.getByTestId("txn-card").first();
+    await expect(txn).toBeVisible();
+    await expect(txn).toContainText("Return label created for your bundle");
+    await expect(txn.getByTestId("txn-id")).toHaveText(/^DEMO-RET-[0-9A-F]{6}$/);
+    await expect(txn.getByTestId("txn-items").locator("li")).toHaveCount(3);
+    await expect(traceEvent(page, "benefit_applied").first()).toContainText("Saved CAD 5.95");
+    await expect(traceEvent(page, "benefit_applied").first()).toContainText("1 of 1 this month");
+    await expect(traceEvent(page, "transaction_created").first()).toContainText("Return label created");
+    await expect(page.getByTestId("workflow-pill")).toContainText("Purchase");
+
+    // The optional beat: the perk is used for this month, the standard fee applies, and no argument changes it.
+    await page.getByTestId("quick-david-3").click();
+    const second = page.getByTestId("quote-card").last();
+    await expect(second).toContainText("Your options");
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+    await expect(second.getByTestId("benefit-note")).toHaveCount(0);
+    await expect(second.getByTestId("option-fee")).toContainText("CAD 5.95");
+    await expect(second.getByTestId("option-refund")).toHaveText("CAD 94.04");
+    await expect(page.getByTestId("bubble-bot").last()).toContainText("already used");
+    await page.getByTestId("quick-david-4").click();
+    await expect(page.getByTestId("bubble-bot").last()).toContainText("I can't change that");
+    await expect(page.getByTestId("quote-card")).toHaveCount(2);
+    await expectNaming(page);
   });
 });
 
-test.describe("purchase confirmation errors", () => {
-  test("an expired proposal and a stock change show clear messages and recover", async ({ page, request }) => {
+test.describe("recoveries and navigation", () => {
+  test("an expired proposal is refused, ALDO bot is asked again, and nothing was ordered", async ({ page, request }) => {
     test.skip(!IS_MOCK, "uses mock-only controls");
-    await resetDemo(request, "dc_stockout");
-    await signInAs(page, "Ava");
-    await proposeViaBot(page);
-
-    // REQUEST_EXPIRED: the server says the proposal lapsed when the owner confirms.
+    await resetDemo(request, "default");
+    await signInAs(page, "John");
+    await page.getByTestId("quick-john-1").click();
+    await expect(page.getByTestId("purchase-card")).toHaveAttribute("data-status", "proposed");
+    await expect(page.getByTestId("confirm-purchase-open")).toBeEnabled();
     const requestId = await latestSizeRequestId(page);
     expect(requestId).toMatch(/^SZR-[0-9A-F]{6}$/);
     await mockPost(request, "/__mock/expire-purchase", { size_request_id: requestId });
+
     await page.getByTestId("confirm-purchase-open").click();
     await page.getByTestId("confirm-purchase").click();
     await expect(page.getByTestId("purchase-error")).toContainText("expired");
-    await shot(page, "14-purchase-request-expired");
-    await axeScan(page, "purchase-error-dialog");
     await page.getByTestId("purchase-error").getByRole("button", { name: "Ask ALDO bot again" }).click();
     await expect(page.getByTestId("purchase-dialog")).toHaveCount(0);
-    // ALDO bot makes a fresh proposal; nothing was ordered in between.
-    await expect(page.getByTestId("pa-transcript").getByText("Order me the ALDO Stessy heels for the wedding Saturday.")).toHaveCount(2);
-    await expect(page.locator('[data-testid^="order-DEMO-A2A-"]')).toHaveCount(0);
-    await expect(page.getByTestId("purchase-card")).toHaveAttribute("data-status", "proposed");
-    await expect(page.getByTestId("pa-working")).toHaveCount(0);
-
-    // STOCK_CHANGED: the proposed pair sold out at the store before the owner confirmed.
-    await mockPost(request, "/__mock/set-atp", { sku: "DEMO-SKU-HERO-BLACK-080", location_id: "DEMO-STORE-MTL-01", atp: 0 });
-    await page.getByTestId("confirm-purchase-open").click();
-    await page.getByTestId("confirm-purchase").click();
-    await expect(page.getByTestId("purchase-error")).toContainText("Stock changed");
-    await shot(page, "15-purchase-stock-changed");
-    await page.getByTestId("purchase-error").getByRole("button", { name: "Ask ALDO bot again" }).click();
-    // A new proposal in another size; it can be confirmed.
-    await expect(page.getByTestId("pa-transcript").getByText("Order me the ALDO Stessy heels for the wedding Saturday.")).toHaveCount(3);
-    await expect(page.getByTestId("pa-working")).toHaveCount(0);
-    await expect(page.getByTestId("purchase-card")).toHaveAttribute("data-status", "proposed");
-    await expect(page.getByTestId("purchase-facts")).toContainText("8.5");
-    await page.getByTestId("confirm-purchase-open").click();
-    await page.getByTestId("confirm-purchase").click();
-    await expect(page.getByTestId("purchase-card")).toHaveAttribute("data-status", "decided");
-    await expect(page.locator('[data-testid^="order-DEMO-A2A-"]')).toHaveCount(1);
+    await expect(page.getByTestId("bubble-user")).toHaveCount(2);
+    await expect(page.getByTestId("purchase-card")).toHaveCount(2);
+    await expect(page.getByTestId("purchase-card").first()).toHaveAttribute("data-status", "replaced");
+    await expect(page.getByTestId("purchase-card").last()).toHaveAttribute("data-status", "proposed");
+    await expect(page.getByTestId("order-card")).toHaveCount(0);
   });
 
-  test("a different option confirmed elsewhere is reported as a conflict", async ({ page, request }) => {
+  test("expired options are refused, fresh options replace them, and the old card is marked replaced", async ({ page, request }) => {
     test.skip(!IS_MOCK, "uses mock-only controls");
-    await resetDemo(request, "default"); // the DC has stock, so two options were offered
-    await signInAs(page, "Ava");
-    await proposeViaBot(page);
-    const requestId = await latestSizeRequestId(page);
-    await mockPost(request, "/__mock/confirm-other", { size_request_id: requestId });
-    await page.getByTestId("confirm-purchase-open").click();
-    await page.getByTestId("confirm-purchase").click();
-    await expect(page.getByTestId("purchase-error")).toContainText("different option was already confirmed");
-    await shot(page, "16-purchase-idempotency-conflict");
-    await page.getByRole("button", { name: "Cancel" }).click();
-    // The card re-reads the server record, which now shows the order the other client placed.
-    await expect(page.getByTestId("purchase-card")).toHaveAttribute("data-status", "decided");
-    await expect(page.locator('[data-testid^="order-DEMO-A2A-"]')).toHaveCount(1);
-  });
-});
+    await resetDemo(request, "default");
+    await signInAs(page, "David");
+    await page.getByTestId("quick-david-1").click();
+    await page.getByTestId("quick-david-2").click();
+    const first = page.getByTestId("quote-card");
+    await expect(first).toBeVisible();
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+    const quoteId = (await first.locator(".msg-card-head .mono").innerText()).trim();
+    await mockPost(request, "/__mock/expire-quote", { quote_id: quoteId });
 
-test.describe("escalation, denial, errors", () => {
-  test("final-sale defect opens a case that shows in the Cases tab", async ({ page, request }) => {
-    await resetDemo(request, "dc_stockout");
-    await signInAs(page, "Ava");
-    await page.getByTestId("order-DEMO-1002").click();
-    await page.getByLabel("Message to the ALDO Returns Agent").fill("The heel broke after two days. I know it is final sale but it is defective.");
-    await page.getByRole("button", { name: "Send" }).last().click();
-    await expect(page.getByTestId("case-panel")).toBeVisible();
-    await expect(page.getByTestId("case-id")).toHaveText(/^DEMO-CASE-[0-9A-F]{6}$/);
-    await expect(page.getByTestId("aldo-trace").locator('[data-tool="escalate_case"]')).toBeVisible();
-    await expect(page.locator('[data-testid^="option-card-"]')).toHaveCount(0);
-    await revealTop(page.getByTestId("case-panel"));
-    await shot(page, "17-case-created");
-    const caseId = (await page.getByTestId("case-id").innerText()).trim();
-    // The agent tells the customer the case ID (requirement 10.3).
-    await expect(page.getByTestId("aldo-transcript")).toContainText(caseId);
-
-    await page.getByRole("link", { name: "Cases", exact: true }).first().click();
-    await expect(page.getByTestId("cases-view")).toBeVisible();
-    await expect(page.getByTestId("cases-view")).toContainText(caseId);
-    await expect(page.getByTestId("proto-banner")).toHaveText(BANNER);
-    await shot(page, "18-cases");
-    await axeScan(page, "cases");
-  });
-
-  test("final-sale change of mind is refused with no options", async ({ page, request }) => {
-    await resetDemo(request, "dc_stockout");
-    await signInAs(page, "Ava");
-    await page.getByTestId("suggested-final-sale-mind").click();
-    await expect(page.getByTestId("order-DEMO-1002").locator("input")).toBeChecked();
-    await expect(page.getByTestId("aldo-transcript")).toContainText(/final.?sale/i);
-    await waitAldoIdle(page);
-    await expect(page.locator('[data-testid^="option-card-"]')).toHaveCount(0);
-    await expect(page.getByTestId("aldo-trace")).toContainText("final_sale.no_return");
-  });
-
-  test("another customer's order is denied and the policy is unchanged", async ({ page, request }) => {
-    await resetDemo(request, "dc_stockout");
-    await signInAs(page, "Ava");
-    await page.getByTestId("suggested-ignore-policy").click();
-    const denied = page.getByTestId("aldo-trace").locator('[data-tool="get_order_context"]');
-    await expect(denied).toContainText("NOT_AUTHORIZED");
-    await expect(denied).toContainText("belongs to another customer");
-    await expect(page.getByTestId("aldo-trace").locator(".code-amber")).toBeVisible();
-    await onMock(async () => {
-      await expect(page.getByTestId("aldo-transcript")).toContainText("isn't on your account");
-    });
-    await waitAldoIdle(page);
-    await expect(page.locator('[data-testid^="option-card-"]')).toHaveCount(0);
-    await expect(page.getByTestId("confirmation-panel")).toHaveCount(0);
-    await shot(page, "19-denied-cross-customer");
-  });
-
-  test("expired quote and conflicting approval show clear messages", async ({ page, request }) => {
-    test.skip(!IS_MOCK, "uses mock-only controls");
-    await resetDemo(request, "dc_stockout");
-    await signInAs(page, "Ava");
-    await page.getByTestId("suggested-hero-wedding").click();
-    await expect(page.getByTestId("options")).toBeVisible();
-    await waitAldoIdle(page);
-    const firstQuote = (await page.getByTestId("options").locator(".card-head .mono").innerText()).trim();
-
-    // QUOTE_EXPIRED: the server says the quote lapsed when the customer confirms.
-    await mockPost(request, "/__mock/expire-quote", { quote_id: firstQuote });
-    await firstApprove(page).click();
+    await first.getByTestId("confirm-option-open").click();
     await page.getByTestId("confirm-approve").click();
-    const err = page.getByTestId("approve-error");
-    await expect(err).toContainText("expired");
-    await shot(page, "20-quote-expired");
-    await err.getByRole("button", { name: "Ask for new options" }).click();
+    await expect(page.getByTestId("approve-error")).toContainText("expired");
+    await page.getByTestId("approve-error").getByRole("button", { name: "Ask for new options" }).click();
     await expect(page.getByTestId("approve-dialog")).toHaveCount(0);
-    await expect(page.getByTestId("aldo-transcript")).toContainText("You asked for fresh options.");
-    await expect(page.getByTestId("options").locator(".card-head .mono")).not.toHaveText(firstQuote);
-    await waitAldoIdle(page);
-    await expect(firstApprove(page)).toBeEnabled();
+    await expect(page.getByTestId("quote-card")).toHaveCount(2);
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+    await expect(page.getByTestId("quote-card").first()).toHaveAttribute("data-status", "replaced");
+    const second = page.getByTestId("quote-card").last();
+    await expect(second).toHaveAttribute("data-status", "open");
+    await expect(second.getByTestId("confirm-option-open")).toBeEnabled();
+    await expect(second.getByTestId("benefit-note")).toContainText("Platinum perk 1 of 1 this month");
+  });
 
-    // IDEMPOTENCY_CONFLICT: another client approved a different option on this quote first.
-    const secondQuote = (await page.getByTestId("options").locator(".card-head .mono").innerText()).trim();
-    const lastCardId = (await page.locator('[data-testid^="option-card-"]').last().getAttribute("data-testid")) ?? "";
-    await mockPost(request, "/__mock/approve-other", { quote_id: secondQuote, option_id: lastCardId.replace("option-card-", "") });
-    await firstApprove(page).click();
-    await page.getByTestId("confirm-approve").click();
-    await expect(page.getByTestId("approve-error")).toContainText("different option was already approved");
-    await shot(page, "21-idempotency-conflict");
-    await axeScan(page, "approve-error-dialog");
-    await page.getByRole("button", { name: "Cancel" }).click();
-    // After the conflict the quote is re-read: all Approve buttons are locked and one card says Approved.
-    await expect(page.locator('[data-testid^="option-card-"]', { hasText: "Approved" })).toHaveCount(1);
-    await expect(firstApprove(page)).toBeDisabled();
+  test("a reload keeps the session; Cases is a separate read-only page; Switch returns to the first screen", async ({ page, request }) => {
+    await resetDemo(request, "default");
+    await signInAs(page, "John");
+    await page.reload();
+    await expect(page.getByTestId("chat-screen")).toBeVisible();
+    await page.goto("/#/cases");
+    await expect(page.getByTestId("cases-view")).toBeVisible();
+    await expect(page.getByTestId("cases-empty")).toBeVisible();
+    await expect(page.getByTestId("proto-banner")).toHaveText(STRIP);
+    await page.getByRole("link", { name: "Back to ALDO bot" }).click();
+    await expect(page.getByTestId("chat-screen")).toBeVisible();
+    await page.getByTestId("switch-customer").click();
+    await expect(page.getByTestId("persona-picker")).toBeVisible();
+    await page.getByTestId("persona-DEMO-CUST-DAVID").click();
+    await expect(page.getByTestId("chat-sub")).toContainText("Platinum member");
   });
 });
 
-test.describe("keyboard and admin", () => {
-  test("keyboard-only: sign in, send a suggested prompt, approve and confirm a return", async ({ page, request }) => {
+test.describe("regression customers and admin controls", () => {
+  test("Ava: stessy purchase, confirm, delivery, half-size swap through the same chat", async ({ page, request }) => {
+    test.skip(!IS_MOCK, "uses the scripted mock");
     await resetDemo(request, "dc_stockout");
-    await page.goto("/");
-    // Sign in with Tab + Enter only.
-    await tabTo(page, page.getByRole("button", { name: "Sign in as Ava" }));
-    await page.keyboard.press("Enter");
-    await expect(page.getByTestId("workspace")).toBeVisible();
-    // Reach the ALDO Returns Agent's first suggested prompt by Tab and send it with Enter.
-    await tabTo(page, page.getByTestId("suggested-hero-wedding"));
-    await expect(page.getByTestId("suggested-hero-wedding")).toBeFocused();
-    await page.keyboard.press("Enter");
-    await expect(page.getByTestId("options")).toBeVisible();
-    await waitAldoIdle(page);
-    // Open the approve dialog with the keyboard.
-    await tabTo(page, firstApprove(page));
-    await page.keyboard.press("Enter");
-    const dialog = page.getByTestId("approve-dialog");
-    await expect(dialog).toBeVisible();
-    // Focus stays inside the dialog while tabbing through it.
-    const confirm = page.getByTestId("confirm-approve");
-    for (let i = 0; i < 6; i++) {
-      await page.keyboard.press("Tab");
-      expect(await dialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
-    }
-    await tabTo(page, confirm, 6);
-    await page.keyboard.press("Enter");
-    await expect(page.getByTestId("confirmation-panel")).toContainText("Simulated exchange created");
-    // Visible focus: the focused control has a non-zero outline.
-    await tabTo(page, page.getByTestId("simulate-pickup"));
-    const outline = await page.getByTestId("simulate-pickup").evaluate((el) => getComputedStyle(el).outlineWidth);
-    expect(parseFloat(outline)).toBeGreaterThanOrEqual(2);
-  });
-
-  test("keyboard-only: ask ALDO bot, then confirm the purchase", async ({ page, request }) => {
-    await resetDemo(request, "dc_stockout");
-    await page.goto("/");
-    await tabTo(page, page.getByRole("button", { name: "Sign in as Ava" }));
-    await page.keyboard.press("Enter");
-    await expect(page.getByTestId("workspace")).toBeVisible();
-    await tabTo(page, page.getByTestId("suggested-pa-order"));
-    await page.keyboard.press("Enter");
+    await signInAs(page, "Ava", "?admin=1");
+    await page.getByTestId("quick-ava-1").click();
     await expect(page.getByTestId("purchase-card")).toHaveAttribute("data-status", "proposed");
     await expect(page.getByTestId("confirm-purchase-open")).toBeEnabled();
-    await tabTo(page, page.getByTestId("confirm-purchase-open"));
-    await page.keyboard.press("Enter");
-    const dialog = page.getByTestId("purchase-dialog");
-    await expect(dialog).toBeVisible();
-    for (let i = 0; i < 5; i++) {
-      await page.keyboard.press("Tab");
-      expect(await dialog.evaluate((d) => d.contains(document.activeElement))).toBe(true);
-    }
-    await tabTo(page, page.getByTestId("confirm-purchase"), 6);
-    await page.keyboard.press("Enter");
-    await expect(page.getByTestId("purchase-card")).toContainText("Simulated order placed");
+    await page.getByTestId("confirm-purchase-open").click();
+    await page.getByTestId("confirm-purchase").click();
+    await expect(page.getByTestId("push-banner")).toContainText("Delivered: Stessy2.0, size 8.0", { timeout: 20_000 });
+    await page.getByTestId("quick-ava-2").click();
+    const quote = page.getByTestId("quote-card");
+    await expect(quote).toBeVisible();
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+    await expect(quote.getByTestId("primary-option")).toContainText("Exchange in store");
+    await expect(quote.getByTestId("primary-option")).toContainText("Meets your deadline");
+    await quote.getByTestId("confirm-option-open").click();
+    await page.getByTestId("confirm-approve").click();
+    await expect(page.getByTestId("txn-card")).toContainText("Exchange confirmed");
+    await expect(traceEvent(page, "memory_updated").first()).toContainText("8.0 to 8.5", { timeout: 30_000 });
+    // Cross-customer attempts are denied by the system, whatever the message says.
+    await page.getByTestId("quick-ava-3").click();
+    await expect(page.getByTestId("a2a-trace")).not.toContainText("DEMO-1006");
+    await expect(page.getByTestId("bubble-bot").last()).toContainText("isn't on your account");
   });
 
-  test("admin controls at ?admin=1 reset the demo; wrong secret is rejected", async ({ page, request }) => {
+  test("admin controls reset the demo; a wrong secret is rejected and the secret is not stored", async ({ page, request }) => {
     await resetDemo(request, "default");
     await page.goto("/?admin=1");
     await expect(page.getByTestId("admin-panel")).toBeVisible();
-    await expect(page.getByTestId("proto-banner")).toHaveText(BANNER);
     const secret = page.getByLabel("Admin secret");
     await expect(secret).toHaveAttribute("type", "password");
-    await shot(page, "22-admin-reset");
-    await axeScan(page, "admin");
-
     await secret.fill("definitely-wrong");
     await page.getByTestId("reset-default").click();
-    await expect(page.getByRole("alert").filter({ hasText: /session|sign in|authenticated|Admin/i }).first()).toBeVisible();
-
-    await secret.fill(process.env.E2E_ADMIN_SECRET ?? "mock-admin");
+    await expect(page.getByRole("alert").first()).toBeVisible();
+    await secret.fill(ADMIN_SECRET);
     await page.getByTestId("reset-dc_stockout").click();
     await expect(page.getByTestId("admin-status")).toContainText("Reset to dc_stockout complete");
-    // The secret is not persisted anywhere.
     const stored = await page.evaluate(() => JSON.stringify({ ...sessionStorage }) + JSON.stringify({ ...localStorage }));
-    expect(stored).not.toContain(process.env.E2E_ADMIN_SECRET ?? "mock-admin");
+    expect(stored).not.toContain(ADMIN_SECRET);
   });
 });

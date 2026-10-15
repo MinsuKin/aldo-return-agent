@@ -34,8 +34,8 @@ from .gateway_client import GatewayClient, build_gateway_client
 from .log import logger
 from .memory import MemoryRepo, get_repo
 from .prompt import build_system_prompt, owner_message
-from .sanitize import count_words, limit_words, strip_markdown
-from .tools import PersonalRunContext, build_tools
+from .sanitize import count_words, drop_quoting_sentences, limit_words, quotes_any, strip_markdown
+from .tools import PersonalRunContext, build_tools, clean_orders
 
 SAFE_ERROR_REPLY = (
     "ALDO bot couldn't finish that just now. Nothing was ordered. Please try again in a moment."
@@ -44,6 +44,18 @@ HARD_STOP_REPLY = (
     "ALDO bot ran out of steps before it could finish. Nothing was ordered. Please try again."
 )
 CONFIRM_SUFFIX = "Please confirm it in the app; nothing is ordered until you do."
+#: The one sentence after a hand-off to the return flow: it names nobody else (addendum 12.1).
+HANDOFF_REPLY = "Sure, let's sort out your return."
+HANDOFF_MIN_WORDS = 3  # "Done." is not a sentence the owner can follow
+HANDOFF_MAX_WORDS = 25
+#: Words that would introduce somebody else to the owner. The reply after a hand-off must not have any.
+_OTHER_AGENT = re.compile(
+    r"\b(?:agents?|assistants?|specialists?|colleagues?|teams?|departments?|systems?|humans?)\b"
+    r"|\b(?:hand(?:ing|ed|s)?[\s-]*(?:you\s+|this\s+|it\s+)?(?:over|off)|hand-?off|transfer\w*|redirect\w*"
+    r"|escalat\w*|bring(?:ing)?\s+in|connect(?:ing)?\s+you|pass(?:ing)?\s+(?:you|this)\s+(?:on|over|to))\b"
+    r"|\b(?:another|other|different|separate|dedicated)\s+(?:bot|person|desk)\b",
+    re.IGNORECASE,
+)
 
 #: Model errors worth ONE retry on the fallback model (throttling and access problems).
 _FALLBACK_CODES = frozenset(
@@ -168,6 +180,7 @@ def run(
         if gateway is None:
             token = (token_minter or mint_delegated_token)(owner_id)
             gateway = build_gateway_client(token)
+        orders = clean_orders(payload.get("orders"))  # server data from the worker, or None
         ctx = PersonalRunContext(
             run_id=run_id,
             conv_id=conv_id,
@@ -176,13 +189,15 @@ def run(
             repo=repo,
             size_system=profile["size_system"],
             model_id=settings.model_id(),
+            message=message,
+            orders=orders,
         )
         ctx.emit(
             "run_started",
             {"conv_id": conv_id, "model_id": ctx.model_id, "max_tool_calls": ctx.max_tool_calls},
         )
         prior = repo.load_messages(owner_id, conv_id)
-        system_prompt = build_system_prompt(profile["display_name"])
+        system_prompt = build_system_prompt(profile["display_name"], orders=orders)
         agent, result = _run_agent(ctx, agent_factory or default_agent_factory, prior, system_prompt, message)
         reply, guard, raw_words = _final_reply(ctx, _reply_text(result), profile["display_name"])
         _save_messages(ctx, agent)
@@ -312,28 +327,51 @@ def compose_proposal_reply(ctx: PersonalRunContext, owner_name: str) -> str:
     return (
         f"{owner_name}, I have a proposal ready: size {size}"
         f"{' ' + product if product else ''}, {how}{' on ' + when if when else ''}.{late} "
-        f"{CONFIRM_SUFFIX} Prototype with simulated data, no payment is taken."
+        f"{CONFIRM_SUFFIX}"
     )
 
 
+def handoff_reply(text: str) -> tuple[str, str]:
+    """``(reply, guard)`` after a hand-off: one short sentence that names nobody else.
+
+    The model's own sentence is kept when it is short and mentions no agent, assistant, team or
+    hand-over; anything else becomes the fixed sentence ``HANDOFF_REPLY``.
+    """
+    text = (text or "").strip()
+    if HANDOFF_MIN_WORDS <= count_words(text) <= HANDOFF_MAX_WORDS and not _OTHER_AGENT.search(text):
+        return text, "none"
+    return HANDOFF_REPLY, "replaced"
+
+
 def _final_reply(ctx: PersonalRunContext, text: str, owner_name: str) -> tuple[str, str, int]:
-    """(reply, guard, raw_words): enforce 'proposal, confirm in the app, never claim an order'."""
+    """(reply, guard, raw_words): enforce 'proposal, confirm in the app, never claim an order'.
+
+    Also: nothing quoted from a flagged review leaves in the reply, and after a hand-off the reply
+    is one short sentence that does not mention another agent.
+    """
     text = strip_markdown(text)
     raw_words = count_words(text)
     if ctx.hard_stopped:
         return HARD_STOP_REPLY, "hard_stop", raw_words
+    if ctx.handed_off:
+        reply, guard = handoff_reply(text)
+        return reply, guard, raw_words
+    guard = "none"
+    if ctx.flagged_texts and quotes_any(text, ctx.flagged_texts):
+        text = drop_quoting_sentences(text, ctx.flagged_texts)
+        guard = "dropped_quote"
     if ctx.proposal_sent:
         if not text or _PLACED_CLAIM.search(text):
             return compose_proposal_reply(ctx, owner_name), "replaced", raw_words
         if not _CONFIRM_WORD.search(text):
             room = settings.MAX_REPLY_WORDS - count_words(CONFIRM_SUFFIX)
             return f"{limit_words(text, room)} {CONFIRM_SUFFIX}", "appended_confirm", raw_words
-        return limit_words(text, settings.MAX_REPLY_WORDS), "none", raw_words
+        return limit_words(text, settings.MAX_REPLY_WORDS), guard, raw_words
     if not text:
         return SAFE_ERROR_REPLY, "empty", raw_words
     if _PLACED_CLAIM.search(text) and _ORDER_WORD.search(text):
         return "I haven't sent a proposal, so nothing is ordered. Please tell me which shoe you want and I will try again.", "replaced", raw_words
-    return limit_words(text, settings.MAX_REPLY_WORDS), "none", raw_words
+    return limit_words(text, settings.MAX_REPLY_WORDS), guard, raw_words
 
 
 # ------------------------------------------------------------------------- bookkeeping
@@ -393,6 +431,9 @@ def _metrics(
         "fallback_used": bool(ctx.fallback_used) if ctx else False,
         "error_code": error_code,
         "proposal_sent": bool(ctx.proposal_sent) if ctx else False,
+        "reviews_read": bool(ctx and ctx.reviews_read),
+        "reviews_flagged": sum(c["n_flagged"] for c in ctx.reviews_read.values()) if ctx else 0,
+        "handoff": bool(ctx and ctx.handed_off),
         "limit_reached": bool(ctx and (ctx.tool_calls > ctx.max_tool_calls or ctx.hard_stopped)),
         "reply_guard": guard,
         "reply_words_raw": raw_words,

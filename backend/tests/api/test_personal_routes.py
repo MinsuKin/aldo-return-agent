@@ -273,7 +273,10 @@ def test_the_whole_fit_gateway_story(local_app, enqueued):
         "size_requested",
         "size_recommended",
         "size_confirmed",
+        "delivered",  # the simulate-delivery control (emitted by gateway.simulate_delivery)
+        "quote_created",  # domain v2 (S17A): create_quote mirrors the quote to the middle timeline
         "transaction_created",
+        "store_notified",  # domain v2 (S17A): approving a store pickup tells the store desk, actor aldo_store
         "memory_updated",
     ]
     assert execution.execute(AVA, world.quote_id, run_id=run_id).replayed is True  # replay: nothing new

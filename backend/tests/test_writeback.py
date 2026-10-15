@@ -1007,3 +1007,28 @@ def test_a_failed_flush_after_pickup_still_queues_the_final_update(pa):
     pa.fail_with = None
     assert gateway.flush_outbox(AVA) == 1
     assert pa.received[outcome["update_id"]]["provisional"] is False
+
+
+# ------------------------------------------------- the colour exchange tells the stream the size fit
+
+
+def test_memory_updated_carries_fit_feedback_for_a_colour_exchange_and_nothing_extra(env, monkeypatch):
+    """D11: a PREFERENCE update is shown with fit_feedback size_ok; no other update field leaks."""
+    seen: list[tuple[str, str, dict, str]] = []
+    monkeypatch.setattr(gateway, "_emit", lambda owner, kind, payload, actor: seen.append((owner, kind, payload, actor)))
+    update = {
+        "update_id": "MU-5C0A12", "owner_ref": AVA, "order_id": "DEMO-A2A-81B20E", "style_id": "DEMO-STYLE-MEN001",
+        "product_name": "ALDO Men 001", "color": "BLACK", "original_size": "9.5", "new_size": "9.5", "reason": "PREFERENCE",
+        "outcome": "exchange_created", "provisional": True, "source": "ALDO_CA", "ts": "2026-10-16T16:05:00+00:00",
+        "fit_feedback": "size_ok",
+    }
+    gateway._emit_memory_updated(AVA, update)
+    (owner, kind, payload, actor), = seen
+    assert (owner, kind, actor) == (AVA, "memory_updated", "personal_agent")
+    assert payload["fit_feedback"] == "size_ok" and payload["reason"] == "PREFERENCE" and payload["new_size"] == "9.5"
+    assert set(payload) <= trace.A2A_PUBLIC_FIELDS["memory_updated"]
+    assert "owner_ref" not in payload and "order_id" not in payload and "ts" not in payload
+
+    seen.clear()
+    gateway._emit_memory_updated(AVA, {k: v for k, v in update.items() if k != "fit_feedback"} | {"reason": "TOO_SMALL"})
+    assert "fit_feedback" not in seen[0][2]  # a size exchange has none
