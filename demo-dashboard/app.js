@@ -32,7 +32,7 @@ const TIMING = {
 
 /* Actor identity: display label + CSS modifier class. */
 const ACTORS = {
-  personal: { label: "ALDO bot", cls: "actor-personal" },
+  personal: { label: "Personal Agent", cls: "actor-personal" },
   gateway: { label: "ALDO Gateway", cls: "actor-gateway" },
   aldo: { label: "ALDO Returns Agent", cls: "actor-aldo" },
   system: { label: "System", cls: "actor-system" },
@@ -73,11 +73,11 @@ const EMPTY_TRACE_HTML =
    ============================================================ */
 const SCENARIOS = {
   buy: {
-    head: { name: "ALDO bot", status: "online · personal shopping agent", avatar: "A", isPersonalAgent: true },
-    sub: "Pre-purchase fit — ALDO bot ⇄ ALDO Gateway (A2A handshake)",
+    head: { name: "Personal Agent", status: "online · personal shopping agent", avatar: "A", isPersonalAgent: true },
+    sub: "Pre-purchase fit — Personal Agent ⇄ ALDO Gateway (A2A handshake)",
     chat: [
       { who: "user", text: "Order me the ALDO Stessy heels for the wedding Saturday." },
-      { who: "bot", label: "ALDO bot", text: "On it — checking ALDO's fit data and in-stock sizes against your usual 9. One sec." },
+      { who: "bot", label: "Personal Agent", text: "On it — checking ALDO's fit data and in-stock sizes against your usual 9. One sec." },
     ],
     events: [
       { t: 200, actor: "system", type: "run_started", icon: ICON.run, title: "Run started", detail: "kind=personal · owner request received" },
