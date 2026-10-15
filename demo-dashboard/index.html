@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ALDO Fit Gateway — Demo Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/@vscode/codicons@0.0.36/dist/codicon.css" rel="stylesheet" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div>ALDO Fit Gateway</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="actions">
+  <button class="btn run ghost" id="resetBtn">Reset ↺</button>
+  <button class="btn run" id="playBtn" aria-keyshortcuts="R">Run demo <span class="keycap" aria-hidden="true">R</span></button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+
+    <!-- LEFT: iPhone -->
+    <div class="phone-col">
+      <div class="scenario" id="scenario">
+        <button data-scn="buy" class="active">Buy</button>
+        <button data-scn="return">Return</button>
+        <button data-scn="safety">Safety</button>
+      </div>
+
+      <div class="phone" id="phone">
+        <div class="phone-screen">
+          <div class="notch"></div>
+          <div class="status-bar">
+            <span id="clock">9:41</span>
+            <span class="icons">
+              <!-- cellular -->
+              <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden="true">
+                <rect x="0" y="7.5" width="3" height="3.5" rx="1"/>
+                <rect x="4.5" y="5" width="3" height="6" rx="1"/>
+                <rect x="9" y="2.5" width="3" height="8.5" rx="1"/>
+                <rect x="13.5" y="0" width="3" height="11" rx="1"/>
+              </svg>
+              <!-- wifi -->
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor" aria-hidden="true">
+                <path d="M8 2.2c2.6 0 5 1 6.8 2.7l1.2-1.3C13.9 1.4 11 .2 8 .2S2.1 1.4 0 3.6l1.2 1.3C3 3.2 5.4 2.2 8 2.2z"/>
+                <path d="M8 5.6c1.6 0 3.1.6 4.2 1.7l1.2-1.3C13 4.6 10.6 3.6 8 3.6S3 4.6 2.6 6l1.2 1.3C4.9 6.2 6.4 5.6 8 5.6z"/>
+                <path d="M8 9c.8 0 1.5.3 2 .9l-2 2.1-2-2.1c.5-.6 1.2-.9 2-.9z"/>
+              </svg>
+              <!-- battery -->
+              <svg width="26" height="12" viewBox="0 0 26 12" fill="none" aria-hidden="true">
+                <rect x="0.5" y="0.5" width="22" height="11" rx="3" stroke="currentColor" opacity="0.4"/>
+                <rect x="2" y="2" width="17" height="8" rx="1.5" fill="currentColor"/>
+                <rect x="24" y="4" width="1.6" height="4" rx="0.8" fill="currentColor" opacity="0.5"/>
+              </svg>
+            </span>
+          </div>
+          <div class="chat-head muse" id="chatHead">
+            <div class="avatar" id="headAvatar">M</div>
+            <div class="meta">
+              <b id="headName">Personal Agent</b>
+            </div>
+          </div>
+          <div class="messages" id="messages"></div>
+          <div class="composer" id="composer">
+            <div class="field">
+              <input id="composerInput" placeholder="Message…" inputmode="none" autocomplete="off" autocorrect="off" spellcheck="false" />
+              <button class="send" id="sendBtn" aria-label="Send"><i class="codicon codicon-arrow-up"></i></button>
+            </div>
+          </div>
+          <div class="kb-wrap" id="kbWrap" aria-hidden="true">
+            <div class="kb" id="kb">
+              <div class="kb-suggest" id="kbSuggest"><span></span><span></span><span></span></div>
+              <div class="kb-rows" id="kbRows"></div>
+              <div class="kb-bottom">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.2 14.2c1 1.5 2.3 2.2 3.8 2.2s2.8-.7 3.8-2.2"/><circle cx="9" cy="9.7" r=".6" fill="currentColor"/><circle cx="15" cy="9.7" r=".6" fill="currentColor"/></svg>
+                <svg width="22" height="24" viewBox="0 0 22 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><rect x="7.5" y="2" width="7" height="12" rx="3.5"/><path d="M3.5 11.5c0 4 3 7 7.5 7s7.500-3 7.500-7M11 18.500V22"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: trace + meta -->
+    <div class="right-col">
+      <div class="panel trace-panel">
+        <div class="panel-bar">
+          <i class="codicon codicon-type-hierarchy-sub"></i>
+          <span class="pb-title">Agentic trace</span>
+          <div class="pb-progress" id="traceProgress" data-state="idle">
+            <span class="pb-phase" id="tracePhase">Idle</span>
+            <span class="pb-time" id="traceTime"></span>
+          </div>
+        </div>
+        <div class="trace" id="trace">
+          <div class="trace-empty">Press <span class="kbd">▶ Run demo</span> or send a message in the phone to watch the agents reason step by step.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-bar">
+          <i class="codicon codicon-dashboard"></i>
+          <span class="pb-title">Run meta</span>
+        </div>
+        <div class="meta-grid" id="metaGrid">
+          <div class="metric"><div class="k">Rounds</div><div class="v" id="mRounds">—</div></div>
+          <div class="metric"><div class="k">Tool calls</div><div class="v" id="mTools">—</div></div>
+          <div class="metric"><div class="k">Tokens</div><div class="v" id="mTokens">—</div><div class="sub" id="mTokensSub">in / out</div></div>
+          <div class="metric"><div class="k">Latency</div><div class="v" id="mLatency">—</div></div>
+          <div class="metric"><div class="k">Est. cost</div><div class="v" id="mCost">—</div><div class="sub">assumed pricing</div></div>
+          <div class="metric"><div class="k">Status</div><div class="v" id="mStatus">—</div><div class="sub" id="mModel">model</div></div>
+        </div>
+        <div class="decision-box">
+          <div class="hicon"><i class="codicon codicon-pass-filled"></i></div>
+          <div>
+            <div class="d-title">Decision rationale</div>
+            <div class="d-text" id="decisionText">Run the demo to record the agent's public decision sentence.</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="foot-note">
+        A2A actors: <b style="color:var(--violet)">Personal Agent</b> ·
+        <b style="color:var(--blue)">ALDO Gateway</b> (fit + stock) ·
+        <b style="color:var(--accent)">ALDO Returns Agent</b>. &nbsp;
+        Fit signal derived from real ALDO return data · everything else synthetic.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/app.js"></script>
+<!-- Agentation visual-feedback toolbar (resolved + served by Vite) -->
+<script type="module" src="/agentation-mount.js"></script>
+</body>
+</html>
