@@ -71,7 +71,7 @@ def load_assist(variant: str = "default") -> dict[str, Any]:
 
 
 def men001_answer() -> dict[str, Any]:
-    """John's men's style (demo plan 11.2): the REAL gateway's answer for ``ALDO Men 001`` in black.
+    """John's men's style (demo plan 11.2): the REAL gateway's answer for ``Toney`` in black.
 
     ``size_assist_men001.json`` was produced by ``returns_domain.gateway.size_assist`` on the demo
     fixtures (default variant, John, no deadline): the fit signal derived from the real returns
@@ -296,7 +296,7 @@ def proposed_response(size_request_id: str = "SZR-3F9A1C", size: str = "8.0") ->
             "color": "BLACK",
             "size": size,
             "option_type": "store_pickup",
-            "location_name": "ALDO Demo Store Montreal",
+            "location_name": "ALDO Sainte-Catherine",
             "eta_date": "2026-10-17",
             "eta_text": "Sat Oct 17",
             "meets_deadline": True,

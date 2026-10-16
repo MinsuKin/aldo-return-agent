@@ -23,7 +23,7 @@ JOHN, DAVID, AVA = "DEMO-CUST-JOHN", "DEMO-CUST-DAVID", "DEMO-CUST-AVA"
 ORDERS = [
     {  # newest first, as the worker attaches them
         "order_id": "DEMO-A2A-AB12CD", "channel": "agent", "ordered_at": "2026-10-16", "delivered_at": "2026-10-16",
-        "lines": [{"product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5", "qty": 1}],
+        "lines": [{"product_name": "Toney", "color": "BLACK", "size": "9.5", "qty": 1}],
     },
     {
         "order_id": "DEMO-1001", "channel": "web", "ordered_at": "2026-10-01", "delivered_at": "2026-10-05",
@@ -46,7 +46,7 @@ def test_johns_context_is_the_example_of_the_addendum(repo: MemoryRepo) -> None:
         "typical_size": "10.0",
         "preferred_colors": ["BROWN", "WHITE"],  # the brown loafer and the white sneaker were kept
         "aldo_items": [
-            {"order_id": "DEMO-A2A-AB12CD", "product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5", "status": "delivered"}
+            {"order_id": "DEMO-A2A-AB12CD", "product_name": "Toney", "color": "BLACK", "size": "9.5", "status": "delivered"}
         ],
         "source": "personal agent memory",
     }
@@ -113,9 +113,9 @@ def test_a_colour_exchange_does_not_make_the_colour_the_owner_gave_back_a_favour
 def test_only_agent_placed_orders_become_aldo_items_and_the_status_follows_the_delivery() -> None:
     orders = [
         {"order_id": "DEMO-A2A-000001", "channel": "agent", "delivered_at": None,
-         "lines": [{"product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5"}]},
+         "lines": [{"product_name": "Toney", "color": "BLACK", "size": "9.5"}]},
         {"order_id": "DEMO-3001", "channel": "web", "delivered_at": "2026-10-13",
-         "lines": [{"product_name": "Valegyn", "color": "NAVY", "size": "10.0"}]},
+         "lines": [{"product_name": "Patten", "color": "NAVY", "size": "10.0"}]},
         {"order_id": "DEMO-A2A-000002", "channel": "agent", "delivered_at": "2026-10-16",
          "lines": [{"product_name": "Stessy2.0", "color": "TAN", "size": "8.0"}]},
     ]

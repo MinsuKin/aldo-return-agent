@@ -14,7 +14,7 @@ export interface Persona {
   tier?: string;
   /** Human label of the tier, for example "Silver member". */
   tier_label?: string;
-  /** Where the persona lives, for example "Downtown Montreal". */
+  /** Where the persona lives, for example "Bronfman Building, Montreal". */
   location_label?: string;
 }
 
@@ -149,4 +149,18 @@ export interface ConfirmPurchaseResponse {
 
 export interface ApiErrorBody {
   error: { code: string; message: string };
+}
+
+/** Where the fit insights come from (docs/data-platform/DESIGN.md): the bundled file, the AWS data platform, or both compared. */
+export type DataMode = "static" | "platform" | "shadow";
+
+export interface DataPlatformStatus {
+  mode: DataMode;
+  modes: DataMode[];
+  aws_enabled: boolean;
+  /** The curated document in S3 can be loaded right now. */
+  available: boolean;
+  curated?: { key: string; generated_at: string; products: number; query_execution_ids: string[] };
+  error?: string;
+  shadow?: Record<string, { mismatched: number; only_bundled: number; only_platform: number; products_platform: number; products_bundled: number }>;
 }

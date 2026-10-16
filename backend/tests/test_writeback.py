@@ -1018,7 +1018,7 @@ def test_memory_updated_carries_fit_feedback_for_a_colour_exchange_and_nothing_e
     monkeypatch.setattr(gateway, "_emit", lambda owner, kind, payload, actor: seen.append((owner, kind, payload, actor)))
     update = {
         "update_id": "MU-5C0A12", "owner_ref": AVA, "order_id": "DEMO-A2A-81B20E", "style_id": "DEMO-STYLE-MEN001",
-        "product_name": "ALDO Men 001", "color": "BLACK", "original_size": "9.5", "new_size": "9.5", "reason": "PREFERENCE",
+        "product_name": "Toney", "color": "BLACK", "original_size": "9.5", "new_size": "9.5", "reason": "PREFERENCE",
         "outcome": "exchange_created", "provisional": True, "source": "ALDO_CA", "ts": "2026-10-16T16:05:00+00:00",
         "fit_feedback": "size_ok",
     }

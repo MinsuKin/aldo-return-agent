@@ -18,7 +18,7 @@ What to propose as the next step (say "design", not "built"):
 Wording rules:
 - Do not claim the S3, Glue and Athena pipeline exists. It is a proposed production design.
 - Fit signals are derived from the provided ALDO data. Cross-retailer owner memory, product reviews, customer tiers and perks are simulated or demo assumptions.
-- The supplied e-commerce (OMS) extract has ladies' categories only, but the ALDO POS transaction file contains men's footwear in sizes 7 to 14. "ALDO Men 001" is a demo product; its fit signal is the real 24-month OMS return signal of a men's style (118 fit returns in ALDO_CA, 91.5% "too big"). See `fixtures/demo/README.md`.
+- The supplied e-commerce (OMS) extract has ladies' categories only, but the ALDO POS transaction file contains men's footwear in sizes 7 to 14. "Toney" is a demo product; its fit signal is the real 24-month OMS return signal of a men's style (118 fit returns in ALDO_CA, 91.5% "too big"). See `fixtures/demo/README.md`.
 
 Likely jury question: "Could this operate at retail scale?"
 Short answer: the per-request work is cheap and bounded (measured cost about CAD 0.24 per return run), the data refresh is a batch job, and the transactional state is DynamoDB. Busiest-day load from the impact model is well within normal Bedrock and Lambda patterns; account quotas should be checked and raised before launch.

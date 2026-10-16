@@ -8,6 +8,8 @@ import type {
   ConfirmPurchaseResponse,
   ConversationInfo,
   ConversationResponse,
+  DataMode,
+  DataPlatformStatus,
   MemoryWire,
   Order,
   Persona,
@@ -176,6 +178,12 @@ export const api = {
     return listOf<CaseWire>(data, "cases");
   },
 
+  dataPlatform(adminSecret: string): Promise<DataPlatformStatus> {
+    return request<DataPlatformStatus>("GET", "/demo/data-platform", { adminSecret, auth: false });
+  },
+  setDataPlatform(mode: DataMode, adminSecret: string): Promise<DataPlatformStatus> {
+    return request<DataPlatformStatus>("POST", "/demo/data-platform", { body: { mode }, adminSecret, auth: false });
+  },
   reset(variant: ResetVariant, adminSecret: string): Promise<unknown> {
     return request<unknown>("POST", "/demo/reset", { body: { variant }, adminSecret, auth: false });
   },

@@ -28,7 +28,7 @@ test.describe("first screen and layout", () => {
     const john = page.getByTestId("persona-DEMO-CUST-JOHN");
     const david = page.getByTestId("persona-DEMO-CUST-DAVID");
     await expect(john).toContainText("Silver member");
-    await expect(john).toContainText("Downtown Montreal");
+    await expect(john).toContainText("Bronfman Building, Montreal");
     await expect(david).toContainText("Platinum member");
     await expect(david).toContainText("Rural New Brunswick");
     for (const id of ["AVA", "BEN", "CHLOE"]) await expect(page.getByTestId(`persona-DEMO-CUST-${id}`)).toHaveCount(0);
@@ -72,7 +72,7 @@ test.describe("first screen and layout", () => {
 });
 
 test.describe("John (Silver): the stage demo", () => {
-  test("buy the Men 001, confirm, delivery push, then a colour exchange in store", async ({ page, request }) => {
+  test("buy the Toney, confirm, delivery push, then a colour exchange in store", async ({ page, request }) => {
     await resetDemo(request, "default");
     await signInAs(page, "John");
     await expect(page.getByTestId("chat-sub")).toContainText("Silver member");
@@ -81,7 +81,7 @@ test.describe("John (Silver): the stage demo", () => {
 
     // ---- Act 1: the personal agent proposes, nothing is ordered before the click -----------------------------
     await page.getByTestId("quick-john-1").click();
-    await expect(page.getByTestId("bubble-user").last()).toContainText("ALDO Men 001");
+    await expect(page.getByTestId("bubble-user").last()).toContainText("Toney");
     const card = page.getByTestId("purchase-card");
     await expect(card).toHaveAttribute("data-status", "proposed");
     await expect(page.getByTestId("typing")).toHaveCount(0);
@@ -90,8 +90,13 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(card.getByTestId("purchase-facts")).toContainText(/CAD \d+\.\d\d/);
     await expect(card).toContainText("derived from provided ALDO data");
     await expect(card.getByTestId("purchase-countdown")).toBeVisible();
+    // The real ALDO photo of the Toney in black is on the card and it loaded. A missing file would be answered with the app's own page
+    // (HTTP 200, not an image), so look at the decoded pixels, not at the status.
+    await expect
+      .poll(() => card.locator("img").first().evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0))
+      .toBe(true);
     await onMock(async () => {
-      await expect(card).toContainText("ALDO Men 001");
+      await expect(card).toContainText("Toney");
       await expect(card).toContainText("9.5");
       await expect(card).toContainText("CAD 149.99");
       await expect(card).toContainText("Runs large: 91.5% of fit-related returns were too big (n=118)");
@@ -139,7 +144,7 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(page.getByTestId("order-id")).toHaveText(/^DEMO-A2A-[0-9A-F]{6}$/);
     await expect(page.getByTestId("delivery-status")).toHaveAttribute("data-state", "out");
     const push = page.getByTestId("push-banner");
-    await expect(push).toContainText("Delivered: ALDO Men 001, size 9.5", { timeout: 20_000 });
+    await expect(push).toContainText("Delivered: Toney, size 9.5", { timeout: 20_000 });
     await expect(page.getByTestId("delivery-status")).toHaveAttribute("data-state", "delivered");
     await expect(page.getByTestId("bubble-bot").last()).toContainText("was delivered");
     await expect(traceEvent(page, "size_confirmed").first()).toContainText("Confirmed by the owner");
@@ -174,8 +179,10 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(primary).toContainText("Exchange in store");
     await expect(primary).toContainText("black 9.5");
     await expect(primary).toContainText("brown 9.5");
-    await expect(primary).toContainText("ALDO Demo Store Montreal");
+    await expect(primary).toContainText("ALDO Sainte-Catherine");
     await expect(primary).toContainText("5 min away");
+    // The real store's street address sits under its name.
+    await expect(primary.getByTestId("store-address")).toContainText("1009 Sainte-Catherine St. West #1007");
     // Ready date: scripted "Today" on the mock; the deployed fixture says Sat Oct 17 (pickup_ready_days 1, builder section 8).
     await expect(primary).toContainText(IS_MOCK ? "Today" : /Sat Oct 17|Tomorrow/);
     await expect(primary).toContainText("Free");
@@ -233,14 +240,14 @@ test.describe("John (Silver): the stage demo", () => {
 
     await onMock(async () => {
       await expect(txn).toContainText("brown 9.5");
-      await expect(page.getByTestId("txn-next-step")).toContainText("Pick up brown 9.5 at ALDO Demo Store Montreal today");
+      await expect(page.getByTestId("txn-next-step")).toContainText("Pick up brown 9.5 at ALDO Sainte-Catherine today");
     });
     await expectNaming(page);
   });
 });
 
 test.describe("return reasons as one-tap answers", () => {
-  /** Buy and receive the Men 001, ask to return it, and wait until the personal agent has asked for the reason. */
+  /** Buy and receive the Toney, ask to return it, and wait until the personal agent has asked for the reason. */
   async function askToReturn(page: Page, request: Parameters<typeof resetDemo>[0]): Promise<void> {
     await resetDemo(request, "default");
     await signInAs(page, "John");
@@ -275,9 +282,9 @@ test.describe("return reasons as one-tap answers", () => {
     await expect(page.getByTestId("send-error")).toHaveCount(0);
     await expect(page.getByTestId("reason-chips")).toHaveCount(0);
     await expect(page.getByTestId("chat-input")).toHaveAttribute("placeholder", "Message your personal agent");
-    // The real bot answers a reason that includes the wear answer with the return options straight away.
-    if (!IS_MOCK) await expect(page.getByTestId("quote-card")).toBeVisible({ timeout: 90_000 });
-    else await expect(page.getByTestId("bubble-bot").last()).not.toHaveText("");
+    await expect(page.getByTestId("bubble-bot").last()).not.toHaveText("");
+    // The real bot must not ask the wear question again: it offers an exchange or a refund (live probe, 5 of 5 lines).
+    if (!IS_MOCK) await expect(page.getByTestId("bubble-bot").last()).not.toContainText(/\b(worn|wear|wore)\b[^.!?]*\?/i);
   });
 
   test("with the toggle off the wear answer is left out; the size chips carry the direction", async ({ page, request }) => {
@@ -314,6 +321,15 @@ test.describe("David (Platinum): the bundle return", () => {
     await expect(quote).toContainText("Your return bundle");
     const primary = quote.getByTestId("primary-option");
     await expect(primary.getByTestId("bundle-items").locator("li")).toHaveCount(3);
+    // Each of the three rows shows its real ALDO photo, decoded (a missing file would come back as the app's own page, not an image).
+    await expect
+      .poll(() =>
+        primary
+          .getByTestId("bundle-items")
+          .locator("img")
+          .evaluateAll((imgs) => imgs.length === 3 && imgs.every((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)),
+      )
+      .toBe(true);
     await expect(primary).toContainText("Return by mail");
     await expect(primary.getByTestId("benefit-note")).toContainText("Platinum perk 1 of 1 this month");
     await expect(primary.getByTestId("option-fee")).toContainText("CAD 0.00");
@@ -323,9 +339,9 @@ test.describe("David (Platinum): the bundle return", () => {
     await expect(primary.getByTestId("option-refund")).toHaveText(IS_MOCK ? "CAD 429.97" : "CAD 419.97");
     await expect(quote.getByTestId("confirm-option-open")).toHaveText("Confirm bundle return");
     await onMock(async () => {
-      await expect(primary).toContainText("Goer boot");
-      await expect(primary).toContainText("Verity sneaker");
-      await expect(primary).toContainText("Uneral loafer");
+      await expect(primary).toContainText("Brando boot");
+      await expect(primary).toContainText("Oscar sneaker");
+      await expect(primary).toContainText("Patten loafer");
       await expect(page.getByTestId("bubble-bot").last()).toContainText("no ALDO store within reach");
     });
 
@@ -444,7 +460,7 @@ test.describe("routes of the single-chat contract (addendum 11.5)", () => {
     test.skip(!IS_MOCK, "uses mock-only controls");
     await resetDemo(request, "default");
     const personas = (await (await request.get("/api/demo/personas")).json()) as { personas: Record<string, string>[] };
-    expect(personas.personas.find((p) => p.customer_id === "DEMO-CUST-JOHN")).toMatchObject({ tier: "silver", tier_label: "Silver member", location_label: "Downtown Montreal" });
+    expect(personas.personas.find((p) => p.customer_id === "DEMO-CUST-JOHN")).toMatchObject({ tier: "silver", tier_label: "Silver member", location_label: "Bronfman Building, Montreal" });
     expect(personas.personas.find((p) => p.customer_id === "DEMO-CUST-DAVID")).toMatchObject({ tier: "platinum", tier_label: "Platinum member" });
 
     const session = (await (await request.post("/api/demo/sessions", { data: { customer_id: "DEMO-CUST-JOHN" } })).json()) as { token: string };

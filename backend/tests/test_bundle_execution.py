@@ -146,11 +146,11 @@ def test_a_silver_bundle_in_store_notifies_the_store_and_uses_no_perk(bundles, c
     result = execution.execute(JOHN, hq.quote_id, run_id=hq.run_id)
     assert result.option_type == "return_in_store" and result.benefit is None
     assert result.store_notice == {
-        "store_id": MTL, "store_name": "ALDO Demo Store Montreal", "display_name": "John", "tier_label": "Silver member",
-        "eta_minutes": 5, "summary": "ALDO Demo Store Montreal is ready for your return of 2 items, John is about 5 minutes away"}
+        "store_id": MTL, "store_name": "ALDO Sainte-Catherine", "display_name": "John", "tier_label": "Silver member",
+        "eta_minutes": 5, "summary": "ALDO Sainte-Catherine is ready for your return of 2 items, John is about 5 minutes away"}
     txn = txn_item(result)
     assert (txn["fee_cents"], txn["net_refund_cents"], txn["location_id"]) == (0, 23998, MTL)
-    assert txn["next_step"] == "Bring the 2 items, unworn, to ALDO Demo Store Montreal. Your refund of CAD 239.98 is processed at drop-off."
+    assert txn["next_step"] == "Bring the 2 items, unworn, to ALDO Sainte-Catherine. Your refund of CAD 239.98 is processed at drop-off."
     assert keys("STORENOTE#") == [(f"STORENOTE#{result.transaction_id}", "META")]
     assert commits[-1][-1] == "store_notice" and "benefit" not in commits[-1]
     assert keys("BENEFIT#") == []
@@ -386,7 +386,7 @@ def test_a_bundle_sends_one_small_write_back_update(bundles):
     assert (update["outcome"], update["provisional"], update["reason"], update["order_id"]) == ("return_created", True, "PREFERENCE", ORDER)
     assert "fit_feedback" not in update and "original_size" not in update and "new_size" not in update
     assert [(i["product_name"], i["color"], i["size"], i["reason"]) for i in update["items"]] == [
-        ("Aahliyah", "TAN", "10.5", "PREFERENCE"), ("Alanie", "WHITE", "10.0", "PREFERENCE"), ("Valegyn", "NAVY", "10.0", "PREFERENCE")]
+        ("Brando", "TAN", "10.5", "PREFERENCE"), ("Oscar", "WHITE", "10.0", "PREFERENCE"), ("Patten", "NAVY", "10.0", "PREFERENCE")]
     assert all(set(i) == {"style_id", "product_name", "color", "size", "reason"} for i in update["items"])
     assert len(json.dumps(update)) < 1000  # small
     assert update["update_id"] == store.derived_id("MU-", result.transaction_id, "return_created", n=6)
@@ -418,7 +418,7 @@ def test_the_write_back_reason_comes_from_the_policy_checks(bundles):
 def test_the_bundle_update_builder_validates_its_input():
     with pytest.raises(DomainError):
         memory_updates.build_bundle_update(customer_id=DAVID, order_id=ORDER, transaction_id="DEMO-RET-AAAAAA", items=[])
-    item = {"style_id": "DEMO-STYLE-NEW02", "product_name": "Aahliyah", "color": "TAN", "size": "10.5", "reason": "PREFERENCE"}
+    item = {"style_id": "DEMO-STYLE-NEW02", "product_name": "Brando", "color": "TAN", "size": "10.5", "reason": "PREFERENCE"}
     with pytest.raises(DomainError):
         memory_updates.build_bundle_update(customer_id=DAVID, order_id=ORDER, transaction_id="DEMO-RET-AAAAAA", items=[item] * 11)
     with pytest.raises(DomainError):

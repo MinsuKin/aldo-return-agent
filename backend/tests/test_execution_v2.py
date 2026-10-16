@@ -25,7 +25,7 @@ pytestmark = pytest.mark.usefixtures("no_flush")
 
 BROWN_95, BLACK_95 = men_sku("BROWN", "9.5"), men_sku("BLACK", "9.5")
 ORDER, LINE = "DEMO-A2A-5A1B2C", "DEMO-A2A-5A1B2C-L1"
-PICKUP_TEXT = "ALDO Demo Store Montreal will have your Brown pair ready, John is about 5 minutes away"
+PICKUP_TEXT = "ALDO Sainte-Catherine will have your Brown pair ready, John is about 5 minutes away"
 
 
 @pytest.fixture
@@ -107,13 +107,13 @@ def test_a_colour_exchange_in_store_writes_the_notice_in_the_same_transaction(wo
     assert keys("STORENOTE#") == []  # nothing before the customer's click
     result = execution.execute(JOHN, hq.quote_id, run_id=hq.run_id)
 
-    notice = {"store_id": MTL, "store_name": "ALDO Demo Store Montreal", "display_name": "John", "tier_label": "Silver member",
+    notice = {"store_id": MTL, "store_name": "ALDO Sainte-Catherine", "display_name": "John", "tier_label": "Silver member",
               "eta_minutes": 5, "summary": PICKUP_TEXT}
     assert result.option_type == "exchange_store_pickup" and result.replayed is False and result.store_notice == notice
     txn = store.get_item(store.txn_key(result.transaction_id))
     assert txn["store_notice"] == notice
     assert (txn["sku"], txn["replacement_color"], txn["replacement_size"], txn["original_size"]) == (BROWN_95, "BROWN", "9.5", "9.5")
-    assert txn["next_step"] == "ALDO Demo Store Montreal will have your Brown pair, size 9.5, ready from Sat Oct 17; bring the original pair, unworn."
+    assert txn["next_step"] == "ALDO Sainte-Catherine will have your Brown pair, size 9.5, ready from Sat Oct 17; bring the original pair, unworn."
 
     assert keys("STORENOTE#") == [(f"STORENOTE#{result.transaction_id}", "META")]
     note = store.get_item(store.storenote_key(result.transaction_id))
@@ -145,7 +145,7 @@ def test_store_notified_comes_after_transaction_created_and_only_once(world):
     events = a2a(JOHN)
     assert [(e["type"], e["actor"]) for e in events] == [
         ("quote_created", "aldo_agent"), ("transaction_created", "aldo_agent"), ("store_notified", "aldo_store")]
-    assert events[-1]["payload"] == {"store_name": "ALDO Demo Store Montreal", "eta_minutes": 5, "summary": PICKUP_TEXT}
+    assert events[-1]["payload"] == {"store_name": "ALDO Sainte-Catherine", "eta_minutes": 5, "summary": PICKUP_TEXT}
     assert events[1]["payload"]["transaction_id"] == result.transaction_id
     assert "DEMO-CUST" not in json.dumps(events) and "John (" not in json.dumps(events)
     run_events = [e["type"] for e in trace.list_events(hq.run_id).events]
@@ -186,9 +186,9 @@ def test_a_return_in_store_notifies_the_nearest_store(world):
     result = execution.execute(JOHN, hq.quote_id, run_id=hq.run_id)
     assert result.memory_update_id is None and keys("A2AOUT#") == []  # a return has no size write-back
     assert result.store_notice == {
-        "store_id": MTL, "store_name": "ALDO Demo Store Montreal", "display_name": "John", "tier_label": "Silver member",
+        "store_id": MTL, "store_name": "ALDO Sainte-Catherine", "display_name": "John", "tier_label": "Silver member",
         "eta_minutes": 5,
-        "summary": f"ALDO Demo Store Montreal is ready for your return of {MEN_NAME} in size 9.5, John is about 5 minutes away"}
+        "summary": f"ALDO Sainte-Catherine is ready for your return of {MEN_NAME} in size 9.5, John is about 5 minutes away"}
     assert keys("STORENOTE#") == [(f"STORENOTE#{result.transaction_id}", "META")]
     assert store.get_item(store.storenote_key(result.transaction_id))["option_type"] == "return_in_store"
     assert atp(BROWN_95, MTL) == (2, 1) and atp(BLACK_95, MTL) == (0, 1)  # no stock moves for a return
@@ -227,14 +227,14 @@ def test_the_notice_does_not_block_a_customer_whose_distance_is_not_on_file(flow
     flow.approve(hq, "exchange_store_pickup")
     result = execution.execute(AVA, hq.quote_id, run_id=hq.run_id)
     assert result.store_notice == {
-        "store_id": MTL, "store_name": "ALDO Demo Store Montreal", "display_name": "Ava", "tier_label": "Member",
-        "eta_minutes": None, "summary": "ALDO Demo Store Montreal will have your size 7.5 ready for Ava"}
+        "store_id": MTL, "store_name": "ALDO Sainte-Catherine", "display_name": "Ava", "tier_label": "Member",
+        "eta_minutes": None, "summary": "ALDO Sainte-Catherine will have your size 7.5 ready for Ava"}
     assert a2a(AVA, "store_notified")[0]["payload"] == {
-        "store_name": "ALDO Demo Store Montreal", "eta_minutes": None,
-        "summary": "ALDO Demo Store Montreal will have your size 7.5 ready for Ava"}
+        "store_name": "ALDO Sainte-Catherine", "eta_minutes": None,
+        "summary": "ALDO Sainte-Catherine will have your size 7.5 ready for Ava"}
     # a fit-size pickup keeps its original next_step text
     assert execution.get_status(AVA, result.transaction_id).next_step == (
-        "Pick up size 7.5 at ALDO Demo Store Montreal from Sat Oct 17; bring the original pair, unworn.")
+        "Pick up size 7.5 at ALDO Sainte-Catherine from Sat Oct 17; bring the original pair, unworn.")
     assert "replacement_color" not in store.get_item(store.txn_key(result.transaction_id))
 
 
@@ -260,7 +260,7 @@ def test_the_notice_and_next_step_speak_as_the_store_and_never_name_another_agen
     for text in texts:
         lowered = text.lower()
         assert "agent" not in lowered and "simulated" not in lowered and "demo assumption" not in lowered
-        assert "ALDO Demo Store Montreal" in text
+        assert "ALDO Sainte-Catherine" in text
 
 
 def test_reset_clears_the_store_notices(world):

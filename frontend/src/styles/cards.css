@@ -100,6 +100,41 @@
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
+/* Real ALDO product photos (4:3 crops of the shoe on ALDO's light studio background). */
+.product-photo {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  background: var(--photo-mat);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  vertical-align: middle;
+}
+.product-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.product-photo-hero {
+  width: 88px;
+  height: 66px;
+  border-radius: 12px;
+}
+.product-photo-row {
+  width: 48px;
+  height: 36px;
+  border-radius: 9px;
+}
+.product-photo-mini {
+  width: 40px;
+  height: 30px;
+  border-radius: 8px;
+}
+.bundle-list .product-photo,
+.swap .product-photo {
+  margin-right: 2px;
+}
 .swatch {
   display: inline-block;
   width: 13px;
@@ -281,7 +316,7 @@
 .bundle-list li {
   display: grid;
   grid-template-columns: auto 1fr auto;
-  align-items: baseline;
+  align-items: center;
   gap: 7px;
   padding: 5px 2px;
   border-top: 1px solid var(--border-soft);
@@ -297,6 +332,7 @@
 .bundle-name {
   min-width: 0;
   overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 .bundle-name .muted {
   color: var(--fg-muted);

@@ -302,7 +302,7 @@ def test_agent_orders_appear_in_list_orders_newest_first(seeded):
     agent = listed[0]
     assert (agent.channel, agent.delivered_at, agent.ordered_at) == ("agent", None, "2026-10-16")
     assert agent.fulfillment == {"type": "store_pickup", "location_id": "DEMO-STORE-MTL-01",
-                                 "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17"}
+                                 "location_name": "ALDO Sainte-Catherine", "eta_date": "2026-10-17"}
     assert agent.lines[0].line_id == "DEMO-A2A-81B20E-L1" and agent.lines[0].size == "8.0"
     assert all(o.fulfillment is None and o.channel == "web" for o in listed[1:])
 

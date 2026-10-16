@@ -149,6 +149,8 @@ export interface QuoteOption {
   meets_deadline: boolean | null;
   /** Travel time to the store in minutes, when known (addendum 11.1 D6). */
   minutes_away?: number | null;
+  /** Street address of the store, when the location record has one. */
+  location_address?: string;
   conditions: string[];
   evidence: Record<string, unknown>;
   source_refs: string[];
@@ -323,6 +325,8 @@ export interface MockState {
   /** Monthly benefit ledger: `${customer_id}|${yyyy-mm}` -> perks used (addendum 11.1 D8). */
   ledger: Map<string, number>;
   auditCount: number;
+  /** Admin setting of the AWS data platform door (SSM in the real system): reset does not touch it. */
+  dataMode: "static" | "platform" | "shadow";
 }
 
 export const state: MockState = {
@@ -340,6 +344,7 @@ export const state: MockState = {
   sizeRequests: new Map(),
   ledger: new Map(),
   auditCount: 0,
+  dataMode: "static",
 };
 
 export function resetState(variant: Variant): { deleted: number; written: number } {

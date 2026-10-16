@@ -59,6 +59,7 @@ _OMIT_WHEN_NONE: tuple[str, ...] = (
     "replacement_sku",
     "replacement_color",
     "minutes_away",
+    "location_address",
     # bundle returns only (domain v2 phase 2)
     "lines",
     "refund_total_cents",
@@ -100,6 +101,8 @@ class Option(BaseModel):
     replacement_sku: str | None = None
     replacement_color: str | None = None
     minutes_away: int | None = None
+    # Street address of the store (shown on the card); absent when the location record has none.
+    location_address: str | None = None
     # Bundle return (several lines of one order, one shipment). ``sku`` is the first line's sku,
     # ``qty`` the total quantity and ``refund_cents`` the NET refund (``net_refund_cents``);
     # ``lines`` is the authoritative per-line list. ``decision`` is the tier authority check on the
@@ -736,6 +739,8 @@ def _option(
         "source_refs": source_refs,
         "provenance": OPTION_PROVENANCE,
     }
+    if location.get("address"):
+        option["location_address"] = str(location["address"])
     if replacement_color is not None:  # a colour exchange: the replacement is this colour's SKU
         option["replacement_sku"] = sku
         option["replacement_color"] = replacement_color

@@ -7,7 +7,7 @@ import { colorWord, formatCents, friendlyDate } from "../../../lib/format";
 import { credibleProvenance, normalizePurchase, type PurchaseView } from "../../../lib/normalize";
 import { Badge, ProvenanceBadge } from "../../Badge";
 import { Icon } from "../../Icon";
-import { CardFrame, Countdown, Swatch, useFocusWhenReady } from "./shared";
+import { CardFrame, Countdown, ProductPhoto, useFocusWhenReady } from "./shared";
 
 export interface ReviewEvidence {
   count: number;
@@ -71,7 +71,7 @@ export function PurchaseCard({ sizeRequestId, isLatest, busy, reviews, onConfirm
             </p>
           ) : (
             <div className="product-row">
-              <Swatch color={view.color} />
+              <ProductPhoto name={view.productName} color={view.color} size="hero" />
               <div>
                 <p className="product-name">{productLine}</p>
                 <p className="product-size">

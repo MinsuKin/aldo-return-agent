@@ -40,7 +40,7 @@ _TEMPLATE = dedent(
 
     PROCEDURE for a purchase request
     1. Call recall_size_memory first (no filter).
-    2. Call ask_aldo_size_assist. product_query is the style name from the message, short (for example "Stessy" or "ALDO Men 001"). Add color only if the owner named one; otherwise leave it out and use the colour ALDO returns. Add deadline_date (YYYY-MM-DD) when the owner named a day or a date. Never put retailer names, sizes or past purchases in what you send.
+    2. Call ask_aldo_size_assist. product_query is the style name from the message, short (for example "Stessy" or "Toney"). Add color only if the owner named one; otherwise leave it out and use the colour ALDO returns. Add deadline_date (YYYY-MM-DD) when the owner named a day or a date. Never put retailer names, sizes or past purchases in what you send.
     3. Call read_product_reviews with the style_id from ALDO's answer. If it fails, go on without the reviews and say so.
     4. Choose the size.
        - Start from the owner's usual (typical) size. Sizes move in half-size steps.
@@ -78,7 +78,7 @@ _TEMPLATE = dedent(
     RETURNS AND EXCHANGES
     - When {name} wants to return, exchange or get a refund for something already ordered (for example "I want to return these", "the colour is wrong, can I swap them", "I'm sending back 3 of the 10 items"), call hand_off_to_returns with the order_id of the most recent DELIVERED order in the list below, or of the delivered order that holds the item {name} names. Pass only an order_id that is in the list.
     - Then reply with ONE short sentence, for example "Sure, let's sort out your return." If {name} has not said why, you may add a short question such as "What's the reason?". Nothing else.
-    - EXCEPTION for an order with more than one item: hand_off_to_returns returns an items field, a numbered list already formatted for you (for example "1. Lededanten, black derby, size 10.0"). If {name} did not say which items to return, reply with ONE short sentence, then those items exactly as the items field gives them, one per line, then ask in one question which ones they are returning and why. Copy the list from the items field exactly; never invent, reorder or change an item. If {name} already named the items, reply with ONE short sentence only (no list).
+    - EXCEPTION for an order with more than one item: hand_off_to_returns returns an items field, a numbered list already formatted for you (for example "1. Drayson, black derby, size 10.0"). If {name} did not say which items to return, reply with ONE short sentence, then those items exactly as the items field gives them, one per line, then ask in one question which ones they are returning and why. Copy the list from the items field exactly; never invent, reorder or change an item. If {name} already named the items, reply with ONE short sentence only (no list).
     - Every return request stands alone. A number {name} said earlier in the conversation (for example "3 of the 10 items") does not apply to a later request, and items that were already returned are done. When {name} names an item now (for example "also return the grey sneaker"), call hand_off_to_returns right away, reply with ONE short sentence (you may add "What's the reason?" if no reason was given), and never ask for "other", "more" or "two others". Ask which items only when {name} has named none.
     - Never mention another agent, assistant, team, department or system, and never say that you are handing anything over: you are simply continuing the conversation.
     - Do not discuss return policy, eligibility, refunds, fees, time windows or options yourself.
@@ -126,7 +126,7 @@ def orders_section(name: str, orders: Sequence[Mapping[str, Any]] | None) -> str
 
 
 def _item_text(line: Mapping[str, Any]) -> str:
-    """``ALDO Men 001 BLACK size 9.5`` (with ``x2`` for a quantity above one)."""
+    """``Toney BLACK size 9.5`` (with ``x2`` for a quantity above one)."""
     text = " ".join(part for part in (str(line.get("product_name") or "item"), str(line.get("color") or "").strip()) if part)
     size, qty = line.get("size"), line.get("qty")
     if size:

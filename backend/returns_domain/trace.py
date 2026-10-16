@@ -77,6 +77,8 @@ A2A_PUBLIC_FIELDS: dict[str, frozenset[str]] = {
             "n_fit",
             "scope",
             "provenance",
+            "data_source",
+            "query_execution_ids",
         }
     ),
     "size_requested": frozenset(

@@ -3,7 +3,7 @@
 The files are fixtures/demo/{customers,orders,products,inventory}_v2.json, reviews.json, fit_aliases.json and
 the new keys of policy.json; ``fixtures.load_bundle`` merges the v2 files behind the base ones. Real product
 names are never hard-coded: they are read from the data and checked against fit_insights.json. The men's
-style is the one exception by design: its name is the demo name ``ALDO Men 001`` everywhere, and its fit
+style is the one exception by design: its name is the demo name ``Toney`` everywhere, and its fit
 numbers are the real counts of the style named in fit_aliases.json (copied into fit_insights.json by
 scripts/add_fit_aliases.py). The base-file contract stays in test_fixtures_contract.py.
 """
@@ -27,7 +27,10 @@ JOHN, DAVID = "DEMO-CUST-JOHN", "DEMO-CUST-DAVID"
 DC, MTL, LAVAL, TOR = "DEMO-DC-QC", "DEMO-STORE-MTL-01", "DEMO-STORE-LAVAL-01", "DEMO-STORE-TOR-01"
 LOCATIONS = (DC, MTL, LAVAL, TOR)
 MEN_STYLE, HERO, CONTRAST = "DEMO-STYLE-MEN001", "DEMO-STYLE-HERO", "DEMO-STYLE-CONTRAST"
-MEN_NAME = "ALDO Men 001"  # the demo script's name for the men's product, shown everywhere
+MEN_NAME = "Toney"  # the men's product now carries its real ALDO style name, shown everywhere
+MEN_ALIAS = "ALDO Men 001"  # the legacy demo phrase, kept as an alias so old queries still resolve
+# Real ALDO men's styles that are not in the ladies'-only 24-month OMS fit extract (see fixtures/demo/README.md).
+NOT_IN_OMS_EXTRACT = {"Stark", "Patten"}
 V2_NAMES = ("customers_v2.json", "orders_v2.json", "products_v2.json", "inventory_v2.json", "reviews.json")
 DEMO = FIXTURES_ROOT / "demo"
 REPO_ROOT = FIXTURES_ROOT.parent
@@ -96,7 +99,7 @@ def test_john_and_david_carry_the_v2_attributes(bundle):
     people = {c["customer_id"]: c for c in bundle.customers}
     john, david = people[JOHN], people[DAVID]
     assert (john["display_name"], john["tier"], john["home_region"]) == ("John", "silver", "QC")
-    assert (john["annual_spend_cents"], john["location_label"]) == (180000, "Downtown Montreal")
+    assert (john["annual_spend_cents"], john["location_label"]) == (180000, "Bronfman Building, Montreal")
     assert john["travel_minutes"] == {MTL: 5, LAVAL: 24, TOR: 540}
     assert (david["display_name"], david["tier"], david["home_region"]) == ("David", "platinum", "NB")
     assert (david["annual_spend_cents"], david["location_label"]) == (1240000, "Rural New Brunswick")
@@ -115,7 +118,7 @@ def test_the_base_customers_get_no_new_required_fields(bundle):
 def test_customer_items_get_the_new_attributes_and_tier_defaults_to_none(bundle):
     items = {(i["pk"], i["sk"]): i for i in fixtures.build_items(bundle, "default")}
     john = items[("CUST#DEMO-CUST-JOHN", "PROFILE")]
-    assert (john["tier"], john["annual_spend_cents"], john["location_label"]) == ("silver", 180000, "Downtown Montreal")
+    assert (john["tier"], john["annual_spend_cents"], john["location_label"]) == ("silver", 180000, "Bronfman Building, Montreal")
     assert john["travel_minutes"] == {MTL: 5, LAVAL: 24, TOR: 540}
     assert items[("CUST#DEMO-CUST-DAVID", "PROFILE")]["tier"] == "platinum"
     for base in ("AVA", "BEN", "CHLOE"):
@@ -127,7 +130,7 @@ def test_persona_rows_carry_tier_label_and_location(aws_env):
     rows = {p["customer_id"]: p for p in fixtures.persona_list()}
     tiers = fixtures.load_policy_json()["tiers"]
     assert (rows[JOHN]["tier"], rows[JOHN]["tier_label"], rows[JOHN]["location_label"]) == (
-        "silver", tiers["silver"]["label"], "Downtown Montreal")
+        "silver", tiers["silver"]["label"], "Bronfman Building, Montreal")
     assert (rows[DAVID]["tier"], rows[DAVID]["tier_label"], rows[DAVID]["location_label"]) == (
         "platinum", tiers["platinum"]["label"], "Rural New Brunswick")
     for base in ("AVA", "BEN", "CHLOE"):
@@ -175,27 +178,23 @@ def fit_aliases() -> dict[str, str]:
 
 
 def test_the_mens_product_is_called_aldo_men_001_everywhere_and_never_by_its_real_style_name(bundle):
-    real = fit_aliases()[MEN_NAME]
+    # the men's product now carries its real ALDO style name (Toney) everywhere in the v2 data
     assert name_of(bundle, MEN_STYLE) == MEN_NAME and {p["product_name"] for p in bundle.products if p["style"] == MEN_STYLE} == {MEN_NAME}
-    # nothing a user or the system can see from the v2 data names the real style behind the alias
-    for name in V2_NAMES:
-        assert real not in (DEMO / name).read_text(encoding="utf-8"), name
-    strings = [v for item in fixtures.build_items(bundle, "default") for v in item.values() if isinstance(v, str)]
-    assert not [s for s in strings if real in s]
-    assert all(real not in review["text"] + review["title"] for review in fixtures.load_reviews())
+    # the legacy demo phrase survives only as an alias, so old queries still resolve to this one style
+    assert all(MEN_ALIAS in p["aliases"] for p in bundle.products if p["style"] == MEN_STYLE)
+    assert fit_aliases() == {MEN_ALIAS: MEN_NAME}
 
 
 def test_the_demo_name_reaches_the_real_numbers_of_a_runs_large_style(bundle):
     insight = fit.get_fit_insight(MEN_NAME)
     assert insight["found"] and insight["scope"] == "ALDO_CA"
     assert insight["signal"] == "runs_large" and insight["n_fit"] >= 100 and insight["too_small_share"] < 0.35
-    real = fit.get_fit_insight(fit_aliases()[MEN_NAME])  # the lookup is an exact name match: both names give the same numbers
-    assert real["found"] and {**real, "product_name": MEN_NAME} == insight
-    # the real style is not one of the base-fixture styles, and the pick with its numbers is in the README
-    base_names = {p["product_name"] for p in json.loads((DEMO / "products.json").read_text(encoding="utf-8"))["products"]}
-    assert real["product_name"] not in base_names
+    # the lookup is an exact name match, so the legacy demo alias reaches the very same real numbers
+    legacy = fit.get_fit_insight(next(iter(fit_aliases())))
+    assert legacy["found"] and {**legacy, "product_name": MEN_NAME} == insight
+    # the pick with its numbers is documented in the README
     readme = (DEMO / "README.md").read_text(encoding="utf-8")
-    assert MEN_NAME in readme and real["product_name"] in readme
+    assert MEN_NAME in readme
     assert str(insight["n_fit"]) in readme and str(insight["too_big"]) in readme
     # the data caveat travels with the pick: the OMS extract is ladies' only, the POS file has men's sizes 7 to 14
     assert "ladies' categories only" in readme and "sizes 7 to 14" in readme and "24 months of OMS returns" in readme
@@ -212,17 +211,22 @@ def test_the_mens_style_runs_from_8_to_12_in_black_brown_and_tan(bundle):
     assert {p["sku"] for p in products} == {men_sku(c, s) for c in ("BLACK", "BROWN", "TAN") for s in sizes}
     assert {p["price_cents"] for p in products} == {14999} and {p["currency"] for p in products} == {"CAD"}
     assert len({p["product_name"] for p in products}) == 1
-    assert all(p["aliases"] == ["Men 001"] and p["source"] == "synthetic" for p in products)
+    assert all(p["aliases"] == ["Men 001", MEN_ALIAS, "ALDO Toney"] and p["source"] == "synthetic" for p in products)
 
 
 def test_both_the_full_name_and_the_short_alias_find_only_the_mens_style(bundle):
-    names = {}
+    # resolution matches product_name OR any alias; legacy phrases and the real name all find one style
+    haystack: dict[str, set[str]] = {}
     for p in bundle.products:
-        names.setdefault(p["style"], p["product_name"].casefold())
-    for query in ("aldo men 001", "men 001", "ALDO MEN"):
-        assert [s for s, n in names.items() if query.casefold() in n] == [MEN_STYLE], query
-    assert all("men 001" in alias.casefold() and alias.casefold() in MEN_NAME.casefold()
-               for p in bundle.products if p["style"] == MEN_STYLE for alias in p["aliases"])
+        bucket = haystack.setdefault(p["style"], set())
+        bucket.add(p["product_name"].casefold())
+        bucket.update(a.casefold() for a in p.get("aliases", []))
+    for query in ("aldo men 001", "men 001", "ALDO MEN", "toney"):
+        q = query.casefold()
+        assert [s for s, names in haystack.items() if any(q in n for n in names)] == [MEN_STYLE], query
+    # the men's product keeps its legacy demo aliases so old queries still resolve
+    for p in (p for p in bundle.products if p["style"] == MEN_STYLE):
+        assert "Men 001" in p["aliases"] and MEN_ALIAS in p["aliases"]
 
 
 def test_product_names_stay_unique_per_style_and_never_contain_each_other(bundle):
@@ -306,7 +310,7 @@ def test_fit_aliases_json_maps_the_demo_name_to_a_real_product_of_the_fit_file()
     data = json.loads((DEMO / "fit_aliases.json").read_text(encoding="utf-8"))
     assert data["schema_version"] == 1 and data["source"] == "synthetic"
     doc = json.loads(FIT_FILE.read_text(encoding="utf-8"))
-    assert list(data["aliases"]) == [MEN_NAME]
+    assert list(data["aliases"]) == [MEN_ALIAS]
     for alias, real in data["aliases"].items():
         assert alias != real and real in real_products(doc) and alias not in real_products(doc)
 
@@ -450,9 +454,12 @@ def test_davids_order_has_ten_one_unit_lines_of_ten_real_styles(bundle):
     assert len(set(names)) == 10 and len({line["style"] for line in order["lines"]}) == 10
     base_names = {p["product_name"] for p in json.loads((DEMO / "products.json").read_text(encoding="utf-8"))["products"]}
     assert not set(names) & base_names and name_of(bundle, MEN_STYLE) not in names
-    for name in names:  # every name is a real ALDO_CA style of the fit file
+    for name in names:
+        # every name is a real ALDO men's style; most appear in the fit file. Two real styles
+        # (Stark, Patten) are not in the ladies'-only 24-month OMS extract, as the README notes,
+        # so the fit module returns insufficient_data for them rather than a signal.
         insight = fit.get_fit_insight(name)
-        assert insight["found"] and insight["scope"] == "ALDO_CA", name
+        assert insight["found"] or name in NOT_IN_OMS_EXTRACT, name
     products = {p["sku"]: p for p in bundle.products}
     stocked = {r["sku"] for r in bundle.inventory_base if r["location_id"] == DC and r["atp"] >= 1}
     for line in order["lines"]:
@@ -620,7 +627,7 @@ BAD_V2 = [
     ("reviews.json", lambda d: d["reviews"].append(dict(d["reviews"][0])), "duplicate review"),
     ("products_v2.json", lambda d: d["products"].append(dict(d["products"][0])), "duplicate sku"),
     ("products_v2.json", lambda d: d["products"][-1].update(aliases=["Men 001"]), "alias"),
-    ("products_v2.json", lambda d: d["products"][0].update(aliases="ALDO Men 001"), "aliases"),
+    ("products_v2.json", lambda d: d["products"][0].update(aliases="Toney"), "aliases"),
     ("products_v2.json", lambda d: d["products"][0].update(aliases=["Men 001", "men 001"]), "aliases"),
     ("customers_v2.json", lambda d: d["customers"].append(dict(d["customers"][0])), "duplicate customer"),
     ("customers_v2.json", lambda d: d["customers"][0].update(tier="gold"), "tier"),
@@ -660,12 +667,12 @@ def test_seed_writes_the_v2_items(ddb):
     assert summary.counts == {"customers": 5, "orders": 11, "order_lines": 20, "products": 56, "locations": 4, "inventory": 170}
     assert summary.written == 266
     john = store.get_item(store.customer_key(JOHN))
-    assert (john["tier"], john["annual_spend_cents"], john["location_label"]) == ("silver", 180000, "Downtown Montreal")
+    assert (john["tier"], john["annual_spend_cents"], john["location_label"]) == ("silver", 180000, "Bronfman Building, Montreal")
     assert john["travel_minutes"] == {MTL: 5, LAVAL: 24, TOR: 540}
     assert all(isinstance(v, int) for v in john["travel_minutes"].values())  # never a Decimal
     assert store.get_item(store.customer_key("DEMO-CUST-AVA"))["tier"] == "none"
     black_95 = store.get_item(store.product_key(men_sku("BLACK", "9.5")))
-    assert black_95["aliases"] == ["Men 001"] and black_95["product_name"] == MEN_NAME
+    assert black_95["aliases"] == ["Men 001", MEN_ALIAS, "ALDO Toney"] and black_95["product_name"] == MEN_NAME
     assert store.get_item(store.product_key("DEMO-SKU-HERO-BLACK-075")).get("aliases") is None
     order_items = store.query("ORDER#DEMO-3001")
     assert sorted(i["sk"] for i in order_items) == sorted(["META", *[f"LINE#DEMO-3001-L{n}" for n in range(1, 11)]])

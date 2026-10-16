@@ -7,7 +7,7 @@ import { colorWord, formatCents, friendlyDate } from "../../../lib/format";
 import { normalizeQuote, type OptionView, type QuoteView } from "../../../lib/normalize";
 import { Badge } from "../../Badge";
 import { Icon } from "../../Icon";
-import { CardFrame, Countdown, Swatch, useFocusWhenReady, useOrderLookup } from "./shared";
+import { CardFrame, Countdown, ProductPhoto, useFocusWhenReady, useOrderLookup } from "./shared";
 
 interface Props {
   quoteId: string;
@@ -60,7 +60,7 @@ function Summary({ o }: { o: OptionView }) {
         <ol className="bundle-list">
           {o.lines.map((l) => (
             <li key={l.lineId}>
-              <Swatch color={l.color} />
+              <ProductPhoto name={l.productName} color={l.color} size="row" />
               <span className="bundle-name">
                 {l.productName}
                 {l.kind ? ` ${l.kind}` : ""}
@@ -83,20 +83,20 @@ function Summary({ o }: { o: OptionView }) {
         {o.productName && <p className="swap-product">{o.productName}</p>}
         {o.isColorSwap ? (
           <p className="swap" data-testid="swap-summary">
-            <Swatch color={o.fromColor} />
+            <ProductPhoto name={o.productName} color={o.fromColor} size="mini" />
             <span>
               {colorWord(o.fromColor)} {o.fromSize}
             </span>
             <Icon name="chevron-right" size={16} />
             <span className="sr-only">to</span>
-            <Swatch color={o.toColor} />
+            <ProductPhoto name={o.productName} color={o.toColor} size="mini" />
             <strong>
               {colorWord(o.toColor)} {toSize}
             </strong>
           </p>
         ) : (
           <p className="swap" data-testid="swap-summary">
-            <Swatch color={o.toColor} />
+            <ProductPhoto name={o.productName} color={o.toColor} size="mini" />
             <span>{o.fromSize ? `Size ${o.fromSize}` : "Current size"}</span>
             <Icon name="chevron-right" size={16} />
             <span className="sr-only">to</span>
@@ -199,6 +199,11 @@ function OptionBlock({ quote, option: o, primary, disabled, approved, onChoose }
                   {" "}
                   <Badge tone="neutral">{o.minutesAway} min away</Badge>
                 </>
+              )}
+              {o.locationAddress && (
+                <span className="muted" style={{ display: "block", fontSize: "0.85em" }} data-testid="store-address">
+                  {o.locationAddress}
+                </span>
               )}
             </dd>
           </div>

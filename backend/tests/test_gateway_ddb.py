@@ -153,7 +153,7 @@ def test_size_assist_for_the_hero_in_the_default_variant(seeded, fixed_now):
         "option_id": "SO-18",
         "type": "store_pickup",
         "location_id": MTL,
-        "location_name": "ALDO Demo Store Montreal",
+        "location_name": "ALDO Sainte-Catherine",
         "eta_date": "2026-10-17",
         "eta_text": "Sat Oct 17",
         "meets_deadline": True,
@@ -181,7 +181,7 @@ def test_size_assist_persists_the_request_with_a_fifteen_minute_real_clock_expir
         "type": "store_pickup",
         "sku": HERO_080,
         "location_id": MTL,
-        "location_name": "ALDO Demo Store Montreal",
+        "location_name": "ALDO Sainte-Catherine",
         "eta_date": "2026-10-17",
         "meets_deadline": True,
         "atp": 1,
@@ -349,7 +349,7 @@ def test_a_decision_only_records_a_proposal(seeded, fixed_now):
             "size": "8.0",
             "option_type": "store_pickup",
             "location_id": MTL,
-            "location_name": "ALDO Demo Store Montreal",
+            "location_name": "ALDO Sainte-Catherine",
             "eta_date": "2026-10-17",
             "eta_text": "Sat Oct 17",
             "meets_deadline": True,
@@ -381,7 +381,7 @@ def test_a_proposal_emits_size_recommended_from_the_personal_agent_with_public_f
         "option_id": "SO-18",
         "chosen_size": "8.0",
         "option_type": "store_pickup",
-        "location_name": "ALDO Demo Store Montreal",
+        "location_name": "ALDO Sainte-Catherine",
         "eta_date": "2026-10-17",
         "rationale_public": "runs small per ALDO",
         "confidence": "medium",
@@ -593,7 +593,7 @@ def test_the_owner_sees_the_proposal_rendered_from_server_data(seeded, fixed_now
         "size": "8.0",
         "option_type": "store_pickup",
         "location_id": MTL,
-        "location_name": "ALDO Demo Store Montreal",
+        "location_name": "ALDO Sainte-Catherine",
         "eta_date": "2026-10-17",
         "eta_text": "Sat Oct 17",
         "meets_deadline": True,
@@ -674,10 +674,10 @@ def test_the_owners_click_creates_the_order_in_one_transaction(seeded, fixed_now
     assert order.fulfillment.model_dump() == {
         "type": "store_pickup",
         "location_id": MTL,
-        "location_name": "ALDO Demo Store Montreal",
+        "location_name": "ALDO Sainte-Catherine",
         "eta_date": "2026-10-17",
     }
-    assert order.next_step == "Order placed. Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17."
+    assert order.next_step == "Order placed. Pick up size 8.0 at ALDO Sainte-Catherine from Sat Oct 17."
 
     meta = store.get_item(store.order_key(oid))
     assert meta["customer_id"] == AVA and meta["banner"] == "ALDO_CA" and meta["currency"] == "CAD"
@@ -715,7 +715,7 @@ def test_confirmation_emits_size_confirmed_from_the_gateway(seeded):
     # addendum 10.1: the click is visible on the timeline, with the facts the owner saw
     assert payload["approved_by"] == "owner_click" and payload["price_cents"] == 12_999
     assert (payload["size"], payload["location_name"], payload["eta_date"]) == (
-        "8.0", "ALDO Demo Store Montreal", "2026-10-17")
+        "8.0", "ALDO Sainte-Catherine", "2026-10-17")
     assert AVA not in json.dumps(events)
 
 
@@ -1043,7 +1043,7 @@ MEN_BLACK_095 = "DEMO-SKU-MEN001-BLACK-095"
 
 
 def john_assist(**overrides: Any) -> gateway.SizeAssistResponse:
-    return assist(JOHN, style=MEN, product_query="ALDO Men 001", color="black", size_system="US_M", **overrides)
+    return assist(JOHN, style=MEN, product_query="Toney", color="black", size_system="US_M", **overrides)
 
 
 def test_johns_alias_finds_the_mens_style_with_the_real_fit_signal_and_his_stores(seeded):

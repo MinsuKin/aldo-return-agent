@@ -48,7 +48,7 @@ class FakeGateway:
         self._call("get_reviews", claims, request)
         return {
             "style_id": request.get("style_id", "DEMO-STYLE-MEN001"),
-            "product_name": "ALDO Men 001",
+            "product_name": "Toney",
             "n_reviews": 1,
             "n_flagged": 0,
             "reviews": [

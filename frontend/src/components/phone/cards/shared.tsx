@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, type ReactNode, type Ref, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type Ref, type RefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api/client";
 import type { Order } from "../../../api/types";
 import { useNow } from "../../../hooks/useNow";
 import { colorHex, formatCountdown } from "../../../lib/format";
+import { productPhoto } from "../../../lib/productImages";
 import { Icon } from "../../Icon";
 
 export interface LineFacts {
@@ -31,6 +32,21 @@ export function useOrderLookup(): { orders: Order[] | undefined; lookup: (lineId
 /** Small colour dot for a product colour name ("BROWN"). Decorative: the colour is always written next to it. */
 export function Swatch({ color }: { color: string | undefined }) {
   return <span className="swatch" style={{ background: colorHex(color) }} aria-hidden="true" />;
+}
+
+/**
+ * The product photo for a line, or its colour swatch when no photo is shipped (or it fails to load).
+ * Decorative: the name and the colour are always written next to it.
+ */
+export function ProductPhoto({ name, color, size = "row" }: { name: string | undefined; color: string | undefined; size?: "hero" | "row" | "mini" }) {
+  const src = productPhoto(name, color);
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return <Swatch color={color} />;
+  return (
+    <span className={`product-photo product-photo-${size}`} aria-hidden="true">
+      <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+    </span>
+  );
 }
 
 interface FrameProps {

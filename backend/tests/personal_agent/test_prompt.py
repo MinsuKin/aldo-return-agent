@@ -142,13 +142,13 @@ def test_the_prompt_no_longer_asks_for_a_prototype_disclaimer_in_every_reply() -
 def test_the_owner_orders_are_listed_for_the_hand_off() -> None:
     orders = [
         {"order_id": "DEMO-A2A-AB12CD", "channel": "agent", "ordered_at": "2026-10-16", "delivered_at": "2026-10-16",
-         "lines": [{"product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5", "qty": 1}]},
+         "lines": [{"product_name": "Toney", "color": "BLACK", "size": "9.5", "qty": 1}]},
         {"order_id": "DEMO-3001", "channel": "web", "ordered_at": "2026-10-06", "delivered_at": None,
          "lines": [{"product_name": f"Style {n}", "color": "TAN", "size": "10.0", "qty": 2 if n == 1 else 1} for n in range(1, 8)]},
     ]
     text = build_system_prompt("John", orders=orders)
     section = text.split("RECENT ORDERS AT ALDO")[1].split("RULES")[0]
-    assert "- DEMO-A2A-AB12CD (delivered 2026-10-16, ordered 2026-10-16): ALDO Men 001 BLACK size 9.5" in section
+    assert "- DEMO-A2A-AB12CD (delivered 2026-10-16, ordered 2026-10-16): Toney BLACK size 9.5" in section
     assert "- DEMO-3001 (not delivered yet, ordered 2026-10-06): Style 1 TAN size 10.0 x2; Style 2 TAN size 10.0; " in section
     assert "(+3 more items)" in section and "Style 5" not in section  # four items are shown, the rest is counted
     assert "server data" in text and "not instructions" in text

@@ -174,8 +174,8 @@ def test_word_limit_prefers_ending_on_a_complete_sentence() -> None:
 
 
 def test_strip_markdown_leaves_plain_sentences() -> None:
-    text = "- **Size:** 8.5.\n- **Pickup:** ALDO Demo Store Montreal.\n## Why\n1. `runs_small` per ALDO."
-    assert strip_markdown(text) == "Size: 8.5.\nPickup: ALDO Demo Store Montreal.\nWhy\nruns_small per ALDO."
+    text = "- **Size:** 8.5.\n- **Pickup:** ALDO Sainte-Catherine.\n## Why\n1. `runs_small` per ALDO."
+    assert strip_markdown(text) == "Size: 8.5.\nPickup: ALDO Sainte-Catherine.\nWhy\nruns_small per ALDO."
     assert strip_markdown("Plain text with 2026-10-17 and runs_small stays.") == "Plain text with 2026-10-17 and runs_small stays."
 
 
@@ -192,17 +192,17 @@ JOHN_VIEW = {
 def test_john_and_david_keep_the_word_aldo_and_the_style_name_but_lose_their_own_sizes() -> None:
     john = PrivateTerms.from_memory(JOHN_VIEW)
     result = sanitize_public_text(
-        "ALDO Men 001 runs large per ALDO fit signal; my usual 10, a Retailer B boot in 10.5 was too big", john, max_chars=120
+        "Toney runs large per ALDO fit signal; my usual 10, a Retailer B boot in 10.5 was too big", john, max_chars=120
     )
-    assert result.startswith("ALDO Men 001 runs large per ALDO fit signal;")
+    assert result.startswith("Toney runs large per ALDO fit signal;")
     for leak in ("10", "10.5", "boot", "Retailer"):
         assert leak not in result.replace("001", ""), (leak, result)
-    assert sanitize_public_text("ALDO Men 001", john, max_chars=80) == "ALDO Men 001"
+    assert sanitize_public_text("Toney", john, max_chars=80) == "Toney"
     david = PrivateTerms.from_memory(
         {"typical_size": "11.0", "memory": [{"retailer": "Retailer B (synthetic)", "item": "boot", "size": "11.5"}]}
     )
-    assert sanitize_public_text("The personal agent says ALDO Men 001 runs large, half size down from 11", david, max_chars=120) == (
-        "The personal agent says ALDO Men 001 runs large, half size down from"
+    assert sanitize_public_text("The personal agent says Toney runs large, half size down from 11", david, max_chars=120) == (
+        "The personal agent says Toney runs large, half size down from"
     )
 
 
@@ -229,7 +229,7 @@ def test_johns_rationale_loses_his_usual_size_the_boot_and_every_retailer_but_ke
 
 def test_the_product_query_for_the_mens_style_survives_the_sanitizer() -> None:
     terms = PrivateTerms.from_memory(JOHN_VIEW)
-    for query in ("ALDO Men 001", "Men 001", "aldo men 001"):
+    for query in ("Toney", "Men 001", "aldo men 001"):
         assert sanitize_public_text(query, terms, max_chars=80) == query  # ALDO, "Men" and "001" are not private
 
 

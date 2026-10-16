@@ -11,12 +11,12 @@ import os
 from pathlib import Path
 from typing import Any
 
-from returns_domain import auth, clock, config
+from returns_domain import auth, clock, config, data_source
 from returns_domain.errors import DomainError, ErrorCode
 
 from . import providers
 from .http import ADMIN, PUBLIC, Api, Reply, Request, logger
-from .models import ResetBody, SessionBody
+from .models import DataPlatformBody, ResetBody, SessionBody
 
 fixtures = providers.lazy("fixtures")
 audit = providers.lazy("audit")
@@ -64,6 +64,24 @@ def register(api: Api) -> None:
             "deleted": _count(summary, "deleted"),
             "written": _count(summary, "written"),
         }
+
+    @api.get("/demo/data-platform", auth=ADMIN)
+    def data_platform_status(req: Request) -> dict[str, Any]:
+        """Where the fit insights come from now (static | platform | shadow) and whether the curated document loads."""
+        return data_source.status()
+
+    @api.post("/demo/data-platform", auth=ADMIN)
+    def data_platform_set(req: Request) -> dict[str, Any]:
+        """Flip the two-way door. Writes the SSM mode parameter; the next requests (within 15 s) follow it."""
+        body = req.body_model(DataPlatformBody)
+        try:
+            out = data_source.set_mode(body.mode)
+        except Exception:  # SSM denied or unreachable: say so, keep the current mode
+            logger.exception("data_platform_mode_not_saved")
+            raise DomainError(ErrorCode.INTERNAL_ERROR, "The data platform mode could not be saved.") from None
+        audit.write_audit("admin", "data_platform_mode", "allowed", {"mode": body.mode})
+        req.annotate(mode=body.mode)
+        return out
 
     @api.get("/impact", auth=PUBLIC)
     def impact(req: Request) -> Reply:

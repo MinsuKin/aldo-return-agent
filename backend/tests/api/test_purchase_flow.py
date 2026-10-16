@@ -336,7 +336,7 @@ def test_the_purchase_card_has_the_fields_the_ui_renders(client):
     assert PURCHASE_VIEW_KEYS <= set(card)
     assert card["status"] == "proposed" and card["option_id"] == option["option_id"]
     assert card["option_type"] == "store_pickup" and card["size"] == "8.0" and card["meets_deadline"] is True
-    assert card["eta_text"] == "Sat Oct 17" and card["location_name"] == "ALDO Demo Store Montreal"
+    assert card["eta_text"] == "Sat Oct 17" and card["location_name"] == "ALDO Sainte-Catherine"
     assert set(card["fit_signal"]) >= {"signal", "too_small_share", "n_fit", "provenance"}
     assert card["order_id"] is None and card["next_step"] is None
 

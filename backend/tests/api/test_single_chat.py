@@ -110,12 +110,12 @@ def test_a_conversation_is_visible_to_its_owner_only(world):
 
 def test_a_bot_mode_message_starts_a_bot_run_and_says_so(world, enqueued):
     conv = start_chat(world)
-    reply = say(world, conv, "Please buy the ALDO Men 001 for me.")
+    reply = say(world, conv, "Please buy the Toney for me.")
     assert reply.status == 202
     assert reply.json["agent"] == "personal" and reply.json["mode"] == "bot" and reply.json["conv_id"] == conv
     assert reply.json["run_id"].startswith("PRUN-")
     assert [p["agent"] for p in enqueued] == ["personal"]
-    assert enqueued[0]["message"] == "Please buy the ALDO Men 001 for me." and "memory_context" not in enqueued[0]
+    assert enqueued[0]["message"] == "Please buy the Toney for me." and "memory_context" not in enqueued[0]
 
 
 # ============================================================================ returns mode routing
@@ -575,7 +575,7 @@ def test_no_user_facing_text_of_the_single_chat_mentions_a_second_agent(world, a
 def test_the_persona_rows_carry_the_tier_and_the_location_label(world):
     rows = {p["customer_id"]: p for p in world.get("/api/demo/personas").json["personas"]}
     john, david, ava = rows["DEMO-CUST-JOHN"], rows["DEMO-CUST-DAVID"], rows[AVA]
-    assert (john["tier"], john["tier_label"], john["location_label"]) == ("silver", "Silver member", "Downtown Montreal")
+    assert (john["tier"], john["tier_label"], john["location_label"]) == ("silver", "Silver member", "Bronfman Building, Montreal")
     assert (david["tier"], david["tier_label"], david["location_label"]) == ("platinum", "Platinum member", "Rural New Brunswick")
     assert (ava["tier"], ava["tier_label"], ava["location_label"]) == ("none", "Member", "")
     for row in rows.values():

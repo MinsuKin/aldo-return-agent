@@ -266,6 +266,43 @@ route("POST", "/api/demo/reset", false, (c) => {
 
 route("GET", "/api/impact", false, () => ({ status: 200, body: { note: "mock: the UI no longer renders the impact model (it moved to a slide)" } }));
 
+// ---- The AWS data platform door (docs/data-platform/DESIGN.md): which source the fit insights come from ----
+const DATA_MODES = ["static", "platform", "shadow"] as const;
+
+function requireAdmin(c: { headers: Record<string, string | string[] | undefined> }): void {
+  const given = Buffer.from(String(c.headers["x-demo-admin"] ?? ""));
+  const want = Buffer.from(ADMIN_SECRET);
+  if (given.length !== want.length || !timingSafeEqual(given, want)) throw new ApiError(401, "NOT_AUTHENTICATED", "Admin secret required.");
+}
+
+function dataPlatformView() {
+  return {
+    mode: state.dataMode,
+    modes: [...DATA_MODES],
+    aws_enabled: true,
+    available: true,
+    curated: {
+      key: "curated/fit_insights/v=2026-10-15T23-10-00Z/fit_insights.json",
+      generated_at: "2026-10-15T23:10:00+00:00",
+      products: 6848,
+      query_execution_ids: ["mock-query-1", "mock-query-2"],
+    },
+  };
+}
+
+route("GET", "/api/demo/data-platform", false, (c) => {
+  requireAdmin(c);
+  return { status: 200, body: dataPlatformView() };
+});
+
+route("POST", "/api/demo/data-platform", false, (c) => {
+  requireAdmin(c);
+  const mode = str(c.body.mode);
+  if (!mode || !(DATA_MODES as readonly string[]).includes(mode)) throw new ApiError(422, "VALIDATION_ERROR", "mode must be static, platform or shadow.");
+  state.dataMode = mode as (typeof DATA_MODES)[number];
+  return { status: 200, body: dataPlatformView() };
+});
+
 route("POST", "/api/demo/simulate-delivery", true, (c) => {
   const order = orderById(str(c.body.order_id) ?? "");
   if (!order) throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found.");

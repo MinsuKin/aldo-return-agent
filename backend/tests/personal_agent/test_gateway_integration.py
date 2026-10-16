@@ -68,7 +68,7 @@ def run_policy(answer_for: Any) -> Any:
 def montreal_pickup(ask: dict[str, Any]) -> tuple[str, str]:
     for entry in ask["sizes"]:
         if entry["size"] == "8.0":
-            option = next(o for o in entry["options"] if o["type"] == "store_pickup" and "Montreal" in o["location_name"])
+            option = next(o for o in entry["options"] if o["type"] == "store_pickup" and "Sainte-Catherine" in o["location_name"])
             return "8.0", option["option_id"]
     raise AssertionError("size 8.0 is not offered")
 
@@ -99,7 +99,7 @@ def test_a_real_proposal_is_recorded_without_an_order_and_the_owner_can_confirm_
     assert answer["payload"]["evidence"]["n_fit"] == 582
     recommended = next(e for e in events if e["type"] == "size_recommended")["payload"]
     assert (recommended["chosen_size"], recommended["option_type"], recommended["status"]) == ("8.0", "store_pickup", "proposed")
-    assert recommended["location_name"] == "ALDO Demo Store Montreal" and recommended["meets_deadline"] is True
+    assert recommended["location_name"] == "ALDO Sainte-Catherine" and recommended["meets_deadline"] is True
     request_id = next(e for e in events if e["type"] == "tool_result" and e["payload"]["tool"] == "ask_aldo_size_assist")["payload"]["evidence"]["size_request_id"]
 
     # the real record: a proposal, with the sanitized rationale, and NOTHING else changed
@@ -121,7 +121,7 @@ def test_a_real_proposal_is_recorded_without_an_order_and_the_owner_can_confirm_
 
     # the owner clicks Confirm: the real gateway turns the proposal into an order
     order = gateway.confirm_purchase(AVA, request_id)
-    assert order.order_id.startswith("DEMO-A2A-") and order.fulfillment.location_name == "ALDO Demo Store Montreal"
+    assert order.order_id.startswith("DEMO-A2A-") and order.fulfillment.location_name == "ALDO Sainte-Catherine"
     assert hero_stock() == stock_before - 1
     assert store.get_item(store.sizereq_key(request_id))["status"] == "decided"
     assert trace.list_a2a_events(AVA).events[-1]["type"] == "size_confirmed"
@@ -156,7 +156,7 @@ def test_the_hero_answer_has_the_shape_the_tools_expect(both: MemoryRepo) -> Non
     sizes = {entry["size"]: entry["options"] for entry in data["sizes"]}
     assert {"7.5", "8.0"} <= set(sizes)
     pickups = [o for o in sizes["8.0"] if o["type"] == "store_pickup"]
-    assert [o["location_name"] for o in pickups] == ["ALDO Demo Store Montreal"]
+    assert [o["location_name"] for o in pickups] == ["ALDO Sainte-Catherine"]
     assert all(o["meets_deadline"] is True for o in pickups)
     assert all(o["meets_deadline"] is False for o in sizes["8.0"] if o["type"] != "store_pickup")
     assert all(set(o) == {"option_id", "type", "location_id", "location_name", "eta_date", "eta_text", "meets_deadline", "atp"} for o in sizes["8.0"])
@@ -171,7 +171,7 @@ def test_dc_stockout_leaves_only_the_montreal_store_options(both: MemoryRepo) ->
     data = tools.tool_ask_aldo_size_assist(ctx, "Stessy", deadline_date="2026-10-17")["data"]
     options = {entry["size"]: entry["options"] for entry in data["sizes"]}["8.0"]
     assert {o["type"] for o in options} == {"ship_from_store", "store_pickup"}
-    assert {o["location_name"] for o in options} == {"ALDO Demo Store Montreal"}
+    assert {o["location_name"] for o in options} == {"ALDO Sainte-Catherine"}
 
 
 def test_a_us_m_owner_sends_us_m_and_the_gateway_now_serves_it(both: MemoryRepo) -> None:
@@ -183,7 +183,7 @@ def test_a_us_m_owner_sends_us_m_and_the_gateway_now_serves_it(both: MemoryRepo)
 
 
 JOHN = "DEMO-CUST-JOHN"
-JOHN_MESSAGE = "I loved the ALDO Men 001 in black but the store did not have my size. Please buy them for me."
+JOHN_MESSAGE = "I loved the Toney in black but the store did not have my size. Please buy them for me."
 
 
 def test_johns_whole_purchase_against_the_real_gateway(both: MemoryRepo, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -234,7 +234,7 @@ def test_the_canned_mens_answer_is_still_what_the_real_gateway_says(both: Memory
     token = auth.sign_token(JOHN, scope="delegated_gateway", actor="personal_agent")
     real = gateway.size_assist(
         auth.verify_claims(token.token, "delegated_gateway"),
-        {"intent": "size_assist", "product_query": "ALDO Men 001", "color": "BLACK", "size_system": "US_M", "deadline_date": None, "channel_pref": None},
+        {"intent": "size_assist", "product_query": "Toney", "color": "BLACK", "size_system": "US_M", "deadline_date": None, "channel_pref": None},
     ).model_dump(mode="json")
     canned = load_assist("men001")
     for key in ("style_id", "product_name", "color", "price_cents", "currency", "fit_signal", "sizes", "question"):

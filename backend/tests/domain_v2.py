@@ -83,7 +83,7 @@ def build_v2_fixtures(dest: Path) -> Path:
     customers["customers"] += [
         {
             "customer_id": JOHN, "display_name": "John", "home_region": "QC", "tier": "silver",
-            "annual_spend_cents": 180000, "location_label": "Downtown Montreal",
+            "annual_spend_cents": 180000, "location_label": "Bronfman Building, Montreal",
             "travel_minutes": {MTL: 5, LAVAL: 24, TOR: 540},
             "description": "Silver member, buys the men's style and exchanges the colour", "source": "synthetic",
         },

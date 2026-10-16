@@ -456,7 +456,7 @@ def resolve_product(
 ) -> tuple[str, str, list[str], Mapping[str, Mapping[str, list[str]]]]:
     """``(product_name, style_id, colors, catalog)`` for a case-insensitive name or alias query.
 
-    A product alias (for example "ALDO Men 001") identifies its product like the name does. An
+    A product alias (for example "Toney") identifies its product like the name does. An
     exact name or alias wins even when longer names also contain the query; otherwise exactly one
     product may match. No match, several products or several styles under one name:
     ``GatewayError(UNKNOWN_STYLE)`` whose ``candidates`` are ``{"style_id", "product_name",
@@ -925,7 +925,10 @@ def size_assist(claims: auth.TokenClaims, request: Mapping[str, Any]) -> SizeAss
     )
 
     price = money.ensure_cents(products[0].get("price_cents"), "price_cents", minimum=0)
-    signal = fit_signal_view(fit.get_fit_insight(product_name))
+    insight = fit.get_fit_insight(product_name)
+    signal = fit_signal_view(insight)
+    # A curated (data platform) document names its source and the Athena queries behind it; the bundled file adds nothing.
+    data_origin = {key: insight[key] for key in ("data_source", "query_execution_ids") if key in insight}
     question = question_text(signal)
     sizes = group_sizes(offered)
     created = clock.now_utc()
@@ -1009,6 +1012,7 @@ def size_assist(claims: auth.TokenClaims, request: Mapping[str, Any]) -> SizeAss
             "style_id": style_id,
             "product_name": product_name,
             **signal.model_dump(),
+            **data_origin,
         },
         ACTOR_GATEWAY,
     )
@@ -1770,7 +1774,7 @@ def agent_card(base_url: str) -> dict[str, Any]:
                     "result is a proposal; an order exists only after the owner confirms it."
                 ),
                 "tags": ["purchase", "sizing", "reviews", "owner-confirmation"],
-                "examples": ["Buy me the ALDO Men 001 in black in my size."],
+                "examples": ["Buy me the Toney in black in my size."],
                 "inputModes": modes,
                 "outputModes": modes,
             },
@@ -1793,7 +1797,7 @@ def agent_card(base_url: str) -> dict[str, Any]:
                 "name": "Size assist",
                 "description": (
                     "POST /api/gateway/size-assist. Returns the ALDO_CA fit signal for a "
-                    "style (the product name or an alias such as ALDO Men 001), the sizes in "
+                    "style (the product name or an alias such as Toney), the sizes in "
                     "stock with delivery options and a deadline flag, and a question for the "
                     "personal agent."
                 ),

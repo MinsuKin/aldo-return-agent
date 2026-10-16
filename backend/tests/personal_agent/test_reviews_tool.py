@@ -183,7 +183,7 @@ def test_reading_the_reviews_counts_towards_the_tool_call_limit(repo: MemoryRepo
 
 
 def asked_and_read(ctx: PersonalRunContext) -> None:
-    assert tools.tool_ask_aldo_size_assist(ctx, "ALDO Men 001")["ok"]
+    assert tools.tool_ask_aldo_size_assist(ctx, "Toney")["ok"]
     assert read(ctx)["ok"]
 
 

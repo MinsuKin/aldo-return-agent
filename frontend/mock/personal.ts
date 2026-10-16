@@ -193,6 +193,7 @@ export function buildPersonalRun(p: PersonalParams): Script {
           style_id: HERO.style,
           product_name: HERO.product,
           ...fitSignal,
+          ...(state.dataMode === "platform" ? { data_source: "aws-athena", query_execution_ids: ["mock-query-1", "mock-query-2"] } : {}),
         });
         pushA2a(p.customerId, "size_requested", "aldo_gateway", {
           size_request_id: requestId,

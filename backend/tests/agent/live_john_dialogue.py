@@ -4,7 +4,7 @@ Run from /Users/minsu/Desktop/aldo-return-agent/backend (credentials only throug
 
     ../scripts/with_aws_env.sh uv run --no-sync python -m tests.agent.live_john_dialogue --runs 2
 
-The ALDO returns table lives in moto (in-process, seeded from the fixtures, John's order of ALDO Men 001 in
+The ALDO returns table lives in moto (in-process, seeded from the fixtures, John's order of Toney in
 Black 9.5 delivered five days before DEMO_NOW); the Bedrock calls go out for real; nothing is written to AWS. The
 owner's lines are addendum 11.2 steps 3 to 7. Each variant (with and without ``memory_context``) is played
 ``--runs`` times. Checks, per run:
@@ -49,7 +49,7 @@ MEMORY: dict[str, Any] = {
     "typical_size": "10.0",
     "preferred_colors": ["BROWN", "WHITE"],
     "aldo_items": [
-        {"order_id": ORDER, "product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5", "status": "delivered"}
+        {"order_id": ORDER, "product_name": "Toney", "color": "BLACK", "size": "9.5", "status": "delivered"}
     ],
     "source": "personal agent memory",
 }

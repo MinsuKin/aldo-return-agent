@@ -164,11 +164,11 @@ class QuoteM(BaseModel):
 #: What the real domain puts in a store notice (display_name and tier_label are NOT for the model).
 STORE_NOTICE = {
     "store_id": "DEMO-STORE-MTL-01",
-    "store_name": "ALDO Demo Store Montreal",
+    "store_name": "ALDO Sainte-Catherine",
     "display_name": "John",
     "tier_label": "Silver member",
     "eta_minutes": 5,
-    "summary": "ALDO Demo Store Montreal will have your Brown pair ready, John is about 5 minutes away",
+    "summary": "ALDO Sainte-Catherine will have your Brown pair ready, John is about 5 minutes away",
 }
 
 
@@ -274,16 +274,16 @@ def _line(order_id: str, size: str, *, final_sale: bool = False, unit: int = 129
 BUNDLE_ORDER = "DEMO-3001"
 #: number -> (product, colour, category, size, price in cents)
 BUNDLE_LINES: dict[int, tuple[str, str, str, str, int]] = {
-    1: ("Lededanten", "BLACK", "derby", "10.0", 15999),
-    2: ("Aahliyah", "TAN", "boot", "10.5", 17999),
-    3: ("Joselie", "BROWN", "oxford", "10.0", 16999),
-    4: ("Tanerdee", "BLACK", "chelsea boot", "11.0", 19999),
-    5: ("Alanie", "WHITE", "sneaker", "10.0", 10999),
-    6: ("Mazey", "BROWN", "boat shoe", "9.5", 13999),
-    7: ("Caraelia", "BLACK", "monk strap", "10.5", 18999),
-    8: ("Valegyn", "NAVY", "loafer", "10.0", 12999),
-    9: ("Krishelle", "BROWN", "brogue", "11.0", 14999),
-    10: ("Oneameth", "GREY", "sneaker", "10.5", 9999),
+    1: ("Drayson", "BLACK", "derby", "10.0", 15999),
+    2: ("Brando", "TAN", "boot", "10.5", 17999),
+    3: ("Meekes", "BROWN", "oxford", "10.0", 16999),
+    4: ("Sosa", "BLACK", "chelsea boot", "11.0", 19999),
+    5: ("Oscar", "WHITE", "sneaker", "10.0", 10999),
+    6: ("Stark", "BROWN", "slip-on", "9.5", 13999),
+    7: ("Montcourt", "BLACK", "dress shoe", "10.5", 18999),
+    8: ("Patten", "NAVY", "loafer", "10.0", 12999),
+    9: ("Drymos", "BROWN", "casual lace-up", "11.0", 14999),
+    10: ("Finespec", "GREY", "sneaker", "10.5", 9999),
 }
 BUNDLE_SCRIPT = (2, 5, 8)  # the tan boot, the white sneaker, the navy loafer: 17999 + 10999 + 12999 = 41997
 
@@ -402,7 +402,7 @@ def hero_options(*, dc_stock: bool = True, deadline: str | None = "2026-10-17") 
     opts += [
         OptionM(
             option_id="OPT-2", type="exchange_ship_from_store", sku="DEMO-SKU-HERO-BLACK-085",
-            replacement_size="8.5", location_id="DEMO-STORE-MTL-01", location_name="ALDO Demo Store Montreal",
+            replacement_size="8.5", location_id="DEMO-STORE-MTL-01", location_name="ALDO Sainte-Catherine",
             refund_cents=0, fee_cents=0, eta_date="2026-10-19", eta_text="Mon Oct 19",
             meets_deadline=meets("2026-10-19"), conditions=["Bring the original pair, unworn"],
             evidence={"atp": 1, "inventory_version": 1},
@@ -410,7 +410,7 @@ def hero_options(*, dc_stock: bool = True, deadline: str | None = "2026-10-17") 
         ),
         OptionM(
             option_id="OPT-3", type="exchange_store_pickup", sku="DEMO-SKU-HERO-BLACK-085",
-            replacement_size="8.5", location_id="DEMO-STORE-MTL-01", location_name="ALDO Demo Store Montreal",
+            replacement_size="8.5", location_id="DEMO-STORE-MTL-01", location_name="ALDO Sainte-Catherine",
             refund_cents=0, fee_cents=0, eta_date="2026-10-17", eta_text="Sat Oct 17",
             meets_deadline=meets("2026-10-17"), conditions=["Bring the original pair, unworn"],
             evidence={"atp": 1, "inventory_version": 1},
@@ -418,7 +418,7 @@ def hero_options(*, dc_stock: bool = True, deadline: str | None = "2026-10-17") 
         ),
         OptionM(
             option_id="OPT-4", type="return_in_store", sku="DEMO-SKU-HERO-BLACK-080", replacement_size=None,
-            location_id="DEMO-STORE-MTL-01", location_name="ALDO Demo Store Montreal",
+            location_id="DEMO-STORE-MTL-01", location_name="ALDO Sainte-Catherine",
             refund_cents=12999, fee_cents=0, eta_date="2026-10-16", eta_text="Fri Oct 16", meets_deadline=None,
             conditions=["Bring the original pair, unworn"], source_refs=["DEMO-POLICY-CA@2026.10-demo"],
         ),
@@ -455,7 +455,7 @@ def _opt(option_id: str, kind: str, name: str, location_id: str, eta: str, eta_t
 
 def colour_options() -> list[OptionM]:
     """The options of a colour exchange to BROWN for John: DC, two pickups (nearest first), two returns."""
-    mtl, laval = "ALDO Demo Store Montreal", "ALDO Demo Store Laval"
+    mtl, laval = "ALDO Sainte-Catherine", "ALDO Demo Store Laval"
     return [
         _opt("OPT-1", "exchange_ship_from_dc", "ALDO Demo Distribution Centre", "DEMO-DC-QC", "2026-10-20", "Tue Oct 20",
              color="BROWN"),
@@ -584,7 +584,7 @@ class FakeOptions(_Fake):
 
         options: list[OptionM] = []
         if self.bundle_store:
-            options.append(option("OPT-1", "return_in_store", "ALDO Demo Store Montreal", "DEMO-STORE-MTL-01", 5, 0,
+            options.append(option("OPT-1", "return_in_store", "ALDO Sainte-Catherine", "DEMO-STORE-MTL-01", 5, 0,
                                   "2026-10-16", "Fri Oct 16"))
         options.append(option(f"OPT-{len(options) + 1}", "return_mail", "ALDO Demo Distribution Centre",
                               "DEMO-DC-QC", None, fee, "2026-10-26", "Mon Oct 26", perk))
@@ -684,18 +684,18 @@ class FakeExecution(_Fake):
             return TransactionViewM(
                 transaction_id=transaction_id, option_type="exchange_store_pickup", order_id=AGENT_ORDER,
                 line_id=f"{AGENT_ORDER}-L1", sku="DEMO-SKU-MEN001-BROWN-095", location_id="DEMO-STORE-MTL-01",
-                location_name="ALDO Demo Store Montreal", replacement_size="9.5", original_size="9.5",
+                location_name="ALDO Sainte-Catherine", replacement_size="9.5", original_size="9.5",
                 replacement_color="BROWN", eta_date="2026-10-17", eta_text="Sat Oct 17", quote_id="QUO-X",
                 memory_update_id="MU-5C0A11", store_notice=dict(STORE_NOTICE),
-                next_step=("ALDO Demo Store Montreal will have your Brown pair, size 9.5, ready from Sat Oct 17; "
+                next_step=("ALDO Sainte-Catherine will have your Brown pair, size 9.5, ready from Sat Oct 17; "
                            "bring the original pair, unworn."),
             )
         return TransactionViewM(
             transaction_id=transaction_id, option_type="exchange_store_pickup", order_id=AGENT_ORDER,
             line_id=f"{AGENT_ORDER}-L1", sku="DEMO-SKU-HERO-BLACK-085", location_id="DEMO-STORE-MTL-01",
-            location_name="ALDO Demo Store Montreal", replacement_size="8.5", eta_date="2026-10-17",
+            location_name="ALDO Sainte-Catherine", replacement_size="8.5", eta_date="2026-10-17",
             eta_text="Sat Oct 17", quote_id="QUO-X",
-            next_step="Pick up size 8.5 at ALDO Demo Store Montreal from Sat Oct 17; bring the original pair, unworn.",
+            next_step="Pick up size 8.5 at ALDO Sainte-Catherine from Sat Oct 17; bring the original pair, unworn.",
         )
 
 

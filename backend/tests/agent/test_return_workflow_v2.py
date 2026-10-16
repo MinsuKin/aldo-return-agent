@@ -151,7 +151,7 @@ def test_nearest_store_leads_the_ranking_and_the_reason_says_how_far(john: FakeD
     ranking = find(tools_by_name, replacement_color="BROWN")["data"]["ranking"]
     assert ranking["order"][:3] == ["OPT-2", "OPT-3", "OPT-1"]  # MTL (5 min), LAVAL (24 min), then the DC
     assert ranking["order"][-2:] == ["OPT-4", "OPT-5"]
-    assert "Store pickup of the Brown pair at ALDO Demo Store Montreal is free and ready Sat Oct 17, 5 minutes away" in (
+    assert "Store pickup of the Brown pair at ALDO Sainte-Catherine is free and ready Sat Oct 17, 5 minutes away" in (
         ranking["reason"]
     )
     assert "Refund options stay available" in ranking["reason"]
@@ -328,9 +328,9 @@ def test_execute_surfaces_the_store_notice_without_names_or_tier(john: FakeDomai
     john.execution.colour_exchange = True
     data = tools_by_name["execute_approved_resolution"](quote_id="QUO-X", option_id="OPT-2")["data"]
     assert data["store_notice"] == {
-        "store_name": "ALDO Demo Store Montreal",
+        "store_name": "ALDO Sainte-Catherine",
         "eta_minutes": 5,
-        "summary": "ALDO Demo Store Montreal will have your Brown pair ready, John is about 5 minutes away",
+        "summary": "ALDO Sainte-Catherine will have your Brown pair ready, John is about 5 minutes away",
     }
     assert data["memory_update_id"] == "MU-5C0A11"
 

@@ -112,6 +112,8 @@ export interface OptionView {
   color?: string;
   sku?: string;
   locationName?: string;
+  /** Street address of the store, when the server knows it. */
+  locationAddress?: string;
   refundCents: number;
   feeCents: number;
   currency: string;
@@ -219,6 +221,7 @@ export function normalizeOption(raw: Record<string, unknown>, fallbackCurrency: 
     color: str(pick(raw, ["replacement_color", "color"])) ?? line.color,
     sku: str(raw.sku),
     locationName: locationName(raw),
+    locationAddress: str(raw.location_address),
     refundCents: num(raw.refund_cents) ?? 0,
     feeCents: num(raw.fee_cents) ?? 0,
     currency: str(raw.currency) ?? fallbackCurrency,

@@ -6,7 +6,7 @@ import { colorWord, formatCents, friendlyDate } from "../../../lib/format";
 import { normalizeTransaction } from "../../../lib/normalize";
 import { Badge } from "../../Badge";
 import { Icon } from "../../Icon";
-import { CardFrame, Swatch, useOrderLookup } from "./shared";
+import { CardFrame, ProductPhoto, Swatch, useOrderLookup } from "./shared";
 
 interface Props {
   transactionId: string;
@@ -63,7 +63,7 @@ export function TransactionCard({ transactionId, onNudge }: Props) {
             <ol className="bundle-list" data-testid="txn-items">
               {txn.lines.map((l) => (
                 <li key={l.lineId}>
-                  <Swatch color={l.color} />
+                  <ProductPhoto name={l.productName} color={l.color} size="row" />
                   <span className="bundle-name">
                     {l.productName}
                     {l.kind ? ` ${l.kind}` : ""}

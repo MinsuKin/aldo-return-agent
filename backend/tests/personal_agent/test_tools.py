@@ -212,7 +212,7 @@ def test_the_result_is_a_proposal_and_says_so(repo: MemoryRepo) -> None:
     data = propose(ctx)["data"]
     assert (data["status"], data["awaiting"]) == ("proposed", "owner_confirmation")
     assert "Nothing is ordered until the owner" in data["note"] and "order_id" not in data
-    assert data["summary"]["size"] == "8.0" and data["summary"]["location_name"] == "ALDO Demo Store Montreal"
+    assert data["summary"]["size"] == "8.0" and data["summary"]["location_name"] == "ALDO Sainte-Catherine"
     assert ctx.proposal_sent is True
     assert ctx.proposal["size"] == "8.0" and ctx.proposal["option_type"] == "store_pickup"
     assert ctx.proposal["product_name"] == "Stessy2.0" and ctx.proposal["meets_deadline"] is True
@@ -225,7 +225,7 @@ def test_the_recommendation_is_traced_with_its_option_details(repo: MemoryRepo) 
     payload = events(ctx, "size_recommended")[0]["payload"]
     assert events(ctx, "size_recommended")[0]["actor"] == "personal_agent"
     assert payload["chosen_size"] == "8.0" and payload["option_id"] == "SO-10"
-    assert payload["option_type"] == "store_pickup" and payload["location_name"] == "ALDO Demo Store Montreal"
+    assert payload["option_type"] == "store_pickup" and payload["location_name"] == "ALDO Sainte-Catherine"
     assert payload["eta_date"] == "2026-10-17" and payload["meets_deadline"] is True
     assert payload["confidence"] == "high" and payload["status"] == "proposed"
 
@@ -335,11 +335,11 @@ def test_sanitize_public_rationale_never_raises() -> None:
 
 def test_clean_orders_keeps_the_category_when_present() -> None:
     raw = [{"order_id": "DEMO-X-1", "channel": "web", "ordered_at": "2026-10-01", "delivered_at": "2026-10-02",
-            "lines": [{"product_name": "Lededanten", "color": "BLACK", "category": "derby", "size": "10.0", "qty": 1}]}]
+            "lines": [{"product_name": "Drayson", "color": "BLACK", "category": "derby", "size": "10.0", "qty": 1}]}]
     cleaned = tools.clean_orders(raw)
     assert cleaned is not None
     line = cleaned[0]["lines"][0]
-    assert line == {"product_name": "Lededanten", "color": "BLACK", "size": "10.0", "qty": 1, "category": "derby"}
+    assert line == {"product_name": "Drayson", "color": "BLACK", "size": "10.0", "qty": 1, "category": "derby"}
 
 
 def test_clean_orders_omits_the_category_when_absent_or_blank() -> None:

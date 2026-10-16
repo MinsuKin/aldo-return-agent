@@ -41,7 +41,7 @@ JOHN = "DEMO-CUST-JOHN"
 ADMIN = {"X-Demo-Admin": ADMIN_KEY}
 PREFIX = "/api/personal-agent/conversations"
 BUY = (
-    "I was at the ALDO store and loved the black leather shoes, the ALDO Men 001, but they didn't have my size. "
+    "I was at the ALDO store and loved the black Toney boots, but they didn't have my size. "
     "Please buy them for me in my size."
 )
 RETURN = "I want to return these."
@@ -205,7 +205,7 @@ def john_until_the_quote(stack: Stack) -> SimpleNamespace:
     assert payload["message"] == f"{RETURN}\n{REASON}"
     assert payload["memory_context"] == {
         "size_system": "US_M", "typical_size": "10.0", "preferred_colors": ["BROWN", "WHITE"],
-        "aldo_items": [{"order_id": order_id, "product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5", "status": "delivered"}],
+        "aldo_items": [{"order_id": order_id, "product_name": "Toney", "color": "BLACK", "size": "9.5", "status": "delivered"}],
         "source": "personal agent memory",
     }
     from agent import owner_context  # the Return workflow's own validator keeps every field (it drops only the constant `source`)

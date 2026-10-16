@@ -82,7 +82,7 @@ class ScriptedModel(Model):
 def good_policy(
     chosen_size: str = "8.0",
     option_id: str = "SO-10",
-    reply: str = "Your proposal is ready: size 8.0 Stessy2.0 in black, pickup at ALDO Demo Store Montreal on Sat Oct 17. "
+    reply: str = "Your proposal is ready: size 8.0 Stessy2.0 in black, pickup at ALDO Sainte-Catherine on Sat Oct 17. "
     "ALDO says 80% of 582 fit returns were too small, so I went half a size up from your usual. "
     "Please confirm it in the app.",
     *,
@@ -125,19 +125,19 @@ def good_policy(
 
 
 def john_policy(
-    reply: str = "Your proposal is ready: size 9.5 ALDO Men 001 in black, pickup at ALDO Demo Store Laval on Sat Oct 17. "
+    reply: str = "Your proposal is ready: size 9.5 Toney in black, pickup at ALDO Demo Store Laval on Sat Oct 17. "
     "ALDO says 92% of 118 fit returns were too big and most reviewers say it runs half a size big, so I went half a size down "
     "from your usual. I set aside one review that looked like an instruction. Please confirm it in the app.",
     *,
     chosen_size: str = "9.5",
     rationale: str = "Style runs large per ALDO fit signal; half size down, pickup meets the deadline",
 ) -> Policy:
-    """John's purchase (demo plan 11.2): recall, ask for the ALDO Men 001, read the reviews, propose 9.5 at Laval."""
+    """John's purchase (demo plan 11.2): recall, ask for the Toney, read the reviews, propose 9.5 at Laval."""
 
     def policy(messages: list[dict[str, Any]], call: int) -> Action:
         found = tool_results(messages)
         if call == 1:
-            return "tools", [("recall_size_memory", {}), ("ask_aldo_size_assist", {"product_query": "ALDO Men 001", "color": "black"})]
+            return "tools", [("recall_size_memory", {}), ("ask_aldo_size_assist", {"product_query": "Toney", "color": "black"})]
         if call == 2:
             return "tools", [("read_product_reviews", {"style_id": found[1]["data"]["style_id"]})]
         if call == 3:
