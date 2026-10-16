@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-16T11:45:39+00:00",
+  "mode": "live",
+  "simulated": false,
+  "cost_basis": "est_cost_per_run_usd = mean estimated cost (USD, ASSUMED token prices) of one eval run of the ALDO returns-agent scenarios (A, B, C, D, E, H, P4) that called the model; ALDO bot purchase runs (P1, P2) are reported per scenario only.",
+  "latency_note": "Latency = wall-clock time of the agent turns and API calls of one run (reset, DynamoDB reads and assertions excluded). Percentiles use nearest rank over the runs, so with N=3 p95 is the slowest run.",
+  "target": {
+    "base_url": "https://d38111d70jquli.cloudfront.net",
+    "region": "us-east-1",
+    "tables": [
+      "aldo-returns-demo",
+      "aldo-personal-agent-demo"
+    ]
+  },
+  "runs_per_scenario": 1,
+  "summary": {
+    "runs": 1,
+    "passed": 1,
+    "failed": 0,
+    "pass_rate": 1.0,
+    "llm_runs": 0,
+    "fallback_model_runs": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "models_seen": {},
+    "tokens_missing_in_some_runs": false,
+    "returns_agent_runs_costed": 0
+  },
+  "pricing": {
+    "basis": "assumed",
+    "unit": "USD per million tokens",
+    "primary": {
+      "model_id": "us.anthropic.claude-sonnet-5-5",
+      "input_per_mtok": 3.0,
+      "output_per_mtok": 15.0
+    },
+    "fallback": {
+      "model_id": "us.anthropic.claude-opus-5-5",
+      "input_per_mtok": 5.0,
+      "output_per_mtok": 25.0
+    },
+    "usd_to_cad": 1.38,
+    "usd_to_cad_basis": "assumed"
+  },
+  "scenarios": {
+    "P6": {
+      "title": "AWS data platform door: every mode serves the same fit numbers, only platform names S3 + Athena, the mode is restored",
+      "variant": "default",
+      "returns_agent": false,
+      "runs": 1,
+      "passed": 1,
+      "failed": 0,
+      "pass_rate": 1.0,
+      "latency_ms": {
+        "p50": 0.0,
+        "p95": 0.0,
+        "mean": 0.0,
+        "min": 0.0,
+        "max": 0.0
+      },
+      "agent_reported_latency_ms": {
+        "mean": 0.0
+      },
+      "tokens": {
+        "mean_input": 0.0,
+        "mean_output": 0.0,
+        "mean_total": 0.0
+      },
+      "cost_usd": {
+        "mean_per_run": 0.0,
+        "total": 0.0
+      },
+      "cost_cad": {
+        "mean_per_run": 0.0,
+        "total": 0.0
+      },
+      "llm_runs_per_run": 0.0,
+      "failing_checks": {},
+      "runs_detail": [
+        {
+          "scenario": "P6",
+          "title": "AWS data platform door: every mode serves the same fit numbers, only platform names S3 + Athena, the mode is restored",
+          "variant": "default",
+          "returns_agent": false,
+          "run": 1,
+          "passed": true,
+          "error": null,
+          "latency_ms": 0.0,
+          "agent_reported_latency_ms": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "tokens_reported": true,
+          "cost_usd": 0.0,
+          "cost_cad": 0.0,
+          "llm_runs": [],
+          "checks_passed": 20,
+          "checks_failed": 0,
+          "passed_checks": [
+            "door_status_route_answers",
+            "curated_document_is_available",
+            "set_mode_static",
+            "size_assist_in_static_mode",
+            "size_assist_in_static_mode",
+            "size_assist_in_static_mode",
+            "set_mode_platform",
+            "size_assist_in_platform_mode",
+            "size_assist_in_platform_mode",
+            "size_assist_in_platform_mode",
+            "set_mode_shadow",
+            "size_assist_in_shadow_mode",
+            "size_assist_in_shadow_mode",
+            "size_assist_in_shadow_mode",
+            "mode_restored_to_what_it_was",
+            "same_fit_numbers_in_every_mode",
+            "static_event_has_no_data_source",
+            "platform_event_names_aws_athena",
+            "platform_event_lists_the_athena_queries",
+            "shadow_event_serves_static_and_names_no_source"
+          ],
+          "failed_checks": [],
+          "observed": {
+            "mode_before": "static",
+            "curated": {
+              "key": "curated/fit_insights/v=2026-10-16T11-44-21Z/fit_insights.json",
+              "generated_at": "2026-10-16T11:44:21+00:00",
+              "products": 6848,
+              "query_execution_ids": [
+                "5eb35faf-20a3-4c2e-9eda-3a56d3841497",
+                "e917ec94-03a9-45f1-a7cf-e7fe4898e944",
+                "2916b1c6-7834-454e-a1f1-e17e146866ea",
+                "faf1f325-4839-4445-80f4-807e755bc90e",
+                "5953df3d-efd3-4c96-9e3e-bc056576a13d",
+                "9b9b83f7-3de3-4511-806a-e505e339bf73"
+              ]
+            },
+            "size_assist_ms": {
+              "static": [
+                577,
+                311,
+                407
+              ],
+              "platform": [
+                420,
+                305,
+                308
+              ],
+              "shadow": [
+                501,
+                401,
+                410
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "scope_notes": [
+    "Scenario I (day 30/31 boundary) and the concurrent-execute half of E are cut by the pivot; day 30/31 stays a policy unit test.",
+    "Assertions read DynamoDB (tables aldo-returns-demo and aldo-personal-agent-demo); chat text is never asserted.",
+    "The ALDO bot (personal agent) has no item condition to state in its purchase message; every message to the ALDO returns agent does."
+  ],
+  "failures": []
+}
