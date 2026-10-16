@@ -55,16 +55,15 @@ interface FrameProps {
   headingRef?: Ref<HTMLHeadingElement>;
   /** Right side of the header, for example a reference id. */
   meta?: ReactNode;
-  tone?: "default" | "success" | "warn";
   testId: string;
   status?: string;
   children: ReactNode;
 }
 
 /** The frame every inline card shares: a labelled section with a focusable heading. */
-export function CardFrame({ title, titleId, headingRef, meta, tone = "default", testId, status, children }: FrameProps) {
+export function CardFrame({ title, titleId, headingRef, meta, testId, status, children }: FrameProps) {
   return (
-    <section className={`msg-card msg-card-${tone}`} aria-labelledby={titleId} data-testid={testId} data-status={status}>
+    <section className="msg-card" aria-labelledby={titleId} data-testid={testId} data-status={status}>
       <header className="msg-card-head">
         <h3 id={titleId} ref={headingRef} tabIndex={-1}>
           {title}

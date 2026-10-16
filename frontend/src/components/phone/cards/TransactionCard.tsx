@@ -47,7 +47,6 @@ export function TransactionCard({ transactionId, onNudge }: Props) {
       headingRef={headingRef}
       testId="txn-card"
       status={txn ? "confirmed" : "loading"}
-      tone="success"
       meta={<span className="mono muted small" data-testid="txn-id">{transactionId}</span>}
     >
       {query.isPending && <p role="status">Reading the saved record...</p>}

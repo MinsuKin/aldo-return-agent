@@ -20,7 +20,6 @@ export function CaseCard({ caseId }: { caseId: string }) {
       titleId={`case-title-${caseId}`}
       headingRef={headingRef}
       testId="case-card"
-      tone="warn"
       meta={<span className="mono muted small" data-testid="case-id">{caseId}</span>}
     >
       <dl className="facts">

@@ -123,17 +123,17 @@
   color: var(--fg-muted);
 }
 
-/* ?admin=1 panel: a quiet amber-tinted dashed card, consistent with .btn-demo. */
+/* ?admin=1 panel: a quiet neutral dashed card, consistent with .btn-demo. */
 .admin-controls {
-  border: 1px dashed var(--amber);
+  border: 1px dashed var(--border-hover);
   border-radius: var(--radius-lg);
-  background: var(--amber-soft);
+  background: var(--surface-2);
   padding: 8px 12px;
 }
 .admin-controls summary {
   cursor: pointer;
   font-weight: 600;
-  color: var(--amber);
+  color: var(--fg-muted);
 }
 .admin-body {
   display: flex;

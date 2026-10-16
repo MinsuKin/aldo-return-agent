@@ -36,7 +36,6 @@ export function OrderCard({ orderId, sizeRequestId, delivery, onRetryDelivery }:
       titleId={`order-title-${orderId}`}
       testId="order-card"
       status={status ?? "placed"}
-      tone="success"
       meta={<span className="mono muted small" data-testid="order-id">{orderId}</span>}
     >
       {view && (

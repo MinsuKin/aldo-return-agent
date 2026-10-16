@@ -57,14 +57,14 @@
   background: none;
   color: var(--fg);
 }
-/* Demo / admin button: a quiet amber-tinted ghost (dark equivalent of the old dashed yellow). */
+/* Demo / admin button: a quiet neutral ghost with a dashed outline, so it reads as a demo control. */
 .btn-demo {
-  background: var(--amber-soft);
-  border: 1px dashed var(--amber);
-  color: var(--amber);
+  background: transparent;
+  border: 1px dashed var(--border-hover);
+  color: var(--fg-muted);
 }
 .btn-demo:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--amber) 22%, var(--surface-3));
+  background: var(--surface-3);
   color: var(--fg);
 }
 
@@ -174,15 +174,12 @@
   border-color: color-mix(in srgb, var(--red) 45%, transparent);
   color: var(--red);
 }
-.alert-info {
-  background: var(--blue-soft);
-  border-color: color-mix(in srgb, var(--blue) 40%, transparent);
-  color: var(--blue);
-}
+/* Info and warning notices share one neutral look; only a real error is red. */
+.alert-info,
 .alert-warn {
-  background: var(--amber-soft);
-  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
-  color: var(--amber);
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--fg);
 }
 
 .spinner {

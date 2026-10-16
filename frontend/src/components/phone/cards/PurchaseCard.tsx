@@ -52,7 +52,6 @@ export function PurchaseCard({ sizeRequestId, isLatest, busy, reviews, onConfirm
       headingRef={headingRef}
       testId="purchase-card"
       status={decided ? "decided" : replaced ? "replaced" : expired ? "expired" : (view?.status ?? "loading")}
-      tone={decided ? "success" : "default"}
     >
       {query.isPending && <p role="status">Loading the proposal...</p>}
       {query.isError && !view && (
@@ -94,7 +93,7 @@ export function PurchaseCard({ sizeRequestId, isLatest, busy, reviews, onConfirm
                   <strong>{view.optionType === "store_pickup" ? "Ready" : "Arrives"}:</strong>{" "}
                   {view.etaDate ? friendlyDate(view.etaDate) : (view.etaText ?? "Not provided")}{" "}
                   {view.meetsDeadline === true && (
-                    <Badge tone="success">
+                    <Badge tone="neutral">
                       <Icon name="check" size={12} /> Meets your deadline
                     </Badge>
                   )}

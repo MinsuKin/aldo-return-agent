@@ -19,19 +19,14 @@
   min-width: 0;
 }
 
-/* Status variants. Neutral is proposed / open. Success (decided / confirmed) gets a green accent
-   on the left edge; a replaced / expired card is dimmed and quiet. */
-.msg-card-success {
-  border-color: color-mix(in srgb, var(--green) 42%, var(--border));
-  box-shadow:
-    inset 3px 0 0 var(--green),
-    var(--shadow);
-}
-.msg-card-warn {
-  border-color: color-mix(in srgb, var(--amber) 42%, var(--border));
-  box-shadow:
-    inset 3px 0 0 var(--amber),
-    var(--shadow);
+/* Status variants. One neutral palette: a decided / confirmed card gets a slightly lighter border, a
+   replaced / expired card is dimmed and quiet. The title and text say what happened, not a colour. */
+.msg-card[data-status="decided"],
+.msg-card[data-status="confirmed"],
+.msg-card[data-status="placed"],
+.msg-card[data-status="out"],
+.msg-card[data-status="delivered"] {
+  border-color: color-mix(in srgb, var(--fg) 24%, var(--border));
 }
 .msg-card[data-status="replaced"],
 .msg-card[data-status="expired"],
@@ -212,7 +207,7 @@
 .md-section .md-list {
   color: var(--fg-muted);
 }
-/* ---- Countdown pill: amber when short (contrast kept >= 4.5:1 on the card) ------------------ */
+/* ---- Countdown pill: brighter text and border when short (contrast kept >= 4.5:1 on the card) ---- */
 .card-expiry {
   display: inline-flex;
   align-self: flex-start;
@@ -228,9 +223,8 @@
   font-variant-numeric: tabular-nums;
 }
 .card-expiry.card-expiry-soon {
-  color: var(--amber);
-  background: var(--amber-soft);
-  border-color: color-mix(in srgb, var(--amber) 36%, transparent);
+  color: var(--fg);
+  border-color: var(--border-hover);
 }
 .card-expiry .icon {
   color: currentColor;
@@ -259,8 +253,7 @@
   border-color: color-mix(in srgb, var(--fg) 24%, var(--border));
 }
 .opt-approved {
-  border-color: color-mix(in srgb, var(--green) 50%, var(--border));
-  background: var(--green-soft);
+  border-color: color-mix(in srgb, var(--fg) 40%, var(--border));
 }
 .opt-head {
   display: flex;
@@ -379,22 +372,22 @@
   text-decoration-color: var(--fg-dim);
 }
 
-/* ---- Benefit note: green, like the designer's "free & fastest" accent ---------------------- */
+/* ---- Benefit note: a quiet neutral note on the same surface as the other inner rows -------- */
 .benefit {
   display: flex;
   align-items: flex-start;
   gap: 7px;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--green);
-  background: var(--green-soft);
-  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  font-weight: 500;
+  color: var(--fg);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
   border-radius: 8px;
   padding: 7px 10px;
 }
 .benefit .icon {
   margin-top: 1px;
-  color: currentColor;
+  color: var(--fg-muted);
 }
 
 .conditions {
@@ -461,7 +454,7 @@
   color: var(--fg);
 }
 .delivery-line .icon {
-  color: var(--cyan);
+  color: var(--fg-muted);
 }
 .delivery[data-state] .delivery-line::before,
 .delivery-line.delivery-dot::before {
@@ -472,8 +465,8 @@
   flex: none;
 }
 .delivery[data-state="out"] .delivery-line::before {
-  background: var(--green);
-  box-shadow: 0 0 0 3px var(--green-soft);
+  background: var(--fg);
+  box-shadow: 0 0 0 3px var(--primary-soft);
   animation: pulse 1.6s ease-in-out infinite;
 }
 .delivery-done {
@@ -481,18 +474,18 @@
   align-items: center;
   gap: 9px;
   font-size: 13.5px;
-  color: var(--green);
+  color: var(--fg);
 }
 .delivery-done::before {
   content: "";
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--green);
+  background: var(--fg);
   flex: none;
 }
 .delivery-done .icon {
-  color: var(--green);
+  color: var(--fg-muted);
 }
 /* Progress track while out for delivery. */
 .delivery-bar {
@@ -505,7 +498,7 @@
   display: block;
   height: 100%;
   width: 0;
-  background: var(--green);
+  background: var(--fg);
   animation-name: fill;
   animation-timing-function: linear;
   animation-fill-mode: forwards;
@@ -516,20 +509,20 @@
   }
 }
 
-/* ---- Store notice: an amber-tinted note ---------------------------------------------------- */
+/* ---- Store notice: a quiet neutral note ----------------------------------------------------- */
 .store-notice {
   display: flex;
   flex-direction: column;
   gap: 3px;
   padding: 9px 11px;
   border-radius: 8px;
-  background: var(--amber-soft);
-  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
-  color: var(--amber);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  color: var(--fg);
   font-size: 13px;
 }
 .store-notice .muted {
-  color: color-mix(in srgb, var(--amber) 72%, var(--fg-muted));
+  color: var(--fg-muted);
 }
 .store-notice-head {
   display: flex;

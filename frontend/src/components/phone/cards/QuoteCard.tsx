@@ -180,9 +180,9 @@ function OptionBlock({ quote, option: o, primary, disabled, approved, onChoose }
       <header className="opt-head">
         <h4 id={headingId}>{o.typeLabel}</h4>
         {approved ? (
-          <Badge tone="success">Confirmed</Badge>
+          <Badge tone="neutral">Confirmed</Badge>
         ) : o.isExchange && o.feeCents === 0 && o.lines.length <= 1 ? (
-          <Badge tone="success">Free</Badge>
+          <Badge tone="neutral">Free</Badge>
         ) : null}
       </header>
 
@@ -214,7 +214,7 @@ function OptionBlock({ quote, option: o, primary, disabled, approved, onChoose }
             <dd>
               {o.etaDate ? friendlyDate(o.etaDate) : o.etaText}{" "}
               {o.meetsDeadline === true && (
-                <Badge tone="success">
+                <Badge tone="neutral">
                   <Icon name="check" size={12} /> Meets your deadline
                 </Badge>
               )}
