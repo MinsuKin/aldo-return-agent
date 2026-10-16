@@ -1,6 +1,6 @@
 import aldoBot from "../../assets/aldo-bot.png";
 
-/** The personal agent's avatar: the ALDO bot mascot. Decorative; the "Personal agent" text beside it names it. */
+/** The personal agent's avatar: the mascot. Decorative; the "Personal agent" text beside it names it. */
 export function BotAvatar({ size = 40 }: { size?: number }) {
   return (
     <span className="bot-avatar" style={{ width: size, height: size }} aria-hidden="true">

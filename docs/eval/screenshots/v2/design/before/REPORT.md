@@ -1,3 +1,5 @@
+> **Old UI (light theme, before the redesign).** Kept for the before/after comparison. The current report is `../../visual/REPORT.md`. Defects 1 and 2 below are fixed (the theme is dark only, David's sub line is shown in full); defect 3 (content below the fold at 390px) is the stacked layout, which scrolls by design.
+
 # Visual inspection — deployed site static screens (v2)
 
 Source: https://d38111d70jquli.cloudfront.net (load-only; no messages sent, nothing confirmed, demo never reset).

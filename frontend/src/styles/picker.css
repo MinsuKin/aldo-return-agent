@@ -1,6 +1,6 @@
 /* ---- Avatars and the first screen (dark workspace) --------------------------------------- */
 
-/* The ALDO bot mascot image, cropped to a circle. */
+/* The mascot image, cropped to a circle. */
 .bot-avatar {
   flex: none;
   display: inline-block;

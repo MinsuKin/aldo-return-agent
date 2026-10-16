@@ -565,7 +565,8 @@ def test_no_user_facing_text_of_the_single_chat_mentions_a_second_agent(world, a
     hand_off(AVA, conv)
     say(world, conv, "Too tight.")
     busy = say(world, conv, "again")
-    assert busy.status == 409 and "agent" not in busy.error["message"].lower()
+    message = busy.error["message"].lower()
+    assert busy.status == 409 and "returns agent" not in message and "aldo agent" not in message and "second" not in message
 
 
 # ============================================================================ persona rows

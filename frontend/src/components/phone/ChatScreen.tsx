@@ -23,6 +23,7 @@ import { MemorySheet } from "./MemorySheet";
 import { MessageList } from "./MessageList";
 import { PushBanner } from "./PushBanner";
 import { QuickReplies } from "./QuickReplies";
+import { ReasonChips, isAskingForReason } from "./ReasonChips";
 
 export interface ChatCustomer {
   customerId: string;
@@ -107,6 +108,7 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
   const [sheetBusy, setSheetBusy] = useState(false);
   const [sheetError, setSheetError] = useState<ErrorInfo | null>(null);
   const [seenUpdates, setSeenUpdates] = useState(0);
+  const [typeOwnReason, setTypeOwnReason] = useState(false);
   const [followKey, setFollowKey] = useState(0);
   const bumpFollow = useCallback(() => setFollowKey((k) => k + 1), []);
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -249,6 +251,16 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
       if (ok) inputRef.current?.focus();
     });
   };
+  // While the ALDO agent waits for the reason of a return, offer the usual reasons as one-tap answers.
+  const askingReason = isAskingForReason(convo.entries);
+  useEffect(() => {
+    if (!askingReason) setTypeOwnReason(false);
+  }, [askingReason]);
+  const pickReason = (text: string) => {
+    void send(text).then((ok) => {
+      if (ok) inputRef.current?.focus();
+    });
+  };
 
   const typing = convo.busy ? (convo.activeAgent === "returns" ? "Your personal agent is working on your return" : "Your personal agent is typing") : null;
   const greeting = `Hi ${customer.name}. I'm your personal agent. I can buy shoes for you, remember your sizes, and sort out exchanges and returns. Nothing is ordered until you confirm it.`;
@@ -284,8 +296,18 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
       </header>
 
       <MessageList entries={convo.entries} greeting={greeting} typing={typing} renderCard={renderCard} followKey={followKey} />
+      {askingReason && (
+        <ReasonChips
+          disabled={convo.busy}
+          onPick={pickReason}
+          onOther={() => {
+            setTypeOwnReason(true);
+            inputRef.current?.focus();
+          }}
+        />
+      )}
       <QuickReplies replies={replies} disabled={convo.busy} onPick={pick1} />
-      <Composer inputRef={inputRef} busy={convo.busy} error={convo.sendError} onSend={send} />
+      <Composer inputRef={inputRef} busy={convo.busy} error={convo.sendError} placeholder={askingReason && typeOwnReason ? "Type your reason" : undefined} onSend={send} />
       <PushBanner note={convo.push} onDismiss={convo.dismissPush} />
 
       {sheet?.kind === "purchase" && (

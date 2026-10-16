@@ -25,19 +25,9 @@
   gap: 10px;
   min-width: 0;
 }
-.topbar-mark {
-  flex: none;
-  display: inline-grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
+/* The bot mark in the top bar is a rounded square, like an app icon. */
+.topbar-brand .bot-avatar {
   border-radius: 8px;
-  background: var(--brand);
-  color: var(--brand-ink);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
-}
-.topbar-mark svg {
-  display: block;
 }
 .topbar-name {
   font-size: 14.5px;
@@ -157,11 +147,26 @@
   }
   .phone-col {
     padding: 20px 24px;
+    max-width: 100%;
+    min-width: 0;
   }
   .trace-col {
     width: 100%;
     max-width: 780px;
     height: min(78vh, 720px);
     min-height: 480px;
+  }
+}
+
+/* Very narrow (small phones): trim the panel padding so the scaled phone + frame fit with no page
+   scroll. useFitScale sizes the phone from the stage inner width, so the panel must not add width
+   the viewport cannot hold. */
+@media (max-width: 460px) {
+  .stage {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .phone-col {
+    padding: 16px 12px;
   }
 }

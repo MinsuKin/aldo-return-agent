@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ADMIN_SECRET, IS_MOCK, MOCK_URL, latestSizeRequestId, mockPost, onMock, resetDemo, signInAs } from "./helpers";
+import { ADMIN_SECRET, IS_MOCK, MOCK_URL, latestSizeRequestId, mockPost, onMock, resetDemo, shot, signInAs } from "./helpers";
 
 // Functional specs for the phone UI: one chat with the personal agent on a phone (left) and the live A2A trace (right).
 // They run against the mock API by default (scripted John and David as in addendum 11.2) and, with
@@ -149,12 +149,18 @@ test.describe("John (Silver): the stage demo", () => {
     await page.getByTestId("quick-john-2").click();
     await expect(page.getByTestId("workflow-pill")).toContainText("Return");
     await expect(page.getByTestId("bubble-bot").last()).toContainText("reason");
+    // While the ALDO agent waits for the reason, the usual reasons are one tap away; the owner can still type their own.
+    const reasons = page.getByTestId("reason-chips");
+    await expect(reasons).toBeVisible();
+    await expect(reasons.getByRole("button")).toHaveText(["Changed my mind", "Damaged or defective", "Size too big", "Size too small", "Wrong colour", "Something else"]);
+    await expect(reasons.getByTestId("reason-unworn")).toBeChecked();
     await expect(traceEvent(page, "handoff_to_returns").first()).toContainText("Personal agent hands over to the ALDO agent");
     await expect(traceEvent(page, "memory_consulted").first()).toContainText("Using your preferences");
     await expect(traceEvent(page, "memory_consulted").first().getByTestId("actor-chip")).toHaveText("ALDO agent");
 
     await page.getByTestId("quick-john-3").click();
     await expect(page.getByTestId("bubble-bot").last()).toContainText("Brown");
+    await expect(page.getByTestId("reason-chips")).toHaveCount(0);
     await expect(traceEvent(page, "memory_consulted")).toHaveCount(1);
     await page.getByTestId("quick-john-4").click();
     // The bubble is model text on a real deployment ("5 minutes away") and scripted on the mock ("5 min away").
@@ -199,7 +205,7 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(txn.getByTestId("txn-id")).toHaveText(/^DEMO-RMA-[0-9A-F]{6}$/);
     await expect(txn.getByTestId("store-notice")).toContainText("ALDO Store Desk notified");
     await expect(txn.getByTestId("store-notice")).toContainText("5 min away");
-    await expect(page.getByTestId("bubble-bot").last()).toContainText(/store.*notified|notified.*store/is);
+    await expect(page.getByTestId("bubble-bot").last()).toContainText(/store.*notified|notified.*store|(told|informed|alerted|let).{0,30}store/is);
     await expect(page.getByTestId("workflow-pill")).toContainText("Purchase");
     // The return workflow's public milestones sit in the trace next to the A2A events.
     await expect(trace(page).getByText("Policy decision: eligible")).toBeVisible();
@@ -230,6 +236,60 @@ test.describe("John (Silver): the stage demo", () => {
       await expect(page.getByTestId("txn-next-step")).toContainText("Pick up brown 9.5 at ALDO Demo Store Montreal today");
     });
     await expectNaming(page);
+  });
+});
+
+test.describe("return reasons as one-tap answers", () => {
+  /** Buy and receive the Men 001, ask to return it, and wait until the personal agent has asked for the reason. */
+  async function askToReturn(page: Page, request: Parameters<typeof resetDemo>[0]): Promise<void> {
+    await resetDemo(request, "default");
+    await signInAs(page, "John");
+    await expect(page.getByTestId("reason-chips")).toHaveCount(0);
+    await page.getByTestId("quick-john-1").click();
+    await expect(page.getByTestId("purchase-card")).toHaveAttribute("data-status", "proposed");
+    await page.getByTestId("confirm-purchase-open").click();
+    await page.getByTestId("confirm-purchase").click();
+    await expect(page.getByTestId("push-banner")).toContainText("Delivered", { timeout: 25_000 });
+    await page.getByTestId("quick-john-2").click();
+    await expect(page.getByTestId("bubble-bot").last()).toContainText("reason");
+    await expect(page.getByTestId("reason-chips")).toBeVisible();
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+  }
+
+  test("'Something else' leaves the box to the owner; a tap sends that reason with the wear answer", async ({ page, request }) => {
+    test.setTimeout(300_000);
+    await askToReturn(page, request);
+    const reasons = page.getByTestId("reason-chips");
+    await shot(page, "john-reason-chips");
+
+    // "Something else": no message is sent, the message box gets the focus and says what to type.
+    await reasons.getByTestId("reason-other").click();
+    await expect(page.getByTestId("chat-input")).toBeFocused();
+    await expect(page.getByTestId("chat-input")).toHaveAttribute("placeholder", "Type your reason");
+    await expect(page.getByTestId("bubble-user")).toHaveCount(2); // the purchase request and "I want to return these."
+
+    // A tap sends that reason (with "they're unworn", the answer the ALDO agent would ask for) and the chips go away.
+    await reasons.getByTestId("reason-changed-mind").click();
+    await expect(page.getByTestId("bubble-user").last()).toContainText("I changed my mind, and they're unworn.");
+    await expect(page.getByTestId("typing")).toHaveCount(0, { timeout: 90_000 });
+    await expect(page.getByTestId("send-error")).toHaveCount(0);
+    await expect(page.getByTestId("reason-chips")).toHaveCount(0);
+    await expect(page.getByTestId("chat-input")).toHaveAttribute("placeholder", "Message your personal agent");
+    // The real bot answers a reason that includes the wear answer with the return options straight away.
+    if (!IS_MOCK) await expect(page.getByTestId("quote-card")).toBeVisible({ timeout: 90_000 });
+    else await expect(page.getByTestId("bubble-bot").last()).not.toHaveText("");
+  });
+
+  test("with the toggle off the wear answer is left out; the size chips carry the direction", async ({ page, request }) => {
+    test.skip(!IS_MOCK, "the line is checked on the mock; the real bot's answer to it is covered by the test above");
+    test.setTimeout(120_000);
+    await askToReturn(page, request);
+    const reasons = page.getByTestId("reason-chips");
+    await reasons.getByTestId("reason-unworn").uncheck();
+    await expect(reasons.getByTestId("reason-unworn")).not.toBeChecked();
+    await reasons.getByTestId("reason-size-too-small").click();
+    await expect(page.getByTestId("bubble-user").last()).toHaveText(/The size is too small\.$/);
+    await expect(page.getByTestId("bubble-user").last()).not.toContainText("unworn");
   });
 });
 
@@ -290,7 +350,13 @@ test.describe("David (Platinum): the bundle return", () => {
     // A deployment asks for the reason of the second return (the stage script gives none); the phone offers it as the next chip (F5).
     if (!IS_MOCK) await page.getByTestId("quick-david-3b").click();
     const second = page.getByTestId("quote-card").last();
-    await expect(second).toContainText("Your options");
+    await expect(second)
+      .toContainText("Your options")
+      .catch(async (err: Error) => {
+        // Model text decides this step on a deployment: say what the bot answered instead of only "not found".
+        const said = await page.getByTestId("bubble-bot").evaluateAll((els) => els.slice(-3).map((e) => (e as HTMLElement).innerText.replace(/\s+/g, " ").slice(0, 400)));
+        throw new Error(`${err.message}\nthe last bot messages were:\n${said.map((s, i) => `  [${i}] ${s}`).join("\n")}`);
+      });
     await expect(page.getByTestId("typing")).toHaveCount(0);
     await expect(second.getByTestId("benefit-note")).toHaveCount(0);
     await expect(second.getByTestId("option-fee")).toContainText("CAD 5.95");

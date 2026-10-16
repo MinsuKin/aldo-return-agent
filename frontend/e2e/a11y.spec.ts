@@ -82,7 +82,13 @@ test.describe("a11y: axe scan of the phone screens", () => {
     await axeSoft(page, "John: delivered push banner");
     await shot(page, "a11y-john-3-delivered");
 
-    for (const n of [2, 3, 4, 5]) await page.getByTestId(`quick-john-${n}`).click();
+    await page.getByTestId("quick-john-2").click();
+    // While the ALDO agent waits for the reason, the usual reasons are one tap away (the owner's polish note).
+    await expect(page.getByTestId("reason-chips")).toBeVisible();
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+    await axeSoft(page, "John: reason chips after 'I want to return these'");
+    await shot(page, "a11y-john-3b-reasons");
+    for (const n of [3, 4, 5]) await page.getByTestId(`quick-john-${n}`).click();
     const quote = page.getByTestId("quote-card");
     await expect(quote).toBeVisible();
     await expect(page.getByTestId("typing")).toHaveCount(0);
@@ -131,6 +137,15 @@ test.describe("a11y: axe scan of the phone screens", () => {
     await expect(page.getByTestId("txn-card").first()).toContainText("Return label created");
     await axeSoft(page, "David: bundle confirmed card and trace");
     await shot(page, "a11y-david-2-confirmed");
+  });
+});
+
+test.describe("a11y: operator panel", () => {
+  test("admin mode: regression customers and the demo controls", async ({ page }) => {
+    await page.goto("/?admin=1");
+    await expect(page.getByTestId("admin-panel")).toBeVisible();
+    await axeSoft(page, "Admin mode: regression customers and demo controls");
+    await shot(page, "a11y-admin-picker");
   });
 });
 

@@ -51,7 +51,7 @@
   gap: 9px;
 }
 
-/* Round ALDO bot avatar with a hairline ring so it holds its edge on the dark header. */
+/* Round personal agent avatar with a hairline ring so it holds its edge on the dark header. */
 .chat-header .bot-avatar {
   box-shadow: 0 0 0 1px var(--border-soft);
 }
@@ -268,10 +268,92 @@
   overflow: hidden;
 }
 
+/* ---- Reason chips: one-tap answers while the ALDO agent waits for the reason of a return ---- */
+.reasons {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 12px 4px;
+  background: var(--bg-elev);
+  border-top: 1px solid var(--border-soft);
+  animation: fadeUp 0.25s ease both;
+}
+.reasons-hint {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.reasons-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+/* The wear answer the ALDO agent would ask for anyway; on by default, one tap to turn it off. */
+.reasons-unworn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  font-size: 12px;
+  color: var(--fg-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.reasons-unworn input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+.reasons-unworn input:disabled {
+  cursor: not-allowed;
+}
+.reasons-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.reason-chip {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.reason-chip:hover:not(:disabled) {
+  background: var(--surface-3);
+  border-color: var(--fg-dim);
+}
+.reason-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+/* "Something else": a quieter, dashed pill that hands the message box to the owner. */
+.reason-other {
+  background: transparent;
+  border-style: dashed;
+  color: var(--fg-muted);
+}
+.reasons + .quick {
+  border-top: 0;
+  padding-top: 4px;
+}
+
 /* ---- Composer: pill input + round white send button ---- */
 .composer-wrap {
   flex: none;
-  padding: 10px 12px 14px;
+  /* The bottom padding keeps the message box clear of the iPhone home indicator (a 5px bar 8px above the edge). */
+  padding: 10px 12px 26px;
   background: var(--bg-elev);
   border-top: 1px solid var(--border-soft);
   display: flex;
