@@ -118,8 +118,12 @@ export function describeEvent(type: string, p: Obj): Described {
     case "fit_signal_shared": {
       const sig = isObj(p.fit_signal) ? p.fit_signal : p;
       const signal = str(sig.signal);
+      // A fit signal from the AWS data platform names its source and the Athena query behind it.
+      const viaPlatform = str(p.data_source) === "aws-athena";
+      const queryId = Array.isArray(p.query_execution_ids) ? p.query_execution_ids.find((q): q is string => typeof q === "string") : undefined;
       return plain("signal", `Fit signal shared: ${signal ? signal.replace(/_/g, " ") : "signal"}`, fitHeadline(sig)?.replace(/^[^:]+: /, ""), {
         provenance: credibleProvenance(provenanceKinds(sig.provenance, p.provenance, "derived")),
+        chips: viaPlatform ? [{ label: "Source", value: "S3 + Athena" }, ...(queryId ? [{ label: "Query", value: queryId.slice(0, 8) }] : [])] : [],
       });
     }
     case "size_requested": {

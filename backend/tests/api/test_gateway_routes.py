@@ -96,6 +96,8 @@ NOT_SESSION_ROUTES = PUBLIC_ROUTES | {
     ("POST", "/gateway/size-decision"),
     ("POST", "/gateway/reviews"),
     ("POST", "/demo/reset"),
+    ("GET", "/demo/data-platform"),
+    ("POST", "/demo/data-platform"),
     ("POST", "/personal-agent/memory-updates"),
 }
 SESSION_ROUTE_TABLE = sorted(
@@ -222,8 +224,8 @@ def test_reviews_never_take_the_customer_from_the_body(client, gateway):
 
 
 def test_reviews_accept_a_product_query_body_too(client, gateway):
-    reply = client.post("/api/gateway/reviews", {"product_query": "ALDO Men 001"}, token=delegated_token())
-    assert reply.status == 200 and gateway.calls[0][1][1] == {"product_query": "ALDO Men 001"}
+    reply = client.post("/api/gateway/reviews", {"product_query": "Toney"}, token=delegated_token())
+    assert reply.status == 200 and gateway.calls[0][1][1] == {"product_query": "Toney"}
 
 
 def test_a_crashing_gateway_does_not_leak_internals(client, gateway):

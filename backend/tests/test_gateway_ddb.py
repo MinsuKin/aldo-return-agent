@@ -1043,7 +1043,7 @@ MEN_BLACK_095 = "DEMO-SKU-MEN001-BLACK-095"
 
 
 def john_assist(**overrides: Any) -> gateway.SizeAssistResponse:
-    return assist(JOHN, style=MEN, product_query="ALDO Men 001", color="black", size_system="US_M", **overrides)
+    return assist(JOHN, style=MEN, product_query="Toney", color="black", size_system="US_M", **overrides)
 
 
 def test_johns_alias_finds_the_mens_style_with_the_real_fit_signal_and_his_stores(seeded):

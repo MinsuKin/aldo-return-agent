@@ -110,12 +110,12 @@ def test_a_conversation_is_visible_to_its_owner_only(world):
 
 def test_a_bot_mode_message_starts_a_bot_run_and_says_so(world, enqueued):
     conv = start_chat(world)
-    reply = say(world, conv, "Please buy the ALDO Men 001 for me.")
+    reply = say(world, conv, "Please buy the Toney for me.")
     assert reply.status == 202
     assert reply.json["agent"] == "personal" and reply.json["mode"] == "bot" and reply.json["conv_id"] == conv
     assert reply.json["run_id"].startswith("PRUN-")
     assert [p["agent"] for p in enqueued] == ["personal"]
-    assert enqueued[0]["message"] == "Please buy the ALDO Men 001 for me." and "memory_context" not in enqueued[0]
+    assert enqueued[0]["message"] == "Please buy the Toney for me." and "memory_context" not in enqueued[0]
 
 
 # ============================================================================ returns mode routing

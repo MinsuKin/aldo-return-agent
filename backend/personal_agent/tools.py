@@ -139,7 +139,7 @@ class PersonalRunContext:
     handed_off: bool = False  # the conversation was switched to the return flow in this run
     handoff_order_id: str | None = None  # ... for this order (None when the bot named none)
     handoff_context: dict[str, Any] | None = None
-    #: The numbered lines (``1. Lededanten, black derby, size 10.0``) of a handed-off order with several items.
+    #: The numbered lines (``1. Drayson, black derby, size 10.0``) of a handed-off order with several items.
     handoff_items: list[str] = field(default_factory=list)
     _terms: PrivateTerms | None = field(default=None, repr=False)
 
@@ -535,7 +535,7 @@ def _handoff_data(order_id: str | None, order: Mapping[str, Any] | None) -> dict
 
 
 def _item_line(index: int, line: Mapping[str, Any]) -> str:
-    """``1. Lededanten, black derby, size 10.0`` (name, lower-case colour, category if any, size)."""
+    """``1. Drayson, black derby, size 10.0`` (name, lower-case colour, category if any, size)."""
     name = _text(line.get("product_name"), 60) or "item"
     descriptor = " ".join(
         part

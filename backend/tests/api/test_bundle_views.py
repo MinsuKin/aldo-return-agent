@@ -33,7 +33,7 @@ def test_a_bundle_quote_reaches_the_client_with_its_lines_the_perk_and_its_conve
     option = next(o for o in quote["options"] if o["type"] == "return_mail")
     assert (option["refund_total_cents"], option["net_refund_cents"], option["fee_cents"], option["qty"]) == (41997, 41997, 0, 3)
     assert option["benefit"] == PERK_OCTOBER
-    assert [(line["product_name"], line["category"]) for line in option["lines"]] == [("Aahliyah", "boot"), ("Alanie", "sneaker"), ("Valegyn", "loafer")]
+    assert [(line["product_name"], line["category"]) for line in option["lines"]] == [("Brando", "boot"), ("Oscar", "sneaker"), ("Patten", "loafer")]
     assert option["payload_hash"] and option["decision"] == "eligible"
     # the route adds nothing and drops nothing: it is the domain's own view
     assert quote == json.loads(json.dumps(store.json_safe(quotes.get_quote(DAVID, hq.quote_id))))

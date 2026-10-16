@@ -12,8 +12,8 @@ export interface QuickReply {
 export const JOHN_LINES: QuickReply[] = [
   {
     id: "john-1",
-    title: "Buy the Men 001 in my size",
-    text: "I was at the ALDO store and loved the black leather shoes, the ALDO Men 001, but they didn't have my size. Please buy them for me in my size.",
+    title: "Buy the Toney in my size",
+    text: "I was at the ALDO store and loved the black Toney boots, but they didn't have my size. Please buy them for me in my size.",
   },
   { id: "john-2", title: "Return these", text: "I want to return these." },
   { id: "john-3", title: "Colour does not fit my outfit", text: "The colour doesn't go with my outfit, and they're unworn." },

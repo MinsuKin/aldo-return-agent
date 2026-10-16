@@ -27,7 +27,7 @@ export const PERSONAS: MockPersona[] = [
     customer_id: "DEMO-CUST-JOHN",
     display_name: "John",
     home_region: "QC",
-    description: "Silver member in downtown Montreal: buys the Men 001, exchanges the colour in store",
+    description: "Silver member in downtown Montreal: buys the Toney, exchanges the colour in store",
     tier: "silver",
     tier_label: "Silver member",
     location_label: "Downtown Montreal",
@@ -150,15 +150,15 @@ export interface DavidItem {
 export const DAVID_ORDER_ID = "DEMO-3001";
 export const DAVID_ITEMS: DavidItem[] = [
   { n: 1, name: "Harriot", kind: "oxford", color: "BLACK", size: "10.0", cents: 12999 },
-  { n: 2, name: "Goer", kind: "boot", color: "TAN", size: "10.0", cents: 18999 },
+  { n: 2, name: "Brando", kind: "boot", color: "TAN", size: "10.0", cents: 18999 },
   { n: 3, name: "Lagoon", kind: "sneaker", color: "GREY", size: "9.5", cents: 9999 },
   { n: 4, name: "Cherflex", kind: "derby", color: "BROWN", size: "10.0", cents: 14999 },
-  { n: 5, name: "Verity", kind: "sneaker", color: "WHITE", size: "10.0", cents: 10999 },
+  { n: 5, name: "Oscar", kind: "sneaker", color: "WHITE", size: "10.0", cents: 10999 },
   { n: 6, name: "Dorenna", kind: "chelsea boot", color: "BLACK", size: "10.5", cents: 21999 },
   { n: 7, name: "Nevada", kind: "slip-on", color: "BLACK", size: "9.5", cents: 8999 },
-  { n: 8, name: "Uneral", kind: "loafer", color: "NAVY", size: "10.0", cents: 12999 },
-  { n: 9, name: "Belide", kind: "monk strap", color: "BROWN", size: "10.0", cents: 15999 },
-  { n: 10, name: "Tanerdee", kind: "trainer", color: "GREEN", size: "10.5", cents: 11999 },
+  { n: 8, name: "Patten", kind: "loafer", color: "NAVY", size: "10.0", cents: 12999 },
+  { n: 9, name: "Belide", kind: "dress shoe", color: "BROWN", size: "10.0", cents: 15999 },
+  { n: 10, name: "Sosa", kind: "trainer", color: "GREEN", size: "10.5", cents: 11999 },
 ];
 export const davidToken = (n: number): string => `D3001L${n}`;
 
@@ -251,23 +251,23 @@ export const FIT: Record<string, { signal: string; too_small: number; too_big: n
   Verity: { signal: "mixed", too_small: 131, too_big: 91 },
   Dorenna: { signal: "runs_large", too_small: 139, too_big: 312 },
   Jellyicious: { signal: "insufficient_data", too_small: 7, too_big: 19 },
-  "ALDO Men 001": { signal: "runs_large", too_small: 10, too_big: 108 },
+  "Toney": { signal: "runs_large", too_small: 10, too_big: 108 },
   Nevada: { signal: "runs_small", too_small: 169, too_big: 48 },
   Uneral: { signal: "runs_large", too_small: 56, too_big: 148 },
   Belide: { signal: "runs_large", too_small: 42, too_big: 159 },
-  Tanerdee: { signal: "runs_large", too_small: 65, too_big: 130 },
+  Sosa: { signal: "runs_large", too_small: 65, too_big: 130 },
 };
 
 /**
- * The men's style of the John script (addendum 11.3). The product is named "ALDO Men 001" (the fit numbers
+ * The men's style of the John script (addendum 11.3). The product is named "Toney" (the fit numbers
  * behind it are the real OMS return counts of a men's style, see fixtures/demo/README.md); the UI shows
  * whatever name the server sends.
  */
 export const MEN001 = {
-  product: "ALDO Men 001",
+  product: "Toney",
   token: "MEN001",
   style: "DEMO-STYLE-MEN001",
-  aliases: ["Men 001"],
+  aliases: ["Men 001", "ALDO Men 001", "ALDO Toney"],
   colors: ["BLACK", "BROWN", "TAN"],
   priceCents: 14999,
 };

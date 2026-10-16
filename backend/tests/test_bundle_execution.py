@@ -386,7 +386,7 @@ def test_a_bundle_sends_one_small_write_back_update(bundles):
     assert (update["outcome"], update["provisional"], update["reason"], update["order_id"]) == ("return_created", True, "PREFERENCE", ORDER)
     assert "fit_feedback" not in update and "original_size" not in update and "new_size" not in update
     assert [(i["product_name"], i["color"], i["size"], i["reason"]) for i in update["items"]] == [
-        ("Aahliyah", "TAN", "10.5", "PREFERENCE"), ("Alanie", "WHITE", "10.0", "PREFERENCE"), ("Valegyn", "NAVY", "10.0", "PREFERENCE")]
+        ("Brando", "TAN", "10.5", "PREFERENCE"), ("Oscar", "WHITE", "10.0", "PREFERENCE"), ("Patten", "NAVY", "10.0", "PREFERENCE")]
     assert all(set(i) == {"style_id", "product_name", "color", "size", "reason"} for i in update["items"])
     assert len(json.dumps(update)) < 1000  # small
     assert update["update_id"] == store.derived_id("MU-", result.transaction_id, "return_created", n=6)
@@ -418,7 +418,7 @@ def test_the_write_back_reason_comes_from_the_policy_checks(bundles):
 def test_the_bundle_update_builder_validates_its_input():
     with pytest.raises(DomainError):
         memory_updates.build_bundle_update(customer_id=DAVID, order_id=ORDER, transaction_id="DEMO-RET-AAAAAA", items=[])
-    item = {"style_id": "DEMO-STYLE-NEW02", "product_name": "Aahliyah", "color": "TAN", "size": "10.5", "reason": "PREFERENCE"}
+    item = {"style_id": "DEMO-STYLE-NEW02", "product_name": "Brando", "color": "TAN", "size": "10.5", "reason": "PREFERENCE"}
     with pytest.raises(DomainError):
         memory_updates.build_bundle_update(customer_id=DAVID, order_id=ORDER, transaction_id="DEMO-RET-AAAAAA", items=[item] * 11)
     with pytest.raises(DomainError):

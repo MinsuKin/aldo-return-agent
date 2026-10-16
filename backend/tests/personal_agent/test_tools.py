@@ -335,11 +335,11 @@ def test_sanitize_public_rationale_never_raises() -> None:
 
 def test_clean_orders_keeps_the_category_when_present() -> None:
     raw = [{"order_id": "DEMO-X-1", "channel": "web", "ordered_at": "2026-10-01", "delivered_at": "2026-10-02",
-            "lines": [{"product_name": "Lededanten", "color": "BLACK", "category": "derby", "size": "10.0", "qty": 1}]}]
+            "lines": [{"product_name": "Drayson", "color": "BLACK", "category": "derby", "size": "10.0", "qty": 1}]}]
     cleaned = tools.clean_orders(raw)
     assert cleaned is not None
     line = cleaned[0]["lines"][0]
-    assert line == {"product_name": "Lededanten", "color": "BLACK", "size": "10.0", "qty": 1, "category": "derby"}
+    assert line == {"product_name": "Drayson", "color": "BLACK", "size": "10.0", "qty": 1, "category": "derby"}
 
 
 def test_clean_orders_omits_the_category_when_absent_or_blank() -> None:

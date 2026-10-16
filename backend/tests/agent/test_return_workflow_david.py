@@ -54,7 +54,7 @@ def test_the_numbered_list_follows_the_line_ids_not_the_text_order(domain: FakeD
     assert [l["number"] for l in lines] == list(range(1, 11))
     second = lines[1]
     assert (second["product_name"], second["color"], second["category"], second["size"]) == (
-        "Aahliyah", "TAN", "boot", "10.5",
+        "Brando", "TAN", "boot", "10.5",
     )
     assert second["unit_paid_text"] == "CAD 179.99"
 
@@ -118,7 +118,7 @@ def test_colour_narrows_a_shared_category_and_plurals_match(order_lines: list[di
 
 
 def test_the_product_name_resolves_when_the_owner_uses_it(order_lines: list[dict[str, Any]]) -> None:
-    assert names(line_match.resolve(order_lines, ["Aahliyah", "the Valegyn"])) == [("matched", "L2"), ("matched", "L8")]
+    assert names(line_match.resolve(order_lines, ["Brando", "the Patten"])) == [("matched", "L2"), ("matched", "L8")]
 
 
 def test_a_number_means_the_position_in_the_list(order_lines: list[dict[str, Any]]) -> None:
@@ -134,7 +134,7 @@ def test_unknown_words_and_wrong_colours_match_nothing(order_lines: list[dict[st
 
 
 def test_the_same_line_named_twice_is_a_duplicate_not_two_lines(order_lines: list[dict[str, Any]]) -> None:
-    result = line_match.resolve(order_lines, ["tan boot", "the Aahliyah"])
+    result = line_match.resolve(order_lines, ["tan boot", "the Brando"])
     assert [m["status"] for m in result["matches"]] == ["matched", "duplicate"]
     assert result["selected_line_ids"] == [f"{BUNDLE_ORDER}-L2"] and result["complete"] is False
 
@@ -209,10 +209,10 @@ def test_the_bundle_option_carries_lines_one_fee_totals_and_the_perk(david: dict
         "type": "free_return_shipping", "label": "Platinum free return shipping", "saved_cents": 595, "used": 1,
         "allowed": 1, "period": "2026-10", "saved_text": "CAD 5.95",
     }
-    assert [l["product_name"] for l in option["lines"]] == ["Aahliyah", "Alanie", "Valegyn"]
+    assert [l["product_name"] for l in option["lines"]] == ["Brando", "Oscar", "Patten"]
     first = option["lines"][0]
     assert first == {
-        "line_id": f"{BUNDLE_ORDER}-L2", "product_name": "Aahliyah", "color": "TAN", "category": "boot",
+        "line_id": f"{BUNDLE_ORDER}-L2", "product_name": "Brando", "color": "TAN", "category": "boot",
         "size": "10.5", "refund_cents": 17999, "refund_text": "CAD 179.99", "unit_paid_cents": 17999,
         "unit_paid_text": "CAD 179.99",
     }  # no sku and no policy check id for the model
@@ -254,7 +254,7 @@ def test_a_second_bundle_tells_the_model_the_monthly_perk_is_used(domain: FakeDo
         "type": "free_return_shipping", "label": "Platinum free return shipping", "status": "used_this_month",
         "used": 1, "allowed": 1, "period": "2026-10",
     }
-    assert option["refund_total_text"] == "CAD 99.99" and [l["product_name"] for l in option["lines"]] == ["Oneameth"]
+    assert option["refund_total_text"] == "CAD 99.99" and [l["product_name"] for l in option["lines"]] == ["Finespec"]
 
 
 def test_member_perk_is_absent_when_the_option_has_the_benefit_or_the_ledger_has_room_or_cannot_be_read(
@@ -304,7 +304,7 @@ def test_the_quote_carries_the_bundle_fee_total_and_perk_with_the_owners_path_fi
     result = david["create_quote"](candidate_set_id=CAND, option_ids=["OPT-2", "OPT-1"], preferred_channel="return")
     assert result["ok"] and result["data"]["option_ids"] == ["OPT-1", "OPT-2"]  # ranking order, refunds all there
     bundle = result["data"]["bundle"]
-    assert [l["product_name"] for l in bundle["lines"]] == ["Aahliyah", "Alanie", "Valegyn"]
+    assert [l["product_name"] for l in bundle["lines"]] == ["Brando", "Oscar", "Patten"]
     mail = next(o for o in bundle["options"] if o["type"] == "return_mail")
     assert mail["fee_text"] == "CAD 0.00" and mail["refund_total_text"] == "CAD 419.97"
     assert mail["net_refund_text"] == "CAD 419.97" and mail["benefit"]["saved_text"] == "CAD 5.95"
@@ -352,7 +352,7 @@ def test_the_agent_escalates_a_review_bundle_through_the_case_tool_and_grants_no
     find_bundle(david)
     case = david["escalate_case"](
         reason_code="POLICY_REVIEW", order_id=BUNDLE_ORDER, line_id=None,
-        summary="Bundle of 3 items (Aahliyah, Alanie, Valegyn), total CAD 419.97, above the CAD 250.00 limit.",
+        summary="Bundle of 3 items (Brando, Oscar, Patten), total CAD 419.97, above the CAD 250.00 limit.",
     )
     assert case["ok"] and case["data"]["case_id"].startswith("DEMO-CASE-")
     assert domain.calls_to("FakeQuotes", "create_quote") == []  # escalating creates no quote
@@ -373,7 +373,7 @@ def test_the_bundle_execution_reports_the_fee_refund_and_perk_from_the_record(
     assert status["state"] == "completed" and status["option_type"] == "return_mail"
     assert status["fee_text"] == "CAD 0.00" and status["refund_total_text"] == "CAD 419.97"
     assert status["net_refund_text"] == "CAD 419.97" and status["benefit"]["label"] == "Platinum free return shipping"
-    assert [l["product_name"] for l in status["lines"]] == ["Aahliyah", "Alanie", "Valegyn"]
+    assert [l["product_name"] for l in status["lines"]] == ["Brando", "Oscar", "Patten"]
     assert all("sku" not in l and "policy_check_id" not in l for l in status["lines"])
     assert "Mail the 3 items" in status["next_step"] and status.get("store_notice") is None
 

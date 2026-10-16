@@ -274,16 +274,16 @@ def _line(order_id: str, size: str, *, final_sale: bool = False, unit: int = 129
 BUNDLE_ORDER = "DEMO-3001"
 #: number -> (product, colour, category, size, price in cents)
 BUNDLE_LINES: dict[int, tuple[str, str, str, str, int]] = {
-    1: ("Lededanten", "BLACK", "derby", "10.0", 15999),
-    2: ("Aahliyah", "TAN", "boot", "10.5", 17999),
-    3: ("Joselie", "BROWN", "oxford", "10.0", 16999),
-    4: ("Tanerdee", "BLACK", "chelsea boot", "11.0", 19999),
-    5: ("Alanie", "WHITE", "sneaker", "10.0", 10999),
-    6: ("Mazey", "BROWN", "boat shoe", "9.5", 13999),
-    7: ("Caraelia", "BLACK", "monk strap", "10.5", 18999),
-    8: ("Valegyn", "NAVY", "loafer", "10.0", 12999),
-    9: ("Krishelle", "BROWN", "brogue", "11.0", 14999),
-    10: ("Oneameth", "GREY", "sneaker", "10.5", 9999),
+    1: ("Drayson", "BLACK", "derby", "10.0", 15999),
+    2: ("Brando", "TAN", "boot", "10.5", 17999),
+    3: ("Meekes", "BROWN", "oxford", "10.0", 16999),
+    4: ("Sosa", "BLACK", "chelsea boot", "11.0", 19999),
+    5: ("Oscar", "WHITE", "sneaker", "10.0", 10999),
+    6: ("Stark", "BROWN", "slip-on", "9.5", 13999),
+    7: ("Montcourt", "BLACK", "dress shoe", "10.5", 18999),
+    8: ("Patten", "NAVY", "loafer", "10.0", 12999),
+    9: ("Drymos", "BROWN", "casual lace-up", "11.0", 14999),
+    10: ("Finespec", "GREY", "sneaker", "10.5", 9999),
 }
 BUNDLE_SCRIPT = (2, 5, 8)  # the tan boot, the white sneaker, the navy loafer: 17999 + 10999 + 12999 = 41997
 

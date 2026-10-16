@@ -62,6 +62,8 @@ EXTRA_FIELDS = {
     "size_confirmed": {"size", "location_name", "eta_date", "price_cents", "approved_by"},
     "transaction_created": {"original_size", "new_size", "location_id", "fee_cents"},
     "memory_updated": {"fit_feedback"},  # domain v2: "size_ok" on a PREFERENCE (colour) exchange
+    # data platform (docs/data-platform/DESIGN.md): only a curated document names its source and the Athena queries
+    "fit_signal_shared": {"data_source", "query_execution_ids"},
 }
 #: domain v2 event types (addendum 11.4): no customer ids, no review text
 V2_FIELDS = {
@@ -100,6 +102,8 @@ SAMPLE_VALUES = {
     "benefit": "free_return_shipping", "tier_label": "Platinum member", "saved_cents": 595, "used": 1, "per_month": 1,
     "period": "2026-10", "delivered_at": "2026-10-16",
     "type": "free_return_shipping", "label": "Platinum free return shipping",
+    # data platform: where a curated fit signal came from
+    "data_source": "aws-athena", "query_execution_ids": ["q-1", "q-2"],
 }
 #: keys that must never reach the stream, whatever the caller passes
 PRIVATE_FIELDS = {

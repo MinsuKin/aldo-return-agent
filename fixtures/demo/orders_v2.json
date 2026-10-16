@@ -14,7 +14,7 @@
         {
           "line_id": "DEMO-3001-L1",
           "sku": "DEMO-SKU-NEW01-BLACK-100",
-          "product_name": "Lededanten",
+          "product_name": "Drayson",
           "style": "DEMO-STYLE-NEW01",
           "size": "10.0",
           "color": "BLACK",
@@ -28,7 +28,7 @@
         {
           "line_id": "DEMO-3001-L2",
           "sku": "DEMO-SKU-NEW02-TAN-105",
-          "product_name": "Aahliyah",
+          "product_name": "Brando",
           "style": "DEMO-STYLE-NEW02",
           "size": "10.5",
           "color": "TAN",
@@ -42,7 +42,7 @@
         {
           "line_id": "DEMO-3001-L3",
           "sku": "DEMO-SKU-NEW03-BROWN-100",
-          "product_name": "Joselie",
+          "product_name": "Meekes",
           "style": "DEMO-STYLE-NEW03",
           "size": "10.0",
           "color": "BROWN",
@@ -56,7 +56,7 @@
         {
           "line_id": "DEMO-3001-L4",
           "sku": "DEMO-SKU-NEW04-BLACK-110",
-          "product_name": "Tanerdee",
+          "product_name": "Sosa",
           "style": "DEMO-STYLE-NEW04",
           "size": "11.0",
           "color": "BLACK",
@@ -70,7 +70,7 @@
         {
           "line_id": "DEMO-3001-L5",
           "sku": "DEMO-SKU-NEW05-WHITE-100",
-          "product_name": "Alanie",
+          "product_name": "Oscar",
           "style": "DEMO-STYLE-NEW05",
           "size": "10.0",
           "color": "WHITE",
@@ -84,7 +84,7 @@
         {
           "line_id": "DEMO-3001-L6",
           "sku": "DEMO-SKU-NEW06-BROWN-095",
-          "product_name": "Mazey",
+          "product_name": "Stark",
           "style": "DEMO-STYLE-NEW06",
           "size": "9.5",
           "color": "BROWN",
@@ -92,13 +92,13 @@
           "returned_or_reserved_qty": 0,
           "unit_paid_cents": 13999,
           "final_sale": false,
-          "category": "boat shoe",
+          "category": "slip-on",
           "source": "synthetic"
         },
         {
           "line_id": "DEMO-3001-L7",
           "sku": "DEMO-SKU-NEW07-BLACK-105",
-          "product_name": "Caraelia",
+          "product_name": "Montcourt",
           "style": "DEMO-STYLE-NEW07",
           "size": "10.5",
           "color": "BLACK",
@@ -106,13 +106,13 @@
           "returned_or_reserved_qty": 0,
           "unit_paid_cents": 18999,
           "final_sale": false,
-          "category": "monk strap",
+          "category": "dress shoe",
           "source": "synthetic"
         },
         {
           "line_id": "DEMO-3001-L8",
           "sku": "DEMO-SKU-NEW08-NAVY-100",
-          "product_name": "Valegyn",
+          "product_name": "Patten",
           "style": "DEMO-STYLE-NEW08",
           "size": "10.0",
           "color": "NAVY",
@@ -126,7 +126,7 @@
         {
           "line_id": "DEMO-3001-L9",
           "sku": "DEMO-SKU-NEW09-BROWN-110",
-          "product_name": "Krishelle",
+          "product_name": "Drymos",
           "style": "DEMO-STYLE-NEW09",
           "size": "11.0",
           "color": "BROWN",
@@ -134,13 +134,13 @@
           "returned_or_reserved_qty": 0,
           "unit_paid_cents": 14999,
           "final_sale": false,
-          "category": "brogue",
+          "category": "casual lace-up",
           "source": "synthetic"
         },
         {
           "line_id": "DEMO-3001-L10",
           "sku": "DEMO-SKU-NEW10-GREY-105",
-          "product_name": "Oneameth",
+          "product_name": "Finespec",
           "style": "DEMO-STYLE-NEW10",
           "size": "10.5",
           "color": "GREY",

@@ -20,7 +20,7 @@ JOHN_CONTEXT: dict[str, Any] = {
     "typical_size": "10.0",
     "preferred_colors": ["BROWN", "WHITE"],
     "aldo_items": [
-        {"order_id": "DEMO-A2A-AB12CD", "product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5",
+        {"order_id": "DEMO-A2A-AB12CD", "product_name": "Toney", "color": "BLACK", "size": "9.5",
          "status": "delivered"}
     ],
     "source": "ALDO bot memory",
@@ -36,7 +36,7 @@ def test_a_valid_context_is_rendered_from_its_fields() -> None:
     assert text.startswith("OWNER CONTEXT (from ALDO bot memory)")
     assert "Usual size: 10.0 (US men's sizing)" in text
     assert "Colours the owner usually keeps, most often first: BROWN, WHITE" in text
-    assert "ALDO item on file: ALDO Men 001, BLACK, size 9.5, delivered (order DEMO-A2A-AB12CD)" in text
+    assert "ALDO item on file: Toney, BLACK, size 9.5, delivered (order DEMO-A2A-AB12CD)" in text
 
 
 def test_the_rendered_text_is_rebuilt_never_copied_from_the_payload() -> None:
@@ -72,7 +72,7 @@ def test_values_that_do_not_match_their_pattern_are_dropped_one_by_one() -> None
             "typical_size": "ten",
             "preferred_colors": ["BROWN", "br0wn!", 7, None, "WHITE", "white"],
             "aldo_items": [
-                {"order_id": "DEMO-A2A-AB12CD", "product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5",
+                {"order_id": "DEMO-A2A-AB12CD", "product_name": "Toney", "color": "BLACK", "size": "9.5",
                  "status": "delivered"},
                 {"order_id": "bad id", "product_name": "x", "color": "BLACK", "size": "9.5", "status": "delivered"},
                 {"order_id": "DEMO-2", "product_name": "Ok", "color": "BLACK", "size": "nine", "status": "delivered"},
@@ -84,7 +84,7 @@ def test_values_that_do_not_match_their_pattern_are_dropped_one_by_one() -> None
     assert clean == {
         "preferred_colors": ["BROWN", "WHITE"],
         "aldo_items": [
-            {"order_id": "DEMO-A2A-AB12CD", "product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5",
+            {"order_id": "DEMO-A2A-AB12CD", "product_name": "Toney", "color": "BLACK", "size": "9.5",
              "status": "delivered"}
         ],
     }

@@ -24,7 +24,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from . import config
+from . import config, data_source
 from .errors import DomainError, ErrorCode
 
 MIN_N = 30
@@ -94,6 +94,7 @@ def get_fit_insight(
         headline = primary if primary is not None else _scope_view(SCOPE_ALDO_CA, None)
 
     source = data.get("source")
+    origin = data_source.source_info(data)
     return {
         "product_name": name,
         "found": isinstance(entry, Mapping),
@@ -112,6 +113,8 @@ def get_fit_insight(
             if isinstance(source, Mapping)
             else {}
         ),
+        # Only a curated (platform) document says where it came from; the bundled file keeps today's exact output.
+        **({} if origin["data_source"] == data_source.SOURCE_BUNDLED else {"data_source": origin["data_source"], "query_execution_ids": origin["query_execution_ids"]}),
     }
 
 
@@ -221,7 +224,18 @@ def clear_cache() -> None:
 
 
 def load_insights(path: Path | str | None = None) -> dict[str, Any]:
-    """Parsed derived file, cached until the file changes. Raises INTERNAL_ERROR if unusable."""
+    """Parsed derived file, cached until the file changes. Raises INTERNAL_ERROR if unusable.
+
+    Without a path the data-platform door decides (``data_source``): the bundled file (the default), the curated document
+    from S3, or the bundled file while the curated one is compared in the background (shadow). Any platform problem
+    falls back to the bundled file, so this is never worse than before.
+    """
+    if path is None:
+        return data_source.resolve_insights(_load_bundled)
+    return _load_bundled(path)
+
+
+def _load_bundled(path: Path | str | None = None) -> dict[str, Any]:
     target = config.get_settings().fit_insights_path if path is None else Path(path)
     try:
         stat = target.stat()

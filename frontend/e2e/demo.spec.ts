@@ -72,7 +72,7 @@ test.describe("first screen and layout", () => {
 });
 
 test.describe("John (Silver): the stage demo", () => {
-  test("buy the Men 001, confirm, delivery push, then a colour exchange in store", async ({ page, request }) => {
+  test("buy the Toney, confirm, delivery push, then a colour exchange in store", async ({ page, request }) => {
     await resetDemo(request, "default");
     await signInAs(page, "John");
     await expect(page.getByTestId("chat-sub")).toContainText("Silver member");
@@ -81,7 +81,7 @@ test.describe("John (Silver): the stage demo", () => {
 
     // ---- Act 1: ALDO bot proposes, nothing is ordered before the click -----------------------------
     await page.getByTestId("quick-john-1").click();
-    await expect(page.getByTestId("bubble-user").last()).toContainText("ALDO Men 001");
+    await expect(page.getByTestId("bubble-user").last()).toContainText("Toney");
     const card = page.getByTestId("purchase-card");
     await expect(card).toHaveAttribute("data-status", "proposed");
     await expect(page.getByTestId("typing")).toHaveCount(0);
@@ -90,8 +90,13 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(card.getByTestId("purchase-facts")).toContainText(/CAD \d+\.\d\d/);
     await expect(card).toContainText("derived from provided ALDO data");
     await expect(card.getByTestId("purchase-countdown")).toBeVisible();
+    // The real ALDO photo of the Toney in black is on the card and it loaded. A missing file would be answered with the app's own page
+    // (HTTP 200, not an image), so look at the decoded pixels, not at the status.
+    await expect
+      .poll(() => card.locator("img").first().evaluate((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0))
+      .toBe(true);
     await onMock(async () => {
-      await expect(card).toContainText("ALDO Men 001");
+      await expect(card).toContainText("Toney");
       await expect(card).toContainText("9.5");
       await expect(card).toContainText("CAD 149.99");
       await expect(card).toContainText("Runs large: 91.5% of fit-related returns were too big (n=118)");
@@ -139,7 +144,7 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(page.getByTestId("order-id")).toHaveText(/^DEMO-A2A-[0-9A-F]{6}$/);
     await expect(page.getByTestId("delivery-status")).toHaveAttribute("data-state", "out");
     const push = page.getByTestId("push-banner");
-    await expect(push).toContainText("Delivered: ALDO Men 001, size 9.5", { timeout: 20_000 });
+    await expect(push).toContainText("Delivered: Toney, size 9.5", { timeout: 20_000 });
     await expect(page.getByTestId("delivery-status")).toHaveAttribute("data-state", "delivered");
     await expect(page.getByTestId("bubble-bot").last()).toContainText("was delivered");
     await expect(traceEvent(page, "size_confirmed").first()).toContainText("Confirmed by the owner");
@@ -240,7 +245,7 @@ test.describe("John (Silver): the stage demo", () => {
 });
 
 test.describe("return reasons as one-tap answers", () => {
-  /** Buy and receive the Men 001, ask to return it, and wait until ALDO bot has asked for the reason. */
+  /** Buy and receive the Toney, ask to return it, and wait until ALDO bot has asked for the reason. */
   async function askToReturn(page: Page, request: Parameters<typeof resetDemo>[0]): Promise<void> {
     await resetDemo(request, "default");
     await signInAs(page, "John");
@@ -314,6 +319,15 @@ test.describe("David (Platinum): the bundle return", () => {
     await expect(quote).toContainText("Your return bundle");
     const primary = quote.getByTestId("primary-option");
     await expect(primary.getByTestId("bundle-items").locator("li")).toHaveCount(3);
+    // Each of the three rows shows its real ALDO photo, decoded (a missing file would come back as the app's own page, not an image).
+    await expect
+      .poll(() =>
+        primary
+          .getByTestId("bundle-items")
+          .locator("img")
+          .evaluateAll((imgs) => imgs.length === 3 && imgs.every((el) => (el as HTMLImageElement).complete && (el as HTMLImageElement).naturalWidth > 0)),
+      )
+      .toBe(true);
     await expect(primary).toContainText("Return by mail");
     await expect(primary.getByTestId("benefit-note")).toContainText("Platinum perk 1 of 1 this month");
     await expect(primary.getByTestId("option-fee")).toContainText("CAD 0.00");
@@ -323,9 +337,9 @@ test.describe("David (Platinum): the bundle return", () => {
     await expect(primary.getByTestId("option-refund")).toHaveText(IS_MOCK ? "CAD 429.97" : "CAD 419.97");
     await expect(quote.getByTestId("confirm-option-open")).toHaveText("Confirm bundle return");
     await onMock(async () => {
-      await expect(primary).toContainText("Goer boot");
-      await expect(primary).toContainText("Verity sneaker");
-      await expect(primary).toContainText("Uneral loafer");
+      await expect(primary).toContainText("Brando boot");
+      await expect(primary).toContainText("Oscar sneaker");
+      await expect(primary).toContainText("Patten loafer");
       await expect(page.getByTestId("bubble-bot").last()).toContainText("no ALDO store within reach");
     });
 

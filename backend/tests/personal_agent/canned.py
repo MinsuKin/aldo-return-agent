@@ -71,7 +71,7 @@ def load_assist(variant: str = "default") -> dict[str, Any]:
 
 
 def men001_answer() -> dict[str, Any]:
-    """John's men's style (demo plan 11.2): the REAL gateway's answer for ``ALDO Men 001`` in black.
+    """John's men's style (demo plan 11.2): the REAL gateway's answer for ``Toney`` in black.
 
     ``size_assist_men001.json`` was produced by ``returns_domain.gateway.size_assist`` on the demo
     fixtures (default variant, John, no deadline): the fit signal derived from the real returns

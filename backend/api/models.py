@@ -31,6 +31,12 @@ class ResetBody(_SessionBody):
     variant: Variant = "default"
 
 
+class DataPlatformBody(_SessionBody):
+    """Admin: which source the fit insights come from (see docs/data-platform/DESIGN.md)."""
+
+    mode: Literal["static", "platform", "shadow"]
+
+
 class ConversationBody(_SessionBody):
     order_id: str | None = Field(default=None, min_length=1, max_length=128)
 

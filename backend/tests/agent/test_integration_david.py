@@ -160,7 +160,7 @@ def test_davids_whole_dialogue_ends_in_one_transaction_with_three_lines_fee_zero
     assert found["availability"]["reason_no_exchange"] == "BUNDLE_RETURN_ONLY"
     assert option["fee_cents"] == 0 and option["refund_total_cents"] == 41997 and option["refund_total_text"] == "CAD 419.97"
     assert option["benefit"]["saved_text"] == "CAD 5.95" and option["benefit"]["used"] == 1
-    assert [l["product_name"] for l in option["lines"]] == ["Aahliyah", "Alanie", "Valegyn"]
+    assert [l["product_name"] for l in option["lines"]] == ["Brando", "Oscar", "Patten"]
     assert found["ranking"]["reason"].startswith("No store is within reach, so returning 3 items by mail is free")
 
     quote = quote_of(run_2)

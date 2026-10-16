@@ -12,7 +12,7 @@
   "chat.modelDefaults": {
     "claude-sonnet-5.5": {
       "output_config": {
-        "effort": "max"
+        "effort": "high"
       }
     }
   }

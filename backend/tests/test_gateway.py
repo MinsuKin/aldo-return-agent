@@ -424,7 +424,7 @@ def test_size_assist_reports_unknown_style_before_touching_stock():
     assert exc.value.http_status == 422
 
 
-# ================================================ product aliases (demo v2: "ALDO Men 001")
+# ================================================ product aliases (demo v2: "Toney")
 
 MEN = "DEMO-STYLE-MEN001"
 
@@ -432,7 +432,7 @@ MEN = "DEMO-STYLE-MEN001"
 def test_the_mens_style_is_found_by_what_the_owner_says_in_any_case():
     name = product_name_of(MEN)
     assert name  # whichever of the display name and its aliases the fixtures use, all of them find it
-    for query in ("ALDO Men 001", "aldo men 001", "ALDO MEN 001", "  Men   001  ", "men 001"):
+    for query in ("Toney", "aldo men 001", "ALDO MEN 001", "  Men   001  ", "men 001"):
         assert gateway.resolve_style(query, "black") == (name, MEN, "BLACK"), query
         assert gateway.resolve_style(query, "Brown")[2] == "BROWN"
 
@@ -443,7 +443,7 @@ def test_a_unique_part_of_an_alias_finds_the_product():
 
 def test_an_alias_without_a_color_lists_the_colors_of_the_style():
     with pytest.raises(gateway.GatewayError) as exc:
-        gateway.resolve_style("ALDO Men 001")
+        gateway.resolve_style("Toney")
     candidates = exc.value.to_dict()["candidates"]
     assert candidates == [{"style_id": MEN, "product_name": product_name_of(MEN), "colors": ["BLACK", "BROWN", "TAN"]}]
 
@@ -593,7 +593,7 @@ def test_a_flagged_review_is_never_dropped_by_the_limit():
 def test_reviews_request_needs_exactly_one_selector_and_a_sane_limit():
     ok = gateway.ReviewsRequest.model_validate({"style_id": MEN})
     assert (ok.style_id, ok.product_query, ok.limit) == (MEN, None, 12)
-    assert gateway.ReviewsRequest.model_validate({"product_query": "ALDO Men 001", "limit": 20}).limit == 20
+    assert gateway.ReviewsRequest.model_validate({"product_query": "Toney", "limit": 20}).limit == 20
     assert gateway.ReviewsRequest.model_validate({"style_id": MEN, "limit": 1}).limit == 1
     assert gateway.ReviewsRequest.model_validate({"style_id": "  ", "product_query": "men"}).style_id is None
     for bad in (
@@ -644,7 +644,7 @@ def test_the_default_limit_is_twelve_and_the_injection_is_still_there(shared):
 
 def test_a_product_query_or_alias_finds_the_same_reviews(shared):
     by_id = gateway.get_reviews(claims(), {"style_id": MEN, "limit": 20})
-    for query in ("ALDO Men 001", "aldo men 001", product_name_of(MEN)):
+    for query in ("Toney", "aldo men 001", product_name_of(MEN)):
         assert gateway.get_reviews(claims(), {"product_query": query, "limit": 20}) == by_id, query
 
 
@@ -1155,7 +1155,7 @@ def test_the_agent_card_calls_the_agent_alado_bot_and_never_shows_a_second_agent
 
 def test_the_agent_card_says_aliases_are_matched():
     skills = {s["id"]: s for s in gateway.agent_card("https://example.com")["skills"]}
-    assert "alias" in skills["size_assist"]["description"] and "ALDO Men 001" in skills["size_assist"]["description"]
+    assert "alias" in skills["size_assist"]["description"] and "Toney" in skills["size_assist"]["description"]
 
 
 def test_the_agent_card_is_public_data_only():

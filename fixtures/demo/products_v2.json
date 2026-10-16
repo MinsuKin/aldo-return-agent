@@ -3,358 +3,412 @@
   "products": [
     {
       "sku": "DEMO-SKU-MEN001-BLACK-080",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "8.0",
       "color": "BLACK",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BLACK-085",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "8.5",
       "color": "BLACK",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BLACK-090",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "9.0",
       "color": "BLACK",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BLACK-095",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "9.5",
       "color": "BLACK",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BLACK-100",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "10.0",
       "color": "BLACK",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BLACK-105",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "10.5",
       "color": "BLACK",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BLACK-110",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "11.0",
       "color": "BLACK",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BLACK-115",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "11.5",
       "color": "BLACK",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BLACK-120",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "12.0",
       "color": "BLACK",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BROWN-080",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "8.0",
       "color": "BROWN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BROWN-085",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "8.5",
       "color": "BROWN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BROWN-090",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "9.0",
       "color": "BROWN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BROWN-095",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "9.5",
       "color": "BROWN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BROWN-100",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "10.0",
       "color": "BROWN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BROWN-105",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "10.5",
       "color": "BROWN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BROWN-110",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "11.0",
       "color": "BROWN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BROWN-115",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "11.5",
       "color": "BROWN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-BROWN-120",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "12.0",
       "color": "BROWN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-TAN-080",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "8.0",
       "color": "TAN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-TAN-085",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "8.5",
       "color": "TAN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-TAN-090",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "9.0",
       "color": "TAN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-TAN-095",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "9.5",
       "color": "TAN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-TAN-100",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "10.0",
       "color": "TAN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-TAN-105",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "10.5",
       "color": "TAN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-TAN-110",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "11.0",
       "color": "TAN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-TAN-115",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "11.5",
       "color": "TAN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-MEN001-TAN-120",
-      "product_name": "ALDO Men 001",
+      "product_name": "Toney",
       "style": "DEMO-STYLE-MEN001",
       "size": "12.0",
       "color": "TAN",
       "price_cents": 14999,
       "currency": "CAD",
       "aliases": [
-        "Men 001"
+        "Men 001",
+        "ALDO Men 001",
+        "ALDO Toney"
       ],
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-NEW01-BLACK-100",
-      "product_name": "Lededanten",
+      "product_name": "Drayson",
       "style": "DEMO-STYLE-NEW01",
       "size": "10.0",
       "color": "BLACK",
@@ -365,7 +419,7 @@
     },
     {
       "sku": "DEMO-SKU-NEW02-TAN-105",
-      "product_name": "Aahliyah",
+      "product_name": "Brando",
       "style": "DEMO-STYLE-NEW02",
       "size": "10.5",
       "color": "TAN",
@@ -376,7 +430,7 @@
     },
     {
       "sku": "DEMO-SKU-NEW03-BROWN-100",
-      "product_name": "Joselie",
+      "product_name": "Meekes",
       "style": "DEMO-STYLE-NEW03",
       "size": "10.0",
       "color": "BROWN",
@@ -387,7 +441,7 @@
     },
     {
       "sku": "DEMO-SKU-NEW04-BLACK-110",
-      "product_name": "Tanerdee",
+      "product_name": "Sosa",
       "style": "DEMO-STYLE-NEW04",
       "size": "11.0",
       "color": "BLACK",
@@ -398,7 +452,7 @@
     },
     {
       "sku": "DEMO-SKU-NEW05-WHITE-100",
-      "product_name": "Alanie",
+      "product_name": "Oscar",
       "style": "DEMO-STYLE-NEW05",
       "size": "10.0",
       "color": "WHITE",
@@ -409,29 +463,29 @@
     },
     {
       "sku": "DEMO-SKU-NEW06-BROWN-095",
-      "product_name": "Mazey",
+      "product_name": "Stark",
       "style": "DEMO-STYLE-NEW06",
       "size": "9.5",
       "color": "BROWN",
       "price_cents": 13999,
       "currency": "CAD",
-      "category": "boat shoe",
+      "category": "slip-on",
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-NEW07-BLACK-105",
-      "product_name": "Caraelia",
+      "product_name": "Montcourt",
       "style": "DEMO-STYLE-NEW07",
       "size": "10.5",
       "color": "BLACK",
       "price_cents": 18999,
       "currency": "CAD",
-      "category": "monk strap",
+      "category": "dress shoe",
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-NEW08-NAVY-100",
-      "product_name": "Valegyn",
+      "product_name": "Patten",
       "style": "DEMO-STYLE-NEW08",
       "size": "10.0",
       "color": "NAVY",
@@ -442,18 +496,18 @@
     },
     {
       "sku": "DEMO-SKU-NEW09-BROWN-110",
-      "product_name": "Krishelle",
+      "product_name": "Drymos",
       "style": "DEMO-STYLE-NEW09",
       "size": "11.0",
       "color": "BROWN",
       "price_cents": 14999,
       "currency": "CAD",
-      "category": "brogue",
+      "category": "casual lace-up",
       "source": "synthetic"
     },
     {
       "sku": "DEMO-SKU-NEW10-GREY-105",
-      "product_name": "Oneameth",
+      "product_name": "Finespec",
       "style": "DEMO-STYLE-NEW10",
       "size": "10.5",
       "color": "GREY",

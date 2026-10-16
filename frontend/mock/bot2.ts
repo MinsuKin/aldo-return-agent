@@ -29,7 +29,7 @@ import {
 
 const RETURN_RE = /\b(return|returning|returned|exchange|swap|refund|send (?:it|them|these) back|money back)\b|too (?:small|big|tight|large|loose)|doesn.t fit|half size|\btight\b/;
 const BUY_RE = /\b(buy|order|get me|purchase|need|want)\b/;
-const MEN001_RE = /men ?001|black leather shoes?/;
+const MEN001_RE = /men ?001|black leather shoes?|toney/;
 const STESSY_RE = /stessy|heel/;
 
 const startRun = (s: Script, p: TurnParams, kind = "personal"): void => {
@@ -96,7 +96,7 @@ function handoffTurn(p: TurnParams): Turn {
   return { script: s, kind: "customer", agent: "personal" };
 }
 
-// ---- Buying the Men 001 -----------------------------------------------------------------------------
+// ---- Buying the Toney -----------------------------------------------------------------------------
 
 function offeredFor(me: MockPersona, color: string): OfferedOption[] {
   const dc = dcOf();
@@ -187,7 +187,7 @@ function men001Purchase(p: TurnParams): Script {
   toolStep(
     s,
     "ask_aldo_size_assist",
-    { product_query: "Men 001", color, channel_pref: "ship" },
+    { product_query: "Toney", color, channel_pref: "ship" },
     {
       latency: 340,
       evidence: { size_request_id: requestId, signal: fitSignal.signal, too_small_share: share, n_fit: n, offered_sizes: sizesView.map((x) => x.size).join(", ") },
@@ -197,7 +197,7 @@ function men001Purchase(p: TurnParams): Script {
     {
       round: round++,
       actor: BOT,
-      onCall: () => pushA2a(p.customerId, "size_assist_requested", BOT, { product_query: "Men 001", color, deadline_date: null, channel_pref: "ship" }),
+      onCall: () => pushA2a(p.customerId, "size_assist_requested", BOT, { product_query: "Toney", color, deadline_date: null, channel_pref: "ship" }),
       onResult: () => {
         const created = now();
         state.sizeRequests.set(requestId, {
@@ -221,7 +221,14 @@ function men001Purchase(p: TurnParams): Script {
           created_at: iso(created),
           expiresAtMs: created + QUOTE_TTL_MS,
         });
-        pushA2a(p.customerId, "fit_signal_shared", "aldo_gateway", { size_request_id: requestId, style_id: MEN001.style, product_name: MEN001.product, ...fitSignal });
+        pushA2a(p.customerId, "fit_signal_shared", "aldo_gateway", {
+          size_request_id: requestId,
+          style_id: MEN001.style,
+          product_name: MEN001.product,
+          ...fitSignal,
+          // The AWS data platform door (docs/data-platform/DESIGN.md): only the curated source names itself.
+          ...(state.dataMode === "platform" ? { data_source: "aws-athena", query_execution_ids: ["mock-query-1", "mock-query-2"] } : {}),
+        });
         pushA2a(p.customerId, "size_requested", "aldo_gateway", {
           size_request_id: requestId,
           sizes: sizesView,
@@ -264,7 +271,7 @@ function men001Purchase(p: TurnParams): Script {
 
   if (!choice) {
     s.emit(500, "decision", { summary: "ALDO has no stock of this style in any size, so I will not propose a purchase." }, undefined, BOT);
-    say(s, BOT, "ALDO has no stock of the Men 001 in black right now, so I have nothing to propose. I can check again later.");
+    say(s, BOT, "ALDO has no stock of the Toney in black right now, so I have nothing to propose. I can check again later.");
     finishRun(s, { rounds: round, tools, actor: "system" });
     return s;
   }
@@ -316,7 +323,7 @@ function men001Purchase(p: TurnParams): Script {
   say(
     s,
     BOT,
-    `Here's my proposal for the ${MEN001.product}, ALDO's Men 001, in black. Your usual size is ${typical.toFixed(1)}${bigOne ? `, but the ${bigOne.size} ${bigOne.item} you returned elsewhere ran big` : ""}. ALDO's return data says this style runs large (${bigPct} of fit-related returns say too big, n=${n}), and the reviews agree, so I'd go half a size down to ${choice.size}.${flagged ? ` I skipped ${flagged === 1 ? "one review that tried" : `${flagged} reviews that tried`} to give me instructions.` : ""} ${how}. I haven't ordered anything yet. Please check the card below and confirm.`,
+    `Here's my proposal for the ${MEN001.product} in black. Your usual size is ${typical.toFixed(1)}${bigOne ? `, but the ${bigOne.size} ${bigOne.item} you returned elsewhere ran big` : ""}. ALDO's return data says this style runs large (${bigPct} of fit-related returns say too big, n=${n}), and the reviews agree, so I'd go half a size down to ${choice.size}.${flagged ? ` I skipped ${flagged === 1 ? "one review that tried" : `${flagged} reviews that tried`} to give me instructions.` : ""} ${how}. I haven't ordered anything yet. Please check the card below and confirm.`,
     600,
   );
   finishRun(s, { rounds: round, tools, actor: "system" });
@@ -347,6 +354,6 @@ export function buildBotTurn(p: TurnParams): Turn {
       ? "Tell me what to buy. In this demo I can shop the ALDO Stessy2.0 heels, for example: Order me the ALDO Stessy heels for the wedding Saturday."
       : who === "david"
         ? "I can help with an exchange or a return, or buy shoes for you. What would you like?"
-        : "I can buy shoes for you, like the ALDO Men 001, or help with an exchange or a return. What would you like?",
+        : "I can buy shoes for you, like the Toney, or help with an exchange or a return. What would you like?",
   );
 }

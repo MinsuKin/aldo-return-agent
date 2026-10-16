@@ -6,7 +6,7 @@ ping-pong. It travels in the return run's payload as ``memory_context`` (the Age
 no access to the personal-agent table) and is at most ``MAX_CONTEXT_BYTES`` of JSON::
 
     {"size_system": "US_M", "typical_size": "10.0", "preferred_colors": ["BROWN", "WHITE"],
-     "aldo_items": [{"order_id": "DEMO-A2A-AB12CD", "product_name": "ALDO Men 001", "color": "BLACK",
+     "aldo_items": [{"order_id": "DEMO-A2A-AB12CD", "product_name": "Toney", "color": "BLACK",
                      "size": "9.5", "status": "delivered"}],
      "source": "ALDO bot memory"}
 

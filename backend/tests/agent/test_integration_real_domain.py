@@ -326,7 +326,7 @@ def test_dc_stockout_still_leads_with_store_pickup(flow: Flow, scripted, gateway
 
 # ------------------------------------------------------------ return workflow v2: John (S19)
 #
-# John (Silver, Downtown Montreal) returns ALDO Men 001, Black 9.5, delivered five days before DEMO_NOW, because the
+# John (Silver, Downtown Montreal) returns Toney, Black 9.5, delivered five days before DEMO_NOW, because the
 # colour does not go with his outfit. Each owner message is its own run on the same conversation, as in the app.
 
 JOHN = "DEMO-CUST-JOHN"
@@ -336,7 +336,7 @@ JOHN_MEMORY = {"size_system": "US_M", "typical_size": "10.0", "preferred_colors"
 
 V2_CUSTOMERS = Path(__file__).resolve().parents[3] / "fixtures" / "demo" / "customers_v2.json"
 needs_v2_fixtures = pytest.mark.skipif(
-    not V2_CUSTOMERS.exists(), reason="fixtures v2 (John, ALDO Men 001) are not in the working tree"
+    not V2_CUSTOMERS.exists(), reason="fixtures v2 (John, Toney) are not in the working tree"
 )
 
 

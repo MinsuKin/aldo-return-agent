@@ -183,7 +183,7 @@ def test_a_us_m_owner_sends_us_m_and_the_gateway_now_serves_it(both: MemoryRepo)
 
 
 JOHN = "DEMO-CUST-JOHN"
-JOHN_MESSAGE = "I loved the ALDO Men 001 in black but the store did not have my size. Please buy them for me."
+JOHN_MESSAGE = "I loved the Toney in black but the store did not have my size. Please buy them for me."
 
 
 def test_johns_whole_purchase_against_the_real_gateway(both: MemoryRepo, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -234,7 +234,7 @@ def test_the_canned_mens_answer_is_still_what_the_real_gateway_says(both: Memory
     token = auth.sign_token(JOHN, scope="delegated_gateway", actor="personal_agent")
     real = gateway.size_assist(
         auth.verify_claims(token.token, "delegated_gateway"),
-        {"intent": "size_assist", "product_query": "ALDO Men 001", "color": "BLACK", "size_system": "US_M", "deadline_date": None, "channel_pref": None},
+        {"intent": "size_assist", "product_query": "Toney", "color": "BLACK", "size_system": "US_M", "deadline_date": None, "channel_pref": None},
     ).model_dump(mode="json")
     canned = load_assist("men001")
     for key in ("style_id", "product_name", "color", "price_cents", "currency", "fit_signal", "sizes", "question"):

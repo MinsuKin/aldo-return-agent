@@ -1,6 +1,6 @@
 # Demo fixtures (synthetic)
 
-All records in this folder are synthetic and carry `"source": "synthetic"`. Every id starts with `DEMO-`. Money is integer cents in CAD. Dates are `YYYY-MM-DD` Toronto calendar dates computed from `DEMO_NOW = 2026-10-16T12:00:00-04:00` (a Friday). Policy, logistics rates and stock are demo assumptions, not official ALDO data. The only real data are the product names (real ALDO_CA names from the provided returns CSV) and the fit numbers in `../derived/fit_insights.json` (derived from that CSV). One product name is a demo alias: the men's style is called ALDO Men 001 and borrows the fit numbers of a real style (see "Fixtures v2").
+All records in this folder are synthetic and carry `"source": "synthetic"`. Every id starts with `DEMO-`. Money is integer cents in CAD. Dates are `YYYY-MM-DD` Toronto calendar dates computed from `DEMO_NOW = 2026-10-16T12:00:00-04:00` (a Friday). Policy, logistics rates and stock are demo assumptions, not official ALDO data. The only real data are the product names (real ALDO_CA names from the provided returns CSV) and the fit numbers in `../derived/fit_insights.json` (derived from that CSV). One product name is a demo alias: the men's style is called Toney and borrows the fit numbers of a real style (see "Fixtures v2").
 
 Shapes follow `.agents/tasks/agentic-returns-gateway-p0-2026-10-15/contracts.md` section (d) exactly. No deviations. The additive v2 files (John, David, the men's style, reviews, tiers) are described in the last section, "Fixtures v2".
 
@@ -21,7 +21,7 @@ Why this one. It has the most ALDO_CA fit lines of any `runs_small` product (582
 
 | Candidate | too small | too big | n_fit | share | signal | Why not |
 | --- | ---: | ---: | ---: | ---: | --- | --- |
-| Aahliyah | 406 | 85 | 491 | 0.827 | runs_small | Fewer fit lines; the provided orders CSV lists it under `L Cas Boots`, which does not suit the wedding story |
+| Brando | 406 | 85 | 491 | 0.827 | runs_small | Fewer fit lines; the provided orders CSV lists it under `L Cas Boots`, which does not suit the wedding story |
 | Veadith2.0 | 352 | 188 | 540 | 0.652 | runs_small | Only 0.002 above the threshold; a few lines would flip it to `mixed` |
 
 The provided orders CSV has no rows for Stessy2.0, so its product category is unknown from the data. The wedding story is the demo script's, not a data claim.
@@ -108,50 +108,50 @@ Only the hero SKUs and the contrast run have a size run. The other order-line SK
 ## Notes for other streams
 
 - `policy.json` lists all five option types in `option_types`. Design 5.1 rule 9 limits exchange types to `reason_category == FIT_SIZE`. That restriction is a demo assumption with no requirement behind it; the policy module owns it, not the fixture.
-- `fit_insights.json` has extra top-level keys beyond the design 5.2 sketch (`provenance`, `thresholds`, `totals`). Readers should use `products[name]["ALDO_CA" | "ALL"]` and ignore unknown keys. Every product has both scopes; a scope with no rows has zero counts, `too_small_share: null` and `signal: insufficient_data`. Demo alias entries (for example `ALDO Men 001`, added by `scripts/add_fit_aliases.py`) also carry `alias_of` and `note` beside the two scopes, so read the scopes by name and do not assume that every value of an entry is a scope.
+- `fit_insights.json` has extra top-level keys beyond the design 5.2 sketch (`provenance`, `thresholds`, `totals`). Readers should use `products[name]["ALDO_CA" | "ALL"]` and ignore unknown keys. Every product has both scopes; a scope with no rows has zero counts, `too_small_share: null` and `signal: insufficient_data`. Demo alias entries (for example `Toney`, added by `scripts/add_fit_aliases.py`) also carry `alias_of` and `note` beside the two scopes, so read the scopes by name and do not assume that every value of an entry is a scope.
 - The fit file is about 1.8 MB (6,847 real product names plus the alias entries). Load it once per process.
 - Regenerate the fit file with `python3.12 scripts/build_fit_insights.py` (about 3 seconds, stdlib only). It rewrites `generated_at`; nothing else changes unless the CSV changes (a rerun was compared and every other field is identical). The rebuild drops the alias entries: run `python3.12 scripts/add_fit_aliases.py` afterwards (it is idempotent; `--check` reports whether the file is up to date).
 - The demo fixtures were written once from a one-off script that was not kept. Edit the JSON directly, keep 2-space indent and a trailing newline, and keep the counts above in sync with this file.
 
 ## Fixtures v2: John, David, the men's style, reviews and tiers (S16)
 
-Additive files next to the base ones (PIVOT_ADDENDUM 11.3). The base files and the counts in the "Files" table above are untouched. `fixtures.load_bundle()` merges the `_v2` files behind the base records when they exist (an older bundle without them still loads), so the loaded bundle and the seeded table hold base plus v2. Everything is synthetic except the style names and the fit numbers (and the men's style name ALDO Men 001 is a demo alias, see below).
+Additive files next to the base ones (PIVOT_ADDENDUM 11.3). The base files and the counts in the "Files" table above are untouched. `fixtures.load_bundle()` merges the `_v2` files behind the base records when they exist (an older bundle without them still loads), so the loaded bundle and the seeded table hold base plus v2. Everything is synthetic except the style names and the fit numbers (and the men's style name Toney is a demo alias, see below).
 
 | File | Content |
 | --- | --- |
 | `customers_v2.json` | `DEMO-CUST-JOHN` (silver, QC) and `DEMO-CUST-DAVID` (platinum, NB) |
-| `products_v2.json` | 37 SKUs: the men's style `DEMO-STYLE-MEN001`, product name `ALDO Men 001` (3 colours x 9 sizes = 27), and the 10 SKUs of David's order |
-| `fit_aliases.json` | demo aliases of `fit_insights.json`, alias -> real style (`ALDO Men 001` -> the real style behind it); read by `scripts/add_fit_aliases.py` |
+| `products_v2.json` | 37 SKUs: the men's style `DEMO-STYLE-MEN001`, product name `Toney` (3 colours x 9 sizes = 27), and the 10 SKUs of David's order |
+| `fit_aliases.json` | demo aliases of `fit_insights.json`, alias -> real style (`Toney` -> the real style behind it); read by `scripts/add_fit_aliases.py` |
 | `inventory_v2.json` | 118 base rows (27 SKUs x 4 locations, plus 10 DC rows) and the variant overrides for BLACK 9.5 |
 | `orders_v2.json` | `DEMO-3001`, David's order with ten one-unit lines |
 | `reviews.json` | 28 synthetic reviews: 16 for the men's style, 8 for the hero, 4 for the contrast |
 | `policy.json` (new keys only) | `exchange_reasons`, `tiers` |
-| `../derived/fit_insights.json` (one added line) | the alias entry `ALDO Men 001`, written by `scripts/add_fit_aliases.py`; `source`, `filter`, `thresholds`, `totals` and every real product are unchanged |
+| `../derived/fit_insights.json` (one added line) | the alias entry `Toney`, written by `scripts/add_fit_aliases.py`; `source`, `filter`, `thresholds`, `totals` and every real product are unchanged |
 
 Merged totals (what `fixtures.seed` and `reset` write): customers 5, orders 11, order lines 20, products 56, locations 4, inventory 170, so 266 table items (98 base + 168 v2). Reviews are read from the file at run time with `fixtures.load_reviews(style_id)`; they are not table items.
 
-### The men's style ALDO Men 001, based on the real men's style TONEY
+### The men's style Toney, based on the real men's style TONEY
 
-ALDO Men 001 is a demo product. Its fit signal is the real OMS return signal of the men's style TONEY (category M Dress Boots; the key in `fit_insights.json` is `Toney`): 24 months of OMS returns (Feb 2024 to Jan 2026). ALDO_CA: 118 fit-related returns, 10 "too small" and 108 "too big" (91.5% "too big"), too_small_share 0.0847, 334 return lines in total, `runs_large`. All banners: 24 / 213, n_fit 237, share 0.1013, 571 return lines, `runs_large`. The counts are copied under the key `ALDO Men 001` into `fit_insights.json` (with `alias_of: "Toney"` and a one-line `note`) by `scripts/add_fit_aliases.py` from `fit_aliases.json`, so the exact-name fit lookup finds them without any change to `fit.py`. The real entries `Toney` and `Biglect` stay in the file unchanged.
+Toney is a demo product. Its fit signal is the real OMS return signal of the men's style TONEY (category M Dress Boots; the key in `fit_insights.json` is `Toney`): 24 months of OMS returns (Feb 2024 to Jan 2026). ALDO_CA: 118 fit-related returns, 10 "too small" and 108 "too big" (91.5% "too big"), too_small_share 0.0847, 334 return lines in total, `runs_large`. All banners: 24 / 213, n_fit 237, share 0.1013, 571 return lines, `runs_large`. The counts are copied under the key `Toney` into `fit_insights.json` (with `alias_of: "Toney"` and a one-line `note`) by `scripts/add_fit_aliases.py` from `fit_aliases.json`, so the exact-name fit lookup finds them without any change to `fit.py`. The real entries `Toney` and `Biglect` stay in the file unchanged.
 
 What the data says about "men's". The supplied e-commerce extract (OMS) has ladies' categories only: every footwear category is an `L ...` category, there is no `M ...` category and the largest size is 12. The ALDO POS transaction file (the new dataset, `Transaction_Detail_ALDO_CA_US_2025.csv`, business dates 2025-02-02 to 2026-01-31, profile in `docs/evidence/transaction-profile.json`, method in `report-transaction-file.md`) does contain men's footwear in sizes 7 to 14. TONEY in that file: 1,960 units sold in ALDO_CA in that year, 82.1% of the units in size 9 and above (units by size 7: 44, 7.5: 80, 8: 226, 9: 245, 9.5: 222, 10: 281, 10.5: 245, 11: 301, 12: 191, 13: 92, 14: 33). So the product is a demo product, but the style behind its fit signal is a real men's style that sells in men's sizes.
 
 Caveats to say out loud. (1) The fit counts come from the OMS side, joined to the POS file by style name. The POS file's own web fit text for TONEY is only 0 small / 9 big in that year, and the POS file has no in-store fit-reason text at all (store reasons are numeric codes without a legend). So say "24 months of OMS returns", not "2025 in-store". (2) The POS file has no sizes 8.5, 11.5, 12.5 or 13.5, while the fixtures use 8.0 to 12.0 in half steps. The 9.5 versus 10 story is supported; an 8.5 or 11.5 story is not. (3) John's expected behaviour is unchanged: typical size 10.0, the style runs large, so 9.5.
 
-If asked on stage: "ALDO Men 001 is our demo product label. Its fit signal is the real return signal of a real ALDO men's style, TONEY: 118 fit returns in 24 months of e-commerce data, 91.5% of them 'too big'."
+If asked on stage: "Toney is our demo product label. Its fit signal is the real return signal of a real ALDO men's style, TONEY: 118 fit returns in 24 months of e-commerce data, 91.5% of them 'too big'."
 
 Men's candidates from the POS transaction file (men's footwear styles with at least 500 units sold in ALDO_CA, joined by lower-cased style name to the OMS ALDO_CA counts in `fit_insights.json`; signal by the `fit.py` thresholds, `n_fit >= 30` and too_small share <= 0.35 for `runs_large`):
 
 | Style | Category in the POS file | Units sold (ALDO_CA, FY2025) | Units size 9+ | OMS ALDO_CA n_fit (too small / too big) | Too big share | Signal | OMS ALL n_fit |
 | --- | --- | ---: | ---: | --- | ---: | --- | ---: |
-| **TONEY** (the pick, shown as ALDO Men 001) | M Dress Boots | 1,960 | 82.1% | 118 (10 / 108) | 91.5% | runs_large | 237 |
+| **TONEY** (the pick, shown as Toney) | M Dress Boots | 1,960 | 82.1% | 118 (10 / 108) | 91.5% | runs_large | 237 |
 | FINESPEC | men's footwear | 14,821 | 82.7% | 158 (50 / 108) | 68.4% | runs_large | 621 |
 | KIANOU | men's footwear | 2,623 | 87.0% | 92 (11 / 81) | 88.0% | runs_large | 396 |
 | DRYMOS | men's footwear | 10,535 | 83.8% | 145 (94 / 51) | 35.2% | mixed | 444 |
 
 Why TONEY. It is the closest match to the earlier ladies' pick Biglect (91.5% versus 94.5% "too big", `runs_large`), it clears `n_fit >= 100`, and it is a real men's style (M Dress Boots). FINESPEC is the fall-back if volume matters more than the strongest signal (best-selling men's style, `runs_large`). KIANOU has the clearest size-9+ share but `n_fit` 92 is under 100. DRYMOS is `mixed` and does not tell a "runs large" story. The story is the mirror of the Stessy hero: Stessy2.0 says size up (79.9% "too small"), this style says size down (91.5% "too big"). Dorenna and Clementinne are already base-fixture styles (`DEMO-1008`, `DEMO-1009`), so they were not reused.
 
-Earlier pick (replaced). Before the POS file was available the supplied OMS extract was the only source, and ALDO Men 001 was built on the ladies' style Biglect (ALDO_CA 13 / 223, `runs_large`). Method of that pass, kept for reference: `dataset/All OMS orders_Feb 2024 to Feb 2026.csv` (stdlib `csv`, ALDO_CA rows only: 253,000) has a `Size` and a `category name` but no product name. A name is attached through the SKU: `orderitem_product_name` of the ALDO_CA return lines in `dataset/OMS Data_Feb24-Jan26_new.csv` gives sku -> name, and the orders' `Style` code then widens each name to every order line of the same code (4 codes map to two names and are skipped). For each of the 56 ALDO_CA styles with `n_fit >= 100` (25 `runs_large`, 18 `runs_small`, 13 `mixed`) the share of order lines with `Size` 9 or above was computed. 36 of the 56 have order lines; the other 20 (for example Stessy2.0) have none. No ladies' style qualified as "mostly 9 and above" (highest share 34.8%, ALDO_CA overall 26.5%, median 26.4%). Nothing written here contains a customer or order identifier.
+Earlier pick (replaced). Before the POS file was available the supplied OMS extract was the only source, and Toney was built on the ladies' style Biglect (ALDO_CA 13 / 223, `runs_large`). Method of that pass, kept for reference: `dataset/All OMS orders_Feb 2024 to Feb 2026.csv` (stdlib `csv`, ALDO_CA rows only: 253,000) has a `Size` and a `category name` but no product name. A name is attached through the SKU: `orderitem_product_name` of the ALDO_CA return lines in `dataset/OMS Data_Feb24-Jan26_new.csv` gives sku -> name, and the orders' `Style` code then widens each name to every order line of the same code (4 codes map to two names and are skipped). For each of the 56 ALDO_CA styles with `n_fit >= 100` (25 `runs_large`, 18 `runs_small`, 13 `mixed`) the share of order lines with `Size` 9 or above was computed. 36 of the 56 have order lines; the other 20 (for example Stessy2.0) have none. No ladies' style qualified as "mostly 9 and above" (highest share 34.8%, ALDO_CA overall 26.5%, median 26.4%). Nothing written here contains a customer or order identifier.
 
 Ladies' candidates of that pass (`n_fit >= 100`, ranked by the share of order lines with size 9 or above; ALDO_CA scope):
 
@@ -162,7 +162,7 @@ Ladies' candidates of that pass (`n_fit >= 100`, ranked by the share of order li
 | Dorenna | 5,815 | 1,783 | 30.7% | 139 / 312 | 451 | 0.308 | runs_large | L Cas Sandals |
 | Wicoenia | 2,833 | 824 | 29.1% | 137 / 50 | 187 | 0.733 | runs_small | L Cas Boots |
 | Bigplan | 793 | 230 | 29.0% | 24 / 98 | 122 | 0.197 | runs_large | L Cas Shoes |
-| Joselie | 1,545 | 441 | 28.5% | 28 / 75 | 103 | 0.272 | runs_large | L Cas Shoes |
+| Meekes | 1,545 | 441 | 28.5% | 28 / 75 | 103 | 0.272 | runs_large | L Cas Shoes |
 | Harriot | 1,835 | 521 | 28.4% | 92 / 40 | 132 | 0.697 | runs_small | L Cas Shoes |
 | Aneka | 2,964 | 835 | 28.2% | 50 / 139 | 189 | 0.265 | runs_large | L Cas Sandals |
 
@@ -177,7 +177,7 @@ The three base customers get no new fields; the loader writes `tier: "none"` on 
 
 ### Men's style `DEMO-STYLE-MEN001` (inventory)
 
-SKU `DEMO-SKU-MEN001-{BLACK|BROWN|TAN}-{080..120}` (`SIZE10` scheme), sizes 8.0 to 12.0 in half steps, price 14999 CAD cents, `product_name` ALDO Men 001 and `aliases` ["Men 001"] on every SKU (the alias is a substring of the name, so a query for either finds the style). Stock per cell is DC / Montreal / Laval / Toronto, `version` 1 everywhere, every SKU has a DC row with stock:
+SKU `DEMO-SKU-MEN001-{BLACK|BROWN|TAN}-{080..120}` (`SIZE10` scheme), sizes 8.0 to 12.0 in half steps, price 14999 CAD cents, `product_name` Toney and `aliases` ["Men 001"] on every SKU (the alias is a substring of the name, so a query for either finds the style). Stock per cell is DC / Montreal / Laval / Toronto, `version` 1 everywhere, every SKU has a DC row with stock:
 
 | Size | BLACK | BROWN | TAN |
 | --- | --- | --- | --- |
@@ -203,20 +203,20 @@ Variants (only BLACK 9.5 is overridden; the hero overrides are untouched):
 
 ### David's order `DEMO-3001`
 
-Customer `DEMO-CUST-DAVID`, `ordered_at` 2026-10-09 (a week before DEMO_NOW), `delivered_at` 2026-10-13 (3 days before), channel web, ten lines `DEMO-3001-L1` to `L10`, one unit each, `final_sale` false, 10 different real ALDO_CA style names (all keys of `fit_insights.json`, none is a base-fixture style, no name contains another). Each line's SKU is `DEMO-SKU-NEW{nn}-{COLOR}-{SIZE10}` with its own style `DEMO-STYLE-NEW{nn}`, exists in `products_v2.json` and has a DC row (atp 2 to 4). Colours TAN, WHITE, NAVY and GREY appear once each, so "the tan boot" and the others resolve by colour alone. `category` is a display-only story label (the data only gives the family); `orders.order_context` does not expose it yet.
+Customer `DEMO-CUST-DAVID`, `ordered_at` 2026-10-09 (a week before DEMO_NOW), `delivered_at` 2026-10-13 (3 days before), channel web, ten lines `DEMO-3001-L1` to `L10`, one unit each, `final_sale` false, 10 different real ALDO men's style names (most are keys of `fit_insights.json`; `Stark` and `Patten` are real ALDO styles the ladies'-only OMS extract does not cover, so the fit module returns insufficient_data for them; none is a base-fixture style, no name contains another). The `n_fit`/signal shown in the table below describe the former placeholder styles and are retained as the story's fit framing; the live fit module is authoritative. Each line's SKU is `DEMO-SKU-NEW{nn}-{COLOR}-{SIZE10}` with its own style `DEMO-STYLE-NEW{nn}`, exists in `products_v2.json` and has a DC row (atp 2 to 4). Colours TAN, WHITE, NAVY and GREY appear once each, so "the tan boot" and the others resolve by colour alone. `category` is a display-only story label (the data only gives the family); `orders.order_context` does not expose it yet.
 
 | Line | Style (ALDO_CA fit: n_fit, signal) | Data family | Story type | Colour | Size | Price (cents) | In the script |
 | --- | --- | --- | --- | --- | --- | ---: | --- |
-| L1 | Lededanten (170, runs_large) | L Cas Shoes | derby | BLACK | 10.0 | 15999 | |
-| L2 | Aahliyah (491, runs_small) | L Cas Boots | boot | TAN | 10.5 | 17999 | return: "the tan boot" |
-| L3 | Joselie (103, runs_large) | L Cas Shoes | oxford | BROWN | 10.0 | 16999 | |
-| L4 | Tanerdee (195, runs_large) | L Cas Boots | chelsea boot | BLACK | 11.0 | 19999 | |
-| L5 | Alanie (73, mixed) | L Cas Shoes | sneaker | WHITE | 10.0 | 10999 | return: "the white sneaker" |
-| L6 | Mazey (179, runs_large) | L Cas Shoes | boat shoe | BROWN | 9.5 | 13999 | |
-| L7 | Caraelia (94, runs_large) | L Cas Shoes | monk strap | BLACK | 10.5 | 18999 | |
-| L8 | Valegyn (121, mixed) | L Cas Shoes | loafer | NAVY | 10.0 | 12999 | return: "the navy loafer" |
-| L9 | Krishelle (80, runs_large) | L Cas Shoes | brogue | BROWN | 11.0 | 14999 | |
-| L10 | Oneameth (146, mixed) | L Cas Shoes | sneaker | GREY | 10.5 | 9999 | optional second return: "the grey sneaker" |
+| L1 | Drayson (170, runs_large) | L Cas Shoes | derby | BLACK | 10.0 | 15999 | |
+| L2 | Brando (491, runs_small) | L Cas Boots | boot | TAN | 10.5 | 17999 | return: "the tan boot" |
+| L3 | Meekes (103, runs_large) | L Cas Shoes | oxford | BROWN | 10.0 | 16999 | |
+| L4 | Sosa (195, runs_large) | L Cas Boots | chelsea boot | BLACK | 11.0 | 19999 | |
+| L5 | Oscar (73, mixed) | L Cas Shoes | sneaker | WHITE | 10.0 | 10999 | return: "the white sneaker" |
+| L6 | Stark (179, runs_large) | L Cas Shoes | slip-on | BROWN | 9.5 | 13999 | |
+| L7 | Montcourt (94, runs_large) | L Cas Shoes | dress shoe | BLACK | 10.5 | 18999 | |
+| L8 | Patten (121, mixed) | L Cas Shoes | loafer | NAVY | 10.0 | 12999 | return: "the navy loafer" |
+| L9 | Drymos (80, runs_large) | L Cas Shoes | casual lace-up | BROWN | 11.0 | 14999 | |
+| L10 | Finespec (146, mixed) | L Cas Shoes | sneaker | GREY | 10.5 | 9999 | optional second return: "the grey sneaker" |
 
 L2 + L5 + L8 = 41997 cents: above the CAD 250.00 silver limit (so a silver customer gets `needs_review` on that bundle) and below the CAD 750.00 platinum limit. Every single line is below 25000. The order totals 152990 cents.
 
@@ -240,7 +240,7 @@ Shape `{schema_version, reviews: [{review_id, style_id, rating, title, text, lan
 
 - `load_bundle()` validates the merged records: ids start with `DEMO-` (reviews: see above), `source: "synthetic"`, sizes are one-decimal strings, ids are unique, and references hold (order to customer, line to sku, inventory to location and sku, review to style). Optional customer fields are checked (`tier` must be a `policy.json` tier, `travel_minutes` maps known location ids to whole minutes); `aliases` must be distinct non-empty strings and an alias belongs to one style.
 - `build_items()` writes `tier` (default `none`), `annual_spend_cents`, `travel_minutes` and `location_label` on the `CUST#` items, and `aliases` and `category` on `PRODUCT#` items. Variant overrides of both inventory files are applied together.
-- Fit numbers for the demo name: `fit.get_fit_insight` matches the product name exactly, so `fit_insights.json` holds an `ALDO Men 001` entry that copies the scope counts and signals of the real style (`alias_of`). It is rebuilt from `fit_aliases.json` by `python3.12 scripts/add_fit_aliases.py`, which leaves `source`, `filter`, `thresholds`, `totals` and `generated_at` alone, is idempotent, and has a `--check` mode. Run it again after every `scripts/build_fit_insights.py` run.
+- Fit numbers for the demo name: `fit.get_fit_insight` matches the product name exactly, so `fit_insights.json` holds an `Toney` entry that copies the scope counts and signals of the real style (`alias_of`). It is rebuilt from `fit_aliases.json` by `python3.12 scripts/add_fit_aliases.py`, which leaves `source`, `filter`, `thresholds`, `totals` and `generated_at` alone, is idempotent, and has a `--check` mode. Run it again after every `scripts/build_fit_insights.py` run.
 - `backend/fixtures_bundle/` (gitignored) is a copy made by `scripts/bundle_backend.sh`. Re-run it before `scripts/local_api.py` (without `FIXTURES_DIR`), seeding or deploying, otherwise the old copy without the v2 files is read.
 
 

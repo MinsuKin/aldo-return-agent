@@ -24,6 +24,7 @@
   --surface-4: #2a2a30; /* user bubble, scrollbar thumb */
   --surface-5: #35353c; /* active pill */
   --track: #15151a;
+  --photo-mat: #eeeeee; /* ALDO's studio background, shown while a photo loads */
 
   /* ---- Lines ---- */
   --border: #2a2a30; /* panel and card outlines */

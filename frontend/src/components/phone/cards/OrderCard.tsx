@@ -6,7 +6,7 @@ import type { Delivery } from "../../../hooks/useConversation";
 import { colorWord, friendlyDate } from "../../../lib/format";
 import { normalizePurchase } from "../../../lib/normalize";
 import { Icon } from "../../Icon";
-import { CardFrame, Swatch } from "./shared";
+import { CardFrame, ProductPhoto } from "./shared";
 
 interface Props {
   orderId: string;
@@ -41,7 +41,7 @@ export function OrderCard({ orderId, sizeRequestId, delivery, onRetryDelivery }:
     >
       {view && (
         <div className="product-row">
-          <Swatch color={view.color} />
+          <ProductPhoto name={view.productName} color={view.color} size="hero" />
           <div>
             <p className="product-name">
               {view.productName ?? "ALDO style"}

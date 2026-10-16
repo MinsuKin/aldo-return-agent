@@ -24,9 +24,9 @@ DAVID, AVA = "DEMO-CUST-DAVID", "DEMO-CUST-AVA"
 ORDER = "DEMO-3001"
 TRANSACTION = "DEMO-RET-AB12CD"
 ITEMS = [
-    {"style_id": "DEMO-STYLE-NEW02", "product_name": "Aahliyah", "color": "TAN", "size": "10.5", "reason": "OTHER"},
-    {"style_id": "DEMO-STYLE-NEW05", "product_name": "Alanie", "color": "WHITE", "size": "10.0", "reason": "OTHER"},
-    {"style_id": "DEMO-STYLE-NEW08", "product_name": "Valegyn", "color": "NAVY", "size": "10.0", "reason": "OTHER"},
+    {"style_id": "DEMO-STYLE-NEW02", "product_name": "Brando", "color": "TAN", "size": "10.5", "reason": "OTHER"},
+    {"style_id": "DEMO-STYLE-NEW05", "product_name": "Oscar", "color": "WHITE", "size": "10.0", "reason": "OTHER"},
+    {"style_id": "DEMO-STYLE-NEW08", "product_name": "Patten", "color": "NAVY", "size": "10.0", "reason": "OTHER"},
 ]
 TOP_LEVEL = {"update_id", "owner_ref", "order_id", "reason", "outcome", "provisional", "source", "ts", "items"}
 
@@ -41,7 +41,7 @@ def bundle(owner: str = DAVID, transaction: str = TRANSACTION, items: list[dict[
 def exchange(update_id: str = "MU-5C0A11", **changes: Any) -> dict[str, Any]:
     body = {
         "update_id": update_id, "owner_ref": DAVID, "order_id": ORDER, "style_id": "DEMO-STYLE-NEW02",
-        "product_name": "Aahliyah", "color": "TAN", "original_size": "10.5", "new_size": "11.0",
+        "product_name": "Brando", "color": "TAN", "original_size": "10.5", "new_size": "11.0",
         "reason": "TOO_SMALL", "outcome": "exchange_created", "provisional": True, "source": "ALDO_CA",
         "ts": "2026-10-16T16:05:00+00:00",
     }
@@ -68,7 +68,7 @@ def test_a_bundle_return_is_accepted_and_kept_once(repo: MemoryRepo) -> None:
     body = bundle()
     first = repo.apply_update(body)
     assert (first["applied"], first["duplicate"], first["provisional"], first["update_id"]) == (True, False, True, body["update_id"])
-    assert [item["product_name"] for item in first["update"]["items"]] == ["Aahliyah", "Alanie", "Valegyn"]
+    assert [item["product_name"] for item in first["update"]["items"]] == ["Brando", "Oscar", "Patten"]
     again = repo.apply_update(body)  # the outbox may deliver twice
     assert (again["applied"], again["duplicate"]) == (False, True) and again["update"] == first["update"]
     assert len(repo.get_owner_memory(DAVID).returns) == 1
@@ -135,13 +135,13 @@ def test_the_optional_a2a_emission_of_a_return_names_no_item(repo: MemoryRepo) -
     repo.apply_update(bundle(), emit_a2a=True)  # a replay emits nothing
     (args, kwargs), = sent
     assert args[1] == "memory_updated" and set(args[2]) == {"update_id", "reason", "outcome", "provisional"}
-    assert "Aahliyah" not in json.dumps(sent, default=str)
+    assert "Brando" not in json.dumps(sent, default=str)
 
 
 BAD_BODIES = [
     pytest.param({"items": []}, "items", id="no items"),
     pytest.param({"items": ITEMS * 4}, "items", id="more than ten items"),
-    pytest.param({"items": "Aahliyah"}, "items", id="items is not a list"),
+    pytest.param({"items": "Brando"}, "items", id="items is not a list"),
     pytest.param({"provisional": False}, "provisional", id="a return is always provisional"),
     pytest.param({"provisional": "yes"}, "provisional", id="provisional is a real boolean"),
     pytest.param({"fit_feedback": "size_ok"}, "fit_feedback", id="no fit_feedback on a return"),
@@ -176,7 +176,7 @@ def test_a_bad_item_is_named_by_its_position_never_by_its_value(repo: MemoryRepo
     body["items"] = items
     with pytest.raises(DomainError) as caught:
         repo.apply_update(body)
-    assert field in caught.value.message and "Aahliyah" not in caught.value.message and "x" * 41 not in caught.value.message
+    assert field in caught.value.message and "Brando" not in caught.value.message and "x" * 41 not in caught.value.message
     assert repo.get_owner_memory(DAVID).returns == []
 
 
@@ -213,7 +213,7 @@ def test_the_signed_route_applies_a_bundle_once_and_the_memory_route_shows_it(re
     assert status == 200 and (body["applied"], body["duplicate"]) == (False, True)
     shown = api.call("GET", "/personal-agent/memory", token=session(DAVID))[1]
     assert shown["updates"] == [] and [r["order_id"] for r in shown["returns"]] == [ORDER]
-    assert [i["product_name"] for i in shown["returns"][0]["items"]] == ["Aahliyah", "Alanie", "Valegyn"]
+    assert [i["product_name"] for i in shown["returns"][0]["items"]] == ["Brando", "Oscar", "Patten"]
     assert "returns" not in api.call("GET", "/personal-agent/memory", token=session(AVA))[1]
 
 
@@ -264,7 +264,7 @@ def test_a_real_bundle_return_is_written_back_once(both: MemoryRepo, flow) -> No
     assert outbox["status"] == "delivered" and outbox["attempts"] == 0  # delivered at once, no failed try
     (record,) = both.get_owner_memory(DAVID).returns
     assert record.update_id == result.memory_update_id and record.order_id == ORDER
-    assert [(i.product_name, i.color, i.size) for i in record.items] == [("Aahliyah", "TAN", "10.5"), ("Alanie", "WHITE", "10.0"), ("Valegyn", "NAVY", "10.0")]
+    assert [(i.product_name, i.color, i.size) for i in record.items] == [("Brando", "TAN", "10.5"), ("Oscar", "WHITE", "10.0"), ("Patten", "NAVY", "10.0")]
 
     (event,) = memory_updated()
     assert event["actor"] == "personal_agent"
