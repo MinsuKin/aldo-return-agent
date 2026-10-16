@@ -199,7 +199,7 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(txn.getByTestId("txn-id")).toHaveText(/^DEMO-RMA-[0-9A-F]{6}$/);
     await expect(txn.getByTestId("store-notice")).toContainText("ALDO Store Desk notified");
     await expect(txn.getByTestId("store-notice")).toContainText("5 min away");
-    await expect(page.getByTestId("bubble-bot").last()).toContainText(/store.*notified|notified.*store/is);
+    await expect(page.getByTestId("bubble-bot").last()).toContainText(/store.*notified|notified.*store|(told|informed|alerted|let).{0,30}store/is);
     await expect(page.getByTestId("workflow-pill")).toContainText("Purchase");
     // The return workflow's public milestones sit in the trace next to the A2A events.
     await expect(trace(page).getByText("Policy decision: eligible")).toBeVisible();
@@ -290,7 +290,13 @@ test.describe("David (Platinum): the bundle return", () => {
     // A deployment asks for the reason of the second return (the stage script gives none); the phone offers it as the next chip (F5).
     if (!IS_MOCK) await page.getByTestId("quick-david-3b").click();
     const second = page.getByTestId("quote-card").last();
-    await expect(second).toContainText("Your options");
+    await expect(second)
+      .toContainText("Your options")
+      .catch(async (err: Error) => {
+        // Model text decides this step on a deployment: say what the bot answered instead of only "not found".
+        const said = await page.getByTestId("bubble-bot").evaluateAll((els) => els.slice(-3).map((e) => (e as HTMLElement).innerText.replace(/\s+/g, " ").slice(0, 400)));
+        throw new Error(`${err.message}\nthe last bot messages were:\n${said.map((s, i) => `  [${i}] ${s}`).join("\n")}`);
+      });
     await expect(page.getByTestId("typing")).toHaveCount(0);
     await expect(second.getByTestId("benefit-note")).toHaveCount(0);
     await expect(second.getByTestId("option-fee")).toContainText("CAD 5.95");

@@ -75,7 +75,8 @@ HANDOFF_NOTE_MULTI = (
     "The conversation now continues with the return flow. This order has {n} items. If the owner "
     "did not say which items to return, reply with ONE short sentence, then the items exactly as "
     "given in the items field, one per line, then ask which ones and the reason in one question. "
-    "If the owner already named the items, reply with ONE short sentence only. Copy the items "
+    "If the owner already named the items, reply with ONE short sentence only and do not ask for other or "
+    "more items (a count the owner gave earlier does not apply to this request). Copy the items "
     "exactly as given; never invent them. Do not mention any other agent, assistant or team."
 )
 LIMIT_MESSAGE = "Tool call limit reached for this run. Stop calling tools and answer the owner."

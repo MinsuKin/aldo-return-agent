@@ -82,6 +82,9 @@ for (const setting of SETTINGS) {
         await screen.open(page);
         await page.waitForTimeout(500); // let banners / layout settle
         await save(page, screen.name, setting.tag);
+        // Finding F12: at 390 px the stacked layout was 6 px wider than the viewport. No screen may scroll sideways.
+        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+        expect(overflow, `${screen.name} @ ${setting.tag}: horizontal page overflow in px`).toBeLessThanOrEqual(0);
       });
     }
   });

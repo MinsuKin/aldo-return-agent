@@ -72,6 +72,10 @@ def test_upcoming_days_are_computed_from_the_date() -> None:
         "one per line",
         "Copy the list from the items field exactly; never invent, reorder or change an item",
         "If {name} already named the items, reply with ONE short sentence only (no list).".replace("{name}", "Ava"),
+        # finding F11: the second return in a chat is its own request, a count from the first one does not carry over
+        "Every return request stands alone",
+        "A number Ava said earlier in the conversation (for example \"3 of the 10 items\") does not apply to a later request",
+        "never ask for \"other\", \"more\" or \"two others\"",
         "Do not discuss return policy, eligibility, refunds, fees, time windows or options yourself",
         "If no order has been delivered yet",
         "cancel or back to bot",

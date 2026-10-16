@@ -134,6 +134,15 @@ test.describe("a11y: axe scan of the phone screens", () => {
   });
 });
 
+test.describe("a11y: operator panel", () => {
+  test("admin mode: regression customers and the demo controls", async ({ page }) => {
+    await page.goto("/?admin=1");
+    await expect(page.getByTestId("admin-panel")).toBeVisible();
+    await axeSoft(page, "Admin mode: regression customers and demo controls");
+    await shot(page, "a11y-admin-picker");
+  });
+});
+
 test.describe("a11y: keyboard only", () => {
   test("John's purchase from the persona picker to the placed order, with Tab, Enter and Escape only", async ({ page, request }) => {
     test.setTimeout(240_000);
