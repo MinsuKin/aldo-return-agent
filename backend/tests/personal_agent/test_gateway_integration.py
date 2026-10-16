@@ -1,4 +1,4 @@
-"""ALDO bot against the REAL ``returns_domain.gateway`` on moto (not the canned answers).
+"""The personal agent against the REAL ``returns_domain.gateway`` on moto (not the canned answers).
 
 Two moto tables live side by side: the ALDO returns table (fixtures, size requests, inventory,
 A2A stream) and the personal-agent table. The model is scripted; everything else is real: the

@@ -60,7 +60,7 @@ function agentOf(res: SendMessageResponse): RunAgent {
 }
 
 /**
- * The one chat with ALDO bot. It owns the transcript, the active run (polled), the purchase delivery
+ * The one chat with the personal agent. It owns the transcript, the active run (polled), the purchase delivery
  * sequence (addendum 11.1 D10) and the push notification. `a2a` is the shared A2A feed; `onDelivered`
  * asks that feed to poll quickly because delivery adds an event to it.
  */
@@ -93,7 +93,7 @@ export function useConversation(a2a: RunEvent[], onDelivered: () => void): Conve
 
   const entries = useMemo(() => entriesOf(state, a2a), [state, a2a]);
 
-  // The conversation mode flips when ALDO bot switches workflows; read it after every finished run and
+  // The conversation mode flips when the personal agent switches workflows; read it after every finished run and
   // whenever the A2A stream shows a hand-off or hand-back.
   const finished = state.runs.filter((r) => isTerminal(r.status)).length;
   const modeSignal = useMemo(() => a2a.filter((e) => e.type === "handoff_to_returns" || e.type === "handback").length, [a2a]);
@@ -116,7 +116,7 @@ export function useConversation(a2a: RunEvent[], onDelivered: () => void): Conve
     };
   }, [state.convId, finished, modeSignal]);
 
-  // A finished run may have recorded a proposal or options, or changed what ALDO bot remembers.
+  // A finished run may have recorded a proposal or options, or changed what the personal agent remembers.
   useEffect(() => {
     if (finished > 0) {
       void qc.invalidateQueries({ queryKey: ["purchase"] });
@@ -169,7 +169,7 @@ export function useConversation(a2a: RunEvent[], onDelivered: () => void): Conve
           type: "bot",
           text: `Your ${product ?? "order"}${size ? ` (size ${size})` : ""} was delivered. Tell me if it works out, or if you want to send it back.`,
         });
-        setPush({ id: Date.now(), title: "ALDO bot", body: `Delivered: ${product ?? "your order"}${size ? `, size ${size}` : ""}` });
+        setPush({ id: Date.now(), title: "Personal agent", body: `Delivered: ${product ?? "your order"}${size ? `, size ${size}` : ""}` });
         onDelivered();
         void qc.invalidateQueries({ queryKey: ["orders"] });
       } catch (e) {

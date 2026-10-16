@@ -67,7 +67,7 @@ function Step({ step }: { step: ToolStep }) {
       </p>
       {step.hidden ? (
         <p className="step-private">
-          <Icon name="lock" size={12} /> Private to ALDO bot: details are not shown here.
+          <Icon name="lock" size={12} /> Private to your personal agent: details are not shown here.
         </p>
       ) : (
         <>
@@ -95,7 +95,7 @@ function Step({ step }: { step: ToolStep }) {
   );
 }
 
-/** One run of ALDO bot (purchase or return workflow): its tool calls, collapsed by default. */
+/** One run of an agent (the personal agent's purchase workflow or the ALDO agent's return workflow): its tool calls, collapsed by default. */
 export function RunRow({ item, t0, onToggle }: { item: RunItem; t0: number | null; onToggle: () => void }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();

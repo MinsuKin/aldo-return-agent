@@ -2,7 +2,7 @@ import type { RunEvent } from "../api/types";
 import { isTerminal, type RunAgent, type RunKind, type RunState } from "../lib/runs";
 import { isObj, pick, str, type Obj } from "../lib/util";
 
-// One chat with ALDO bot (addendum 11.1 D1/D3). The transcript is the owner's messages, ALDO bot's
+// One chat with the personal agent (addendum 11.1 D1/D3). The transcript is the owner's messages, the personal agent's
 // replies and inline cards. Cards only carry an id: their content is always read from the server.
 
 export type CardRef =
@@ -138,7 +138,7 @@ function tsOf(ev: RunEvent | undefined): number {
 }
 
 /**
- * What one run adds to the chat: ALDO bot's replies, each followed by the cards the run produced before
+ * What one run adds to the chat: the personal agent's replies, each followed by the cards the run produced before
  * it (a proposal, options, a confirmation). Cards wait for the reply that introduces them.
  */
 function runEntries(run: RunState, a2a: RunEvent[]): Entry[] {
@@ -227,7 +227,7 @@ function runEntries(run: RunState, a2a: RunEvent[]): Entry[] {
   if (isTerminal(run.status)) {
     flush();
     if (!sawReply && run.status === "error") {
-      out.push({ key: `${run.runId}-err`, kind: "notice", text: "ALDO bot could not finish that. Please try again." });
+      out.push({ key: `${run.runId}-err`, kind: "notice", text: "Your personal agent could not finish that. Please try again." });
     }
   }
   return out;

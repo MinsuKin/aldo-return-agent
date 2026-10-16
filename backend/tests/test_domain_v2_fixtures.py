@@ -27,7 +27,7 @@ ORDER, LINE = "DEMO-A2A-5A1B2C", "DEMO-A2A-5A1B2C-L1"
 
 @pytest.fixture
 def john(seeded):
-    """John after the purchase of the black men's shoe in 9.5 (placed through ALDO bot, delivered today)."""
+    """John after the purchase of the black men's shoe in 9.5 (placed through the personal agent, delivered today)."""
     make_agent_order(ORDER, JOHN, sku=BLACK_95, size="9.5", delivered_at="2026-10-16", price_cents=14999)
     return Flow()
 

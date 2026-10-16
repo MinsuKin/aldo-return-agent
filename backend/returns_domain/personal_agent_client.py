@@ -1,4 +1,4 @@
-"""ALDO -> ALDO bot write-back transport (PIVOT_ADDENDUM 5.4, 10.3; contracts.md F.5).
+"""ALDO -> personal agent write-back transport (PIVOT_ADDENDUM 5.4, 10.3; contracts.md F.5).
 
 ALDO pushes a size write-back to the owner's personal agent through ``PersonalAgentClient``.
 The dependency points one way: this module never imports ``personal_agent``. The ``local``

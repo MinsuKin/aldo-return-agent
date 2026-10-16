@@ -41,7 +41,7 @@ export interface Order {
   ordered_at: string;
   delivered_at: string | null;
   currency: string;
-  /** "web" for fixture orders, "agent" for orders placed through ALDO bot. */
+  /** "web" for fixture orders, "agent" for orders placed through the personal agent. */
   channel?: string;
   banner?: string;
   source?: string;
@@ -134,7 +134,7 @@ export type ResetVariant = "default" | "dc_stockout" | "all_stockout";
 /** GET /personal-agent/memory. Shape is normalised tolerantly in lib/normalize.ts. */
 export type MemoryWire = Record<string, unknown>;
 
-/** GET /purchases/{size_request_id}: the server's view of ALDO bot's proposal (normalised in lib/normalize.ts). */
+/** GET /purchases/{size_request_id}: the server's view of the personal agent's proposal (normalised in lib/normalize.ts). */
 export type PurchaseWire = Record<string, unknown>;
 
 /** POST /purchases/{size_request_id}/confirm (contracts.md F.3 SizeDecisionResponse). */

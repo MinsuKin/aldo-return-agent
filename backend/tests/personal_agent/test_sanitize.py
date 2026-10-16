@@ -83,8 +83,8 @@ def test_keeps_numbers_that_are_aldos_own_signal(terms: PrivateTerms) -> None:
 
 
 def test_never_strips_the_word_aldo(terms: PrivateTerms) -> None:
-    result = clean("ALDO bot used ALDO's fit signal", terms)
-    assert "ALDO bot" in result and "ALDO's" in result
+    result = clean("The personal agent used ALDO's fit signal", terms)
+    assert "personal agent" in result and "ALDO's" in result
 
 
 def test_aldo_survives_even_if_a_label_were_set_to_it() -> None:
@@ -201,8 +201,8 @@ def test_john_and_david_keep_the_word_aldo_and_the_style_name_but_lose_their_own
     david = PrivateTerms.from_memory(
         {"typical_size": "11.0", "memory": [{"retailer": "Retailer B (synthetic)", "item": "boot", "size": "11.5"}]}
     )
-    assert sanitize_public_text("ALDO bot says ALDO Men 001 runs large, half size down from 11", david, max_chars=120) == (
-        "ALDO bot says ALDO Men 001 runs large, half size down from"
+    assert sanitize_public_text("The personal agent says ALDO Men 001 runs large, half size down from 11", david, max_chars=120) == (
+        "The personal agent says ALDO Men 001 runs large, half size down from"
     )
 
 

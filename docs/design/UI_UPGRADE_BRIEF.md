@@ -1,4 +1,4 @@
-# UI upgrade brief: ALDO bot dark workspace
+# UI upgrade brief: personal agent dark workspace
 
 Goal: take the look and feel of the team designer's prototype (`demo-dashboard/`) into the product UI (`frontend/`). **Design only**: no behaviour change. Five agents restyle disjoint files in parallel; this brief is the shared contract.
 
@@ -11,14 +11,14 @@ Goal: take the look and feel of the team designer's prototype (`demo-dashboard/`
 - Near-black surfaces on an elevation ramp (bg, panel, card, surface-2..5), hairline borders (`--border`, `--border-soft`), 10px radius panels, subtle shadow, header bars (surface-3) with an icon and a title.
 - Geist (`var(--sans)`) and Geist Mono (`var(--mono)`, ids, numbers, chips, latency), 14px base, heading letter-spacing -0.01em, tabular numbers. Fonts are self-hosted (already imported).
 - ONE primary action per screen/card in ALDO yellow (`background: var(--brand); color: var(--brand-ink)`); everything else is a neutral surface-3 button or a ghost button.
-- Actor hues: ALDO bot Purchase = violet, ALDO bot Return = orange, ALDO Data = blue, ALDO Store Desk = amber, System = neutral. Status: green done, cyan in progress, red error.
-- User message = right bubble (`--surface-4`, 18px radius); ALDO bot message = plain flowing text (no bubble) like ChatGPT. "Thinking" = shimmering text.
+- Actor hues: Personal agent = violet, ALDO agent = orange, ALDO Data = blue, ALDO Store Desk = amber, System = neutral. Status: green done, cyan in progress, red error.
+- User message = right bubble (`--surface-4`, 18px radius); personal agent message = plain flowing text (no bubble) like ChatGPT. "Thinking" = shimmering text.
 - Motion only for entering and progress (keyframes `fadeUp popIn slideIn shimmer pulse` are in base.css). A global `prefers-reduced-motion` rule exists.
 
 ## Hard constraints (all tested)
 1. Never remove or rename a `data-testid`, `role`, `aria-*` attribute or visible text that the Playwright specs assert. Read `frontend/e2e/demo.spec.ts`, `a11y.spec.ts`, `helpers.ts` for your area before editing.
 2. Layout contracts: `data-testid=phone` keeps a 440:956 aspect ratio (tolerance 0.01) and is scaled to fit with NO page scroll at 1440x900; the phone is left of `data-testid=trace-panel`; the trace panel is taller than 0.9 x the phone; below 1100px they stack (`data-layout` on `data-testid=stage`); `data-testid=proto-banner` stays visible, `role=note`, text exactly `Prototype with simulated data`. The phone scale comes from `src/hooks/useFitScale.ts` (do not edit hooks).
-3. Branding: never show `Returns Agent`, `Muse`, `Simulated data` (capital S) or `synthetic` in the phone or the trace. Actor names stay: `ALDO bot · Purchase`, `ALDO bot · Return`, `ALDO Data`, `ALDO Store Desk`, `System`.
+3. Branding: never show `Returns Agent`, `Muse`, `Simulated data` (capital S) or `synthetic` in the phone or the trace. Actor names stay: `Personal agent`, `ALDO agent`, `ALDO Data`, `ALDO Store Desk`, `System`.
 4. Accessibility: axe serious/critical = 0 (colour contrast!). `--fg-dim` is only for text on bg/panel/card/surface-2/surface-3; on surface-4/5 use `--fg-muted`. Visible yellow focus ring, targets at least 32px tall, keyboard path unchanged. An `aria-label` must START with the visible text of the control.
 5. No new dependencies, no external requests (no CDN fonts or icons), no images. Icons: `src/components/Icon.tsx` or inline SVG.
 6. TSX edits minimal and presentational (wrappers, class names, icons). Do not touch `src/hooks`, `src/lib`, `src/api`, `src/state`, `package.json`.

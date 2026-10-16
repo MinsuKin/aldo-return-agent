@@ -1,4 +1,4 @@
-"""ALDO bot -> ALDO Fit Gateway client (contracts.md F.8). Three calls, three transports.
+"""The personal agent -> ALDO Fit Gateway client (contracts.md F.8). Three calls, three transports.
 
 ``size_assist(request)``, ``reviews(request)`` and ``size_decision(request)`` take the C.8 request
 bodies (plain dicts) and return the gateway's JSON answer as a dict. Every failure is a ``GatewayCallError``, a
@@ -304,7 +304,7 @@ class HttpGatewayClient:
                 "Authorization": f"Bearer {self._token}",
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "User-Agent": "aldo-bot/1.0",
+                "User-Agent": "aldo-personal-agent/1.0",
             },
         )
         try:

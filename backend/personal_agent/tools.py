@@ -1,4 +1,4 @@
-"""The six tools of ALDO bot (PIVOT_ADDENDUM 5.5, 10.1, 11.5, 12; contracts.md B.3, F.9).
+"""The six tools of the personal agent (PIVOT_ADDENDUM 5.5, 10.1, 11.5, 12; contracts.md B.3, F.9).
 
 Exactly these tools, in this order: ``recall_size_memory``, ``ask_aldo_size_assist``,
 ``read_product_reviews`` (untrusted customer text, returned as data), ``send_size_decision`` (a
@@ -106,7 +106,7 @@ _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 @dataclass
 class PersonalRunContext:
-    """Everything one run of ALDO bot needs. ``owner_id`` is trusted (verified token via the API)."""
+    """Everything one run of the personal agent needs. ``owner_id`` is trusted (verified token via the API)."""
 
     run_id: str
     conv_id: str

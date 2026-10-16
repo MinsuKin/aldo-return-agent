@@ -1,4 +1,4 @@
-"""LIVE smoke of the return workflow of ALDO bot for David's bundle return: real Bedrock, in-memory DynamoDB.
+"""LIVE smoke of the return workflow of the personal agent for David's bundle return: real Bedrock, in-memory DynamoDB.
 
 Run from /Users/minsu/Desktop/aldo-return-agent/backend (credentials only through the helper, never printed):
 
@@ -52,7 +52,7 @@ JOHN = "DEMO-CUST-JOHN"
 ORDER = "DEMO-3001"
 SCRIPT_LINES = tuple(f"{ORDER}-L{n}" for n in (2, 5, 8))
 MEMORY: dict[str, Any] = {"size_system": "US_M", "typical_size": "10.0", "preferred_colors": ["BROWN", "WHITE"],
-                          "source": "ALDO bot memory"}
+                          "source": "personal agent memory"}
 LINES = {
     "handoff": "I ordered the whole new collection and I'm returning 3 of the 10 items.",
     "items": "The tan boot, the white sneaker and the navy loafer. I just don't like them, they're all unworn.",

@@ -7,7 +7,7 @@ import { Stage } from "./components/Stage";
 import { useRoute } from "./hooks/useRoute";
 
 /**
- * The app shell: one small neutral strip, then either the stage (an iPhone-style chat with ALDO bot
+ * The app shell: one small neutral strip, then either the stage (an iPhone-style chat with the personal agent
  * beside the live A2A trace) or the read-only Cases list.
  */
 export default function StageApp() {
@@ -31,7 +31,7 @@ export default function StageApp() {
   }, [session, qc]);
 
   useEffect(() => {
-    document.title = `${route === "cases" ? "Cases" : "ALDO bot"} | Prototype`;
+    document.title = `${route === "cases" ? "Cases" : "Personal agent"} | Prototype`;
   }, [route]);
 
   function switchCustomer() {
@@ -51,7 +51,7 @@ export default function StageApp() {
       </a>
       <Banner />
       <main id="main" tabIndex={-1} className="main-stage">
-        <h1 className="sr-only">ALDO bot on a phone, with the live agent-to-agent trace beside it</h1>
+        <h1 className="sr-only">Personal agent on a phone, with the live agent-to-agent trace beside it</h1>
         {route === "cases" && session ? <CasesView /> : <Stage admin={admin} notice={notice} onSwitch={switchCustomer} />}
       </main>
     </>

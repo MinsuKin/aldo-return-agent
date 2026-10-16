@@ -43,7 +43,7 @@ def build_app(*, enqueue: Callable[[dict], None] | None = None) -> Api:
 
 
 def include_personal_agent_routes(api: Api) -> bool:
-    """Include the ALDO bot's router. The rest of the API works without it."""
+    """Include the personal agent's router. The rest of the API works without it."""
     try:
         routes = providers.optional(PERSONAL_AGENT_ROUTES)
         if routes is None:

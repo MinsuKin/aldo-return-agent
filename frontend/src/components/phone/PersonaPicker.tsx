@@ -15,7 +15,7 @@ interface Props {
   onReset: () => void;
 }
 
-/** The first screen inside the phone: who is using ALDO bot (addendum 11.1 D1, task 2a). */
+/** The first screen inside the phone: who is using the personal agent (addendum 11.1 D1, task 2a). */
 export function PersonaPicker({ admin, notice, onReset }: Props) {
   const personas = useQuery({ queryKey: ["personas"], queryFn: api.personas, retry: 1 });
   const signIn = useMutation({
@@ -50,8 +50,8 @@ export function PersonaPicker({ admin, notice, onReset }: Props) {
     <div className="screen picker" data-testid="persona-picker">
       <div className="picker-head">
         <BotAvatar size={64} />
-        <h2 id="picker-title">Who is using ALDO bot?</h2>
-        <p className="muted">Pick a customer. ALDO bot only sees that customer&apos;s own data.</p>
+        <h2 id="picker-title">Who is using the personal agent?</h2>
+        <p className="muted">Pick a customer. The personal agent only sees that customer&apos;s own data.</p>
       </div>
 
       {notice && (

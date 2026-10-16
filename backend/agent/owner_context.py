@@ -1,6 +1,6 @@
-"""The trusted "Owner context (from ALDO bot memory)" section of the system prompt (PIVOT_ADDENDUM 12.3).
+"""The trusted "Owner context (from personal agent memory)" section of the system prompt (PIVOT_ADDENDUM 12.3).
 
-The API/worker builds a small ``memory_context`` dict from the owner's ALDO bot memory and puts it
+The API/worker builds a small ``memory_context`` dict from the owner's personal agent memory and puts it
 in the run payload (the AgentCore runtime has no access to the personal table). This module turns
 that dict into prompt text. Rules, all enforced here and not by the prompt:
 
@@ -29,7 +29,7 @@ MAX_CONTEXT_BYTES = 1024
 MAX_RAW_BYTES = 8 * 1024
 MAX_PREFERRED_COLORS = 5
 MAX_ALDO_ITEMS = 3
-SECTION_TITLE = "OWNER CONTEXT (from ALDO bot memory)"
+SECTION_TITLE = "OWNER CONTEXT (from personal agent memory)"
 
 _SIZE = re.compile(r"^\d{1,2}\.\d$")
 _SIZE_SYSTEM = re.compile(r"^US_([MW])$")

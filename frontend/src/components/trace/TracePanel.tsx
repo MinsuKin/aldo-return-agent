@@ -82,7 +82,7 @@ export function TracePanel({ items, signedIn, live }: Props) {
         </ul>
         <p className="trace-desc">Agent-to-agent events as they happen. Newest at the bottom.</p>
         <p className="trace-note" data-testid="trace-note">
-          Trace: public fields only, ALDO bot&apos;s private memory never appears here.
+          Trace: public fields only, your personal agent&apos;s private memory never appears here.
         </p>
       </div>
 
@@ -99,7 +99,7 @@ export function TracePanel({ items, signedIn, live }: Props) {
         {empty && (
           <p className="trace-empty" data-testid="trace-empty">
             {signedIn
-              ? "No events yet. Say something to ALDO bot and its steps appear here, live."
+              ? "No events yet. Say something to your personal agent and its steps appear here, live."
               : "Pick a customer on the phone. The agent-to-agent trace appears here, live."}
           </p>
         )}

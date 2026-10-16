@@ -1,6 +1,6 @@
 """The ALDO side of the single chat: after a hand-off the owner's messages go to the return workflow.
 
-PIVOT_ADDENDUM 11.1 D3, 11.5, 12.1, 12.3. The owner talks to ALDO bot only. ALDO bot's purchase
+PIVOT_ADDENDUM 11.1 D3, 11.5, 12.1, 12.3. The owner talks to the personal agent only. The personal agent's purchase
 workflow answers while the conversation is in mode ``bot``; its ``hand_off_to_returns`` tool
 switches the personal-agent conversation to mode ``returns`` (with the order id, the owner's
 triggering message and a trusted memory context). From then on each owner message is routed
@@ -83,7 +83,7 @@ def forward_text(conversation: Mapping[str, Any], text: str) -> str:
 def recent_orders(customer_id: str, limit: int = RECENT_ORDERS) -> list[dict[str, Any]]:
     """The owner's recent ALDO orders, newest first, compact: what the bot needs to pick an order.
 
-    ``order_id``, ``channel`` (``agent`` for orders ALDO bot's purchases created), ``ordered_at``,
+    ``order_id``, ``channel`` (``agent`` for orders the personal agent's purchases created), ``ordered_at``,
     ``delivered_at`` and the lines (``product_name``, ``color``, ``size``, ``qty``, and ``category``
     when the fixture names what the shoe is; it is left out otherwise).
     """
@@ -122,7 +122,7 @@ def _compact_line(line: Any) -> dict[str, Any]:
 def _memory() -> Any:
     memory = providers.optional("personal_agent.memory")
     if memory is None:
-        raise DomainError(ErrorCode.INTERNAL_ERROR, "ALDO bot is not available.")
+        raise DomainError(ErrorCode.INTERNAL_ERROR, "Your personal agent is not available.")
     return memory
 
 

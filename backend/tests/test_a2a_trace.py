@@ -329,7 +329,7 @@ def test_memory_consulted_says_how_much_memory_was_used_never_what_it_said(ddb):
         AVA, "memory_consulted",
         {"n_entries": 2, "fields": ["preferred_colors", "typical_size"],
          "preferred_colors": ["BROWN", "WHITE"], "typical_size": "10.0", "values": {"typical_size": "10.0"},
-         "aldo_items": [{"order_id": "DEMO-A2A-AB12CD", "size": "9.5"}], "source": "ALDO bot memory", "customer_id": AVA},
+         "aldo_items": [{"order_id": "DEMO-A2A-AB12CD", "size": "9.5"}], "source": "personal agent memory", "customer_id": AVA},
         actor="aldo_agent",
     )
     event = trace.list_a2a_events(AVA).events[0]

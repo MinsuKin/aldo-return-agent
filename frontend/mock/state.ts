@@ -281,7 +281,7 @@ export interface OfferedOption {
   atp: number;
 }
 
-/** SIZEREQ item: open -> proposed (by ALDO bot) -> decided (only by the owner's confirm click). */
+/** SIZEREQ item: open -> proposed (by the personal agent) -> decided (only by the owner's confirm click). */
 export interface SizeRequest {
   size_request_id: string;
   customer_id: string;
@@ -317,7 +317,7 @@ export interface MockState {
   cases: CaseRecord[];
   a2a: Map<string, A2aEvent[]>;
   memoryUpdates: Map<string, MemoryUpdate[]>;
-  /** ALDO -> ALDO bot write-backs waiting to be delivered (A2AOUT# items). */
+  /** ALDO -> the personal agent write-backs waiting to be delivered (A2AOUT# items). */
   outbox: Map<string, PendingWriteback[]>;
   sizeRequests: Map<string, SizeRequest>;
   /** Monthly benefit ledger: `${customer_id}|${yyyy-mm}` -> perks used (addendum 11.1 D8). */
@@ -390,7 +390,7 @@ export function memoryFor(customerId: string) {
     display_name: seed?.display_name ?? "Owner",
     size_system: seed?.size_system ?? "US_W",
     typical_size: seed?.typical_size ?? null,
-    label: "ALDO bot memory",
+    label: "personal agent memory",
     memory: seed?.memory ?? [],
     updates: state.memoryUpdates.get(customerId) ?? [],
   };
@@ -407,7 +407,7 @@ export interface PendingWriteback {
   queuedAt: number;
 }
 
-/** An exchange was created: the write-back waits in the outbox until something reads ALDO bot's memory. */
+/** An exchange was created: the write-back waits in the outbox until something reads the personal agent's memory. */
 export function enqueueWriteback(customerId: string, update: MemoryUpdate): void {
   const list = state.outbox.get(customerId) ?? [];
   list.push({ update, queuedAt: now() });

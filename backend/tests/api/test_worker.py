@@ -310,7 +310,7 @@ def test_an_ssm_value_that_is_not_an_arn_is_refused(monkeypatch):
         worker.runtime_arn()
 
 
-# ---------------------------------------------------------------------------- the ALDO bot
+# ---------------------------------------------------------------------------- the personal agent
 
 
 class FakeRunner:
@@ -382,7 +382,7 @@ def test_a_crashed_personal_runner_closes_the_run_so_the_owner_is_not_left_waiti
         ("finish", AVA, "PRUN-0123456789", "error", {"error_code": "INTERNAL_ERROR"}),
         ("release", AVA, "PCONV-0123456789", "PRUN-0123456789"),
     ]
-    assert "ALDO bot" in worker.PERSONAL_FAILURE_TEXT
+    assert "personal agent" in worker.PERSONAL_FAILURE_TEXT
 
 
 def test_a_crashed_personal_runner_against_the_real_personal_table(agentcore, personal_table):

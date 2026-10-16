@@ -1,4 +1,4 @@
-"""ALDO bot store: owner size memory, ALDO write-backs, conversations, runs and events.
+"""Personal agent store: owner size memory, ALDO write-backs, conversations, runs and events.
 
 One DynamoDB table (``PERSONAL_AGENT_TABLE_NAME``, default ``aldo-personal-agent-demo``), keys per
 PIVOT_ADDENDUM 5.5 and contracts.md F.9. Everything lives in the owner's partition::
@@ -57,7 +57,7 @@ CONV_ID_PREFIX = "PCONV-"
 MEMORY_LABEL = "Synthetic demo memory"
 MEMORY_NOTE = "synthetic demo memory"
 
-#: Event types of an ALDO bot run (left panel). ``actor`` is personal_agent or system.
+#: Event types of a personal agent run (left panel). ``actor`` is personal_agent or system.
 EVENT_TYPES = (
     "run_started",
     "tool_call",
@@ -388,7 +388,7 @@ class ReturnedItem(BaseModel):
 
 
 class ReturnRecord(BaseModel):
-    """An applied bundle-return write-back: what ALDO told ALDO bot about a return (outcome ``return_created``).
+    """An applied bundle-return write-back: what ALDO told the personal agent about a return (outcome ``return_created``).
 
     It is not a size swap, so it is not in ``OwnerMemory.updates`` (the list of exchanges) but in
     ``OwnerMemory.returns``. A return is never superseded by another update of the same order.
@@ -771,7 +771,7 @@ class MemoryRepo:
         return {"owners": owners, "entries": entries}
 
     def reset(self, fixture_path: Path | str | None = None) -> dict[str, int]:
-        """Delete EVERYTHING in this table (it is the dedicated ALDO bot demo table), then seed."""
+        """Delete EVERYTHING in this table (it is the dedicated personal agent demo table), then seed."""
         load_fixture(fixture_path)  # fail before deleting anything if the fixture is unusable
         keys: list[dict[str, str]] = []
         start_key: dict[str, Any] | None = None
@@ -1127,7 +1127,7 @@ class MemoryRepo:
     def get_conversation(self, owner_id: str, conv_id: str) -> dict[str, Any]:
         """Conversation meta (no messages). Another owner's conversation is simply NOT_FOUND.
 
-        ``mode`` is ``bot`` (the ALDO bot purchase workflow answers) or ``returns`` (the owner's
+        ``mode`` is ``bot`` (the personal agent purchase workflow answers) or ``returns`` (the owner's
         messages go straight to the return workflow); in ``returns`` mode ``returns_order_id`` is
         the order being returned, ``returns_conv_id`` the ALDO-side conversation once it exists,
         ``handoff_text`` the owner message that started the hand-off until it was forwarded
@@ -1698,5 +1698,5 @@ def emit_run_event(
 
 
 def list_run_events(owner_id: str, run_id: str, after: int = 0, limit: int = 100) -> dict[str, Any]:
-    """Event page of an ALDO bot run (``GET /api/runs/{id}/events`` for ``PRUN-`` ids)."""
+    """Event page of a personal agent run (``GET /api/runs/{id}/events`` for ``PRUN-`` ids)."""
     return get_repo().list_events(owner_id, run_id, after, limit)

@@ -1,14 +1,14 @@
 """ALDO Fit Gateway: purchase-time sizing, the owner-confirmed simulated order, the write-back.
 
-PIVOT_ADDENDUM sections 2 (C1-C10), 5.2-5.6 and 10 (owner confirmation click, ALDO bot);
+PIVOT_ADDENDUM sections 2 (C1-C10), 5.2-5.6 and 10 (owner confirmation click, the personal agent);
 contracts.md C.8 and F.3-F.7. Deterministic code, no LLM, each call well under a second.
 
 Purchase flow (addendum 10.1). No agent can place an order:
 
-1. ``size_assist(claims, request)``: the ALDO bot asks "help me size this" with a DELEGATED
+1. ``size_assist(claims, request)``: the personal agent asks "help me size this" with a DELEGATED
    token. ALDO answers from its own data only (fit signal, stock, delivery options, a template
    question) and persists ``SIZEREQ#{id}`` with a 15 minute real-clock expiry. Nothing else.
-2. ``decide_size(claims, request)``: the ALDO bot's choice is only a PROPOSAL. The checks of
+2. ``decide_size(claims, request)``: the personal agent's choice is only a PROPOSAL. The checks of
    F.4 (1)-(8) run, then one conditional write records ``status = proposed`` and the chosen
    option. No order, no stock change. A newer proposal replaces an older one while the request
    is ``open`` or ``proposed``.
@@ -25,7 +25,7 @@ Facts come from server data only: fit from ``fit.get_fit_insight`` (headline sco
 unless that is too thin), products and sizes from the GSI1 ``STYLE#{style}#{color}`` query,
 stock from the consistent ``INV#{sku}`` rows, the owner's ``home_region`` from ALDO's own
 customer record (the request never carries it), ETAs in calendar days from DEMO_NOW.
-Everything the ALDO bot sends is untrusted data: schema-validated with ``extra="forbid"``,
+Everything the personal agent sends is untrusted data: schema-validated with ``extra="forbid"``,
 enumerations and lengths checked, ``rationale_public`` shown as data and never put in a prompt.
 
 Options per size: ``ship_from_dc`` (a DC with stock), ``ship_from_store`` (the single home-region
@@ -189,7 +189,7 @@ class GatewayError(DomainError):
 
 
 class _Request(BaseModel):
-    """Everything the ALDO bot sends is untrusted: unknown fields are refused."""
+    """Everything the personal agent sends is untrusted: unknown fields are refused."""
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
@@ -1162,7 +1162,7 @@ def decide_size(claims: auth.TokenClaims, request: Mapping[str, Any]) -> SizePro
 # ------------------------------------------------------------------------------- reviews
 
 #: Instruction-like text in a review (indirect prompt injection), English and French basics. The
-#: heuristic only LABELS: a flagged review is still served (the ALDO bot must show that it ignores
+#: heuristic only LABELS: a flagged review is still served (the personal agent must show that it ignores
 #: it), and a clean review is not a promise of anything: reviews are untrusted data either way.
 _INSTRUCTION_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
     re.compile(pattern, re.IGNORECASE)
@@ -1261,7 +1261,7 @@ def select_reviews(reviews: Sequence[Mapping[str, Any]], limit: int) -> list[dic
     """The reviews to serve: most helpful first, newest first among equals, at most ``limit``.
 
     A flagged review is NEVER dropped: one that falls outside the first ``limit`` is appended, so
-    the ALDO bot always gets the chance to show that it ignores it. Records need ``review_id``,
+    the personal agent always gets the chance to show that it ignores it. Records need ``review_id``,
     ``helpful_votes``, ``created_at`` and ``flags``.
     """
     ordered = sorted(reviews, key=lambda r: r["review_id"])
@@ -1715,9 +1715,9 @@ def simulate_pickup(customer_id: str, transaction_id: str) -> dict[str, Any]:
 
 
 def agent_card(base_url: str) -> dict[str, Any]:
-    """The public A2A-style agent card of ALDO bot (served without authentication, contracts.md F.5).
+    """The public A2A-style agent card of the ALDO agent (served without authentication, contracts.md F.5).
 
-    ALDO bot is the top-level agent (addendum 12.1). Its skills are the two workflows,
+    The ALDO agent is what an owner's personal agent calls (addendum 12.1). Its skills are the two workflows,
     ``purchase_workflow`` and ``return_workflow``, followed by the gateway services a calling
     agent can use directly: ``size_assist``, ``get_reviews``, ``size_decision`` and
     ``memory_writeback``. The bearer scheme is the delegated scope; provider and label say it
@@ -1731,9 +1731,9 @@ def agent_card(base_url: str) -> dict[str, Any]:
     minutes = max(1, settings.delegation_ttl_seconds // 60)
     modes = ["application/json"]
     return {
-        "name": "ALDO bot",
+        "name": "ALDO agent",
         "description": (
-            "ALDO bot is ALDO's shopping agent for an owner's personal agent. Its purchase "
+            "ALDO agent is ALDO's agent for an owner's personal agent. Its purchase "
             "workflow picks a size from ALDO's return-based fit signal, live stock and customer "
             "reviews, and proposes a purchase that only the owner can confirm. Its return "
             "workflow handles returns and exchanges for a delivered order: policy, ranked "

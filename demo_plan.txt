@@ -5,12 +5,12 @@ design:
 Iphone 17 pro max looking window on the left, select user, chat with agent.
 A2A trace window on the right, show the trace of agentic workflow real time
 
-note - I don't want left ALDO bot and right return bot, we want all on the left for ALDO bot.
+note - I don't want left the personal agent and right return bot, we want all on the left for the personal agent.
 
 scenario:
 - 1. john (silver member)
 I went to also store, I liked the leather shoes but they didn't have my size
-I write to my personal agent (MUSE in real life but ALDO bot in the demo)
+I write to my personal agent (MUSE in real life but the personal agent in the demo)
 to buy this model (can be aldo men 001), my size.
 agent find what's your size in the memory and find the best size for you (not only product spec, but check in the comment section for user review of size info - true to size, slightly bigger, etc.)
 after find the size and availablity pop up the button to user to review these info and purchase

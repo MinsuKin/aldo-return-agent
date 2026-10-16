@@ -1,4 +1,4 @@
-"""The ALDO bot system prompt encodes the product rules (PIVOT_ADDENDUM 5.5, 10.1, 10.2)."""
+"""The personal agent system prompt encodes the product rules (PIVOT_ADDENDUM 5.5, 10.1, 10.2)."""
 
 from __future__ import annotations
 
@@ -12,9 +12,9 @@ from personal_agent.prompt import build_system_prompt, upcoming_days
 PROMPT = build_system_prompt("Ava")
 
 
-def test_the_persona_is_aldo_bot_never_muse() -> None:
+def test_the_persona_is_the_personal_agent_never_muse() -> None:
     assert PROMPT.startswith(
-        "You are ALDO bot, Ava's personal shopping agent. You remember Ava's sizes across retailers."
+        "You are Ava's personal agent. You shop for Ava and remember Ava's sizes across retailers."
     )
     assert "muse" not in PROMPT.lower()
 
@@ -120,13 +120,13 @@ def test_the_error_playbook_is_there() -> None:
     assert "go on without the reviews and say so" in PROMPT
 
 
-def test_nobody_but_aldo_bot_is_ever_named_to_the_owner() -> None:
+def test_nobody_but_the_personal_agent_is_ever_named_to_the_owner() -> None:
     """Addendum 12.1: no second agent. The prompt may only tell the model NOT to mention one."""
     lowered = PROMPT.lower()
     for name in ("returns agent", "return agent", "returns assistant", "returns workflow", "specialist"):
         assert name not in lowered, name
     for line in PROMPT.splitlines():
-        if "agent" in line.lower() and "personal shopping agent" not in line and "retailer's agent" not in line:
+        if "agent" in line.lower() and "personal agent" not in line and "retailer's agent" not in line:
             assert "Never mention another agent" in line, line
 
 
@@ -160,7 +160,7 @@ def test_order_data_cannot_break_or_extend_the_template() -> None:
     hostile = [{"order_id": "DEMO-1", "ordered_at": "2026-10-01", "delivered_at": "2026-10-02",
                 "lines": [{"product_name": "{name} {orders} }{", "color": "TAN", "size": "9.0", "qty": 1}]}]
     text = build_system_prompt("Ava", orders=hostile)
-    assert "{name} {orders} }{" in text and text.count("You are ALDO bot, Ava's") == 1
+    assert "{name} {orders} }{" in text and text.count("You are Ava's personal agent.") == 1
 
 
 def test_no_template_placeholders_are_left_over() -> None:
@@ -169,7 +169,7 @@ def test_no_template_placeholders_are_left_over() -> None:
 
 
 def test_a_blank_owner_name_falls_back_to_the_owner() -> None:
-    assert build_system_prompt("  ").startswith("You are ALDO bot, the owner's personal shopping agent")
+    assert build_system_prompt("  ").startswith("You are the owner's personal agent.")
 
 
 def test_the_owner_message_is_passed_through_unchanged() -> None:

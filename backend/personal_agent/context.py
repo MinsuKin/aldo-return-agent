@@ -1,6 +1,6 @@
-"""The trusted memory context ALDO bot hands to the return workflow (PIVOT_ADDENDUM 12.3).
+"""The trusted memory context the personal agent hands to the return workflow (PIVOT_ADDENDUM 12.3).
 
-At hand-off the return workflow gets a minimal, server-built summary of what ALDO bot remembers
+At hand-off the return workflow gets a minimal, server-built summary of what the personal agent remembers
 about the owner, so it can offer the colours the owner usually keeps first and avoid size
 ping-pong. It travels in the return run's payload as ``memory_context`` (the AgentCore runtime has
 no access to the personal-agent table) and is at most ``MAX_CONTEXT_BYTES`` of JSON::
@@ -8,7 +8,7 @@ no access to the personal-agent table) and is at most ``MAX_CONTEXT_BYTES`` of J
     {"size_system": "US_M", "typical_size": "10.0", "preferred_colors": ["BROWN", "WHITE"],
      "aldo_items": [{"order_id": "DEMO-A2A-AB12CD", "product_name": "ALDO Men 001", "color": "BLACK",
                      "size": "9.5", "status": "delivered"}],
-     "source": "ALDO bot memory"}
+     "source": "personal agent memory"}
 
 Privacy by construction: the builder reads only the owner's sizing basics, the COLOURS of items the
 owner kept and the owner's agent-placed ALDO orders. It never copies a retailer label, an item
@@ -23,11 +23,11 @@ import re
 from collections import Counter
 from typing import Any, Mapping, Sequence
 
-CONTEXT_SOURCE = "ALDO bot memory"
+CONTEXT_SOURCE = "personal agent memory"
 MAX_CONTEXT_BYTES = 1024
 MAX_PREFERRED_COLORS = 5
 MAX_ALDO_ITEMS = 3
-AGENT_CHANNEL = "agent"  # orders placed through ALDO bot (ids DEMO-A2A-XXXXXX)
+AGENT_CHANNEL = "agent"  # orders placed through the personal agent (ids DEMO-A2A-XXXXXX)
 
 #: The fields a context may hold, in the order the trace lists them.
 CONTEXT_FIELDS = ("typical_size", "preferred_colors", "aldo_items")

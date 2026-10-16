@@ -27,7 +27,7 @@ def session_token(customer_id: str = AVA, **kwargs) -> str:
 
 
 def delegated_token(customer_id: str = AVA, *, max_amount_cents: int = 25_000, **kwargs) -> str:
-    """The ALDO bot's short-lived delegated token (minted server-side in production)."""
+    """The personal agent's short-lived delegated token (minted server-side in production)."""
     return auth.sign_token(
         customer_id,
         scope="delegated_gateway",
@@ -52,7 +52,7 @@ def enqueued() -> list[dict]:
 
 @pytest.fixture
 def personal_table(ddb, monkeypatch):
-    """The ALDO bot's own table (empty, in the same moto session) and a fresh repository."""
+    """The personal agent's own table (empty, in the same moto session) and a fresh repository."""
     from personal_agent import memory
 
     monkeypatch.delenv("PERSONAL_AGENT_TABLE_NAME", raising=False)

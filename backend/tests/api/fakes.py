@@ -84,7 +84,7 @@ class FakeGateway:
 
     def agent_card(self, base_url):
         self._call("agent_card", base_url)
-        return {"name": "ALDO bot", "url": f"{base_url}/api/gateway"}
+        return {"name": "ALDO agent", "url": f"{base_url}/api/gateway"}
 
     def flush_outbox(self, customer_id=None, limit=10, client=None):
         self._call("flush_outbox", customer_id, limit=limit)

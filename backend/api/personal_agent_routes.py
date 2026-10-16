@@ -1,4 +1,4 @@
-"""ALDO bot routes (Powertools ``Router``; the API Lambda includes it with ``include_router``).
+"""The personal agent routes (Powertools ``Router``; the API Lambda includes it with ``include_router``).
 
 Registered WITHOUT the ``/api`` prefix (the resolver strips it), like every route of the API Lambda:
 
@@ -18,22 +18,22 @@ signature is the hex HMAC-SHA256 of the RAW body under the write-back key
 ``POST .../messages`` validates 1..1000 characters (no server marker on any line), allows one
 active run per conversation (409 ``RUN_IN_PROGRESS``) and routes by the conversation's MODE:
 
-* ``bot`` (default): ALDO bot's purchase workflow. The run is created in the personal-agent table
+* ``bot`` (default): the personal agent's purchase workflow. The run is created in the personal-agent table
   (lease there) and started through the injected ``enqueue(payload)``; the payload is ``{"agent":
   "personal", "run_id", "conv_id", "customer_id", "message", "kind": "customer"}``. Answer
   ``202 {run_id, conv_id, agent: "personal", mode: "bot"}``.
-* ``returns``: after ALDO bot's ``hand_off_to_returns``. The message goes straight to the return
+* ``returns``: after the personal agent's ``hand_off_to_returns``. The message goes straight to the return
   workflow (``api.returns_chat``): the ALDO-side conversation of the order is created or
   continued, the stored triggering text is forwarded once and then each new message, and a normal
   customer run is started (kind ``customer``, the order selected, the trusted memory context in
   the payload). Answer ``202 {run_id, conv_id, agent: "returns", mode: "returns"}``. The mode goes
   back to ``bot`` when that run reports ``transaction_created`` or ``case_created`` (the worker
   does it) or when the owner sends a message starting with "cancel" or "back to bot"; the A2A
-  stream then shows ``handback``. A "cancel" message is answered by ALDO bot like any other.
+  stream then shows ``handback``. A "cancel" message is answered by the personal agent like any other.
 
 Errors use the contracts.md C.1 body ``{"error": {"code", "message", "retryable", "request_id"}}``;
 this module renders them itself so it also works in an app without the API's global middleware.
-User-facing texts speak of ALDO bot only (addendum 12.1).
+User-facing texts speak of the personal agent only (addendum 12.1).
 """
 
 from __future__ import annotations
@@ -59,8 +59,8 @@ from .routes_returns import checked_text
 
 MAX_BODY_BYTES = 16 * 1024
 GENERIC_ERROR = "Something went wrong on our side. Please try again."
-BUSY_MESSAGE = "ALDO bot is still working on your last message. Wait for it to finish."
-ENQUEUE_FAILED = "ALDO bot could not start. Please try again."
+BUSY_MESSAGE = "Your personal agent is still working on your last message. Wait for it to finish."
+ENQUEUE_FAILED = "Your personal agent could not start. Please try again."
 SIGNATURE_HEADER = "x-aldo-signature"
 AGENT_PERSONAL = "personal"
 AGENT_RETURNS = "returns"
@@ -83,13 +83,13 @@ def default_enqueue(payload: dict[str, Any]) -> None:
         from worker.enqueue import enqueue_async
     except ImportError as exc:
         raise DomainError(
-            ErrorCode.INTERNAL_ERROR, "the ALDO bot worker is not configured", retryable=False
+            ErrorCode.INTERNAL_ERROR, "the personal agent worker is not configured", retryable=False
         ) from exc
     enqueue_async(payload)
 
 
 def events_for(owner_id: str, run_id: str, after: int = 0) -> dict[str, Any]:
-    """Event page of an ALDO bot run for ``GET /api/runs/<run>/events`` when the id starts with ``PRUN-``."""
+    """Event page of a personal agent run for ``GET /api/runs/<run>/events`` when the id starts with ``PRUN-``."""
     return memory.get_repo().list_events(owner_id, run_id, after)
 
 
@@ -187,7 +187,7 @@ def build_router(
     """A fresh router with its collaborators bound (one router per resolver).
 
     ``enqueue`` starts a run in the worker (default: ``worker.enqueue.enqueue_async``); it starts
-    ALDO bot's runs and, through ``returns``, the return workflow's runs after a hand-off.
+    The personal agent's runs and, through ``returns``, the return workflow's runs after a hand-off.
     ``before_memory_read(owner_id)`` runs before ``GET /memory`` so pending write-backs can be
     delivered first (failures are logged and ignored). ``repo_provider`` returns the repository.
     ``returns`` is the ALDO-side half of the single chat (default: ``ReturnsChat`` on ``enqueue``).
@@ -222,7 +222,7 @@ def build_router(
         _json_object(_raw_body(router), required=False)
         repo = get_repo()
         if repo.get_owner(owner) is None:
-            raise DomainError(ErrorCode.NOT_FOUND, "no ALDO bot profile for this customer")
+            raise DomainError(ErrorCode.NOT_FOUND, "no personal agent profile for this customer")
         return _json(201, {"conv_id": repo.create_conversation(owner)}, request_id)
 
     @router.get("/personal-agent/conversations/<conv>")
@@ -249,7 +249,7 @@ def build_router(
         repo = get_repo()
         conversation = repo.get_conversation(owner, conv_id)  # NOT_FOUND also covers another owner's conversation
         if conversation["mode"] == MODE_RETURNS:
-            # One chat, one run at a time: ALDO bot's own run may still be writing its last sentence
+            # One chat, one run at a time: the personal agent's own run may still be writing its last sentence
             # and the return workflow may still be working on the previous message.
             if repo.lease_active(owner, conv_id) or chat.return_run_active(conversation):
                 raise DomainError(ErrorCode.RUN_IN_PROGRESS, BUSY_MESSAGE)
@@ -260,7 +260,7 @@ def build_router(
                     {"run_id": run_id, "conv_id": conv_id, "agent": AGENT_RETURNS, "mode": MODE_RETURNS},
                     request_id,
                 )
-            # "cancel" / "back to bot": the return ends here and ALDO bot answers the message itself.
+            # "cancel" / "back to bot": the return ends here and the personal agent answers the message itself.
             chat.cancel(owner, conv_id, conversation)
         run_id = memory.new_run_id()
         if not repo.try_acquire_lease(owner, conv_id, run_id):

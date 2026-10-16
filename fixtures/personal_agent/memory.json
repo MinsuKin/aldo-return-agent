@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "label": "Synthetic demo memory that ALDO bot keeps for each owner: generic retailer labels, not real purchase history",
+  "label": "Synthetic demo memory that the personal agent keeps for each owner: generic retailer labels, not real purchase history",
   "owners": [
     {
       "owner_id": "DEMO-CUST-AVA",

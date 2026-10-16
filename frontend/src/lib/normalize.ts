@@ -434,7 +434,7 @@ export interface MemoryEntry {
   item: string;
   size: string;
   outcome: string;
-  /** Optional colour of the item (addendum 12.3): lets ALDO bot offer colours the owner usually keeps. */
+  /** Optional colour of the item (addendum 12.3): lets the personal agent offer colours the owner usually keeps. */
   color?: string;
 }
 

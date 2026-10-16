@@ -90,7 +90,7 @@ def test_delegated_token_cannot_reach_the_owners_purchase_routes(client, gateway
 
 
 # Every route that is neither public, nor delegated-only, nor the admin reset, nor the HMAC
-# write-back: these must be session-token routes and refuse the ALDO bot's delegated token.
+# write-back: these must be session-token routes and refuse the personal agent's delegated token.
 NOT_SESSION_ROUTES = PUBLIC_ROUTES | {
     ("POST", "/gateway/size-assist"),
     ("POST", "/gateway/size-decision"),
@@ -270,7 +270,7 @@ def test_confirm_rejects_a_non_string_option(client, gateway):
 def test_agent_card_is_public_on_both_paths(client, gateway, path):
     reply = client.get(path)
     assert reply.status == 200
-    assert reply.json["name"] == "ALDO bot"
+    assert reply.json["name"] == "ALDO agent"
     assert reply.json["url"] == f"https://{DOMAIN_NAME}/api/gateway"
 
 

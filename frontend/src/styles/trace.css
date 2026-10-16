@@ -291,7 +291,7 @@
   color: var(--fg-muted);
   overflow-wrap: anywhere;
 }
-/* The "Private to ALDO bot" note, dimmed. */
+/* The "Private to your personal agent" note, dimmed. */
 .step-private {
   display: inline-flex;
   align-items: center;

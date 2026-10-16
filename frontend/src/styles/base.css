@@ -1,4 +1,4 @@
-/* ALDO bot stage: an iPhone-style chat on the left, the live A2A trace on the right.
+/* The personal agent stage: an iPhone-style chat on the left, the live A2A trace on the right.
    Design system (dark workspace, after the team designer's demo-dashboard): near-black surfaces on an elevation
    ramp, hairline borders, ALDO yellow for the one primary action, saturated actor hues, Geist + Geist Mono
    (self-hosted, no external requests), inline SVG icons. Plain CSS.
@@ -45,9 +45,9 @@
   --brand-ring: rgba(255, 204, 0, 0.45);
 
   /* ---- Actor and status hues ---- */
-  --violet: #a78bfa; /* ALDO bot · Purchase */
+  --violet: #a78bfa; /* Personal agent */
   --violet-soft: rgba(167, 139, 250, 0.14);
-  --orange: #f97316; /* ALDO bot · Return */
+  --orange: #f97316; /* ALDO agent */
   --orange-soft: rgba(249, 115, 22, 0.14);
   --blue: #60a5fa; /* ALDO Data */
   --blue-soft: rgba(96, 165, 250, 0.14);

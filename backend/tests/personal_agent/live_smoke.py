@@ -1,4 +1,4 @@
-"""LIVE smoke of ALDO bot: real Bedrock, canned ALDO gateway (local transport), in-memory DynamoDB.
+"""LIVE smoke of the personal agent: real Bedrock, canned ALDO gateway (local transport), in-memory DynamoDB.
 
 Run from /Users/minsu/Desktop/aldo-return-agent/backend (credentials only through the helper):
 

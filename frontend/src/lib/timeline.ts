@@ -7,7 +7,7 @@ import { isTerminal, runEventActor, runMetrics, toolSteps, type Chip, type RunAg
 import { humanize, isObj, num, pick, str, type Obj } from "./util";
 
 // The right-hand A2A trace: the public agent-to-agent stream, a few public milestones of the return
-// workflow, and one collapsed group of tool calls per run. Owner-private material (ALDO bot's memory
+// workflow, and one collapsed group of tool calls per run. Owner-private material (the personal agent's memory
 // and notes, review text) never reaches this module's output.
 
 export type Tone = "default" | "success" | "attention";
@@ -170,7 +170,7 @@ export function describeEvent(type: string, p: Obj): Described {
     }
     case "handoff_to_returns": {
       const order = str(p.order_id);
-      return plain("handoff", "Switching to the return workflow", order ? `Order ${order}` : undefined);
+      return plain("handoff", "Personal agent hands over to the ALDO agent", order ? `Order ${order}` : undefined);
     }
     case "memory_consulted": {
       const n = num(pick(p, ["n_entries", "entries", "count"]));
@@ -182,7 +182,7 @@ export function describeEvent(type: string, p: Obj): Described {
     case "handback": {
       const reason = str(pick(p, ["reason", "outcome"]));
       const detail = reason === "completed" ? "Return finished" : reason === "escalated" ? "Passed to a person for review" : undefined;
-      return plain("handoff", "Back to the purchase workflow", detail);
+      return plain("handoff", "Back to the personal agent", detail);
     }
     case "quote_created": {
       const primary = str(pick(p, ["primary_option_type", "primary"]));
@@ -257,7 +257,7 @@ function milestonesOf(run: RunState, mirrored: { quotes: Set<string>; txns: Set<
   for (const ev of [...run.events].sort((a, b) => a.seq - b.seq)) {
     const p: Obj = isObj(ev.payload) ? ev.payload : {};
     const actor = runEventActor(ev, run);
-    if (actor === "personal_agent") continue; // ALDO bot's own notes stay private
+    if (actor === "personal_agent") continue; // the personal agent's own notes stay private
     const base = { kind: "event" as const, key: `${run.runId}-m-${ev.seq}`, tsMs: parseTs(ev.ts), actor, type: ev.type };
 
     if (ev.type === "tool_call") {

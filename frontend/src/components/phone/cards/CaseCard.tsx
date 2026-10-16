@@ -4,7 +4,7 @@ import { api } from "../../../api/client";
 import { normalizeCase } from "../../../lib/normalize";
 import { CardFrame, useFocusWhenReady } from "./shared";
 
-/** Shown when ALDO bot passes a request to a person (requirement 10). */
+/** Shown when the personal agent passes a request to a person (requirement 10). */
 export function CaseCard({ caseId }: { caseId: string }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const cases = useQuery({ queryKey: ["cases"], queryFn: api.cases, retry: 2 });
@@ -42,7 +42,7 @@ export function CaseCard({ caseId }: { caseId: string }) {
         </div>
       </dl>
       <p className="muted small">
-        A person will review this. ALDO bot cannot promise an outcome. See all cases in the <a href="#/cases">Cases list</a>.
+        A person will review this. Your personal agent cannot promise an outcome. See all cases in the <a href="#/cases">Cases list</a>.
       </p>
     </CardFrame>
   );

@@ -145,7 +145,7 @@ def test_checkpoint_2_passes_against_the_working_system(stack, personal_table, c
     out = capsys.readouterr().out
     assert "[  ok] exactly one transaction in the table" in out
     assert ADMIN_KEY not in out and "Bearer" not in out and "Authorization" not in out
-    # the exchange also wrote back to the ALDO bot (provisional, once)
+    # the exchange also wrote back to the personal agent (provisional, once)
     updates = personal_table.get_repo().list_memory(AVA)["updates"]
     assert len(updates) == 1 and updates[0]["provisional"] is True
 
@@ -270,7 +270,7 @@ def test_moto_mode_serves_a_complete_offline_demo():
             memory = fetch(f"{url}/api/personal-agent/memory", headers=bearer)[2]
             assert memory["typical_size"] == "7.5"
             status, _, card = fetch(f"{url}/.well-known/agent-card.json")
-            assert status == 200 and card["name"] == "ALDO bot"
+            assert status == 200 and card["name"] == "ALDO agent"
             reset = fetch(
                 f"{url}/api/demo/reset", method="POST", body={"variant": "dc_stockout"},
                 headers={"X-Demo-Admin": local_api.LOCAL_ADMIN_KEY},

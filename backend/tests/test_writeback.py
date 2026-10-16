@@ -1,4 +1,4 @@
-"""ALDO -> ALDO bot write-back: signature, transports, outbox flush, memory_updated (F.5, F.12).
+"""ALDO -> personal agent write-back: signature, transports, outbox flush, memory_updated (F.5, F.12).
 
 Unit tests use a local HTTP receiver and fakes; the integration tests use the real store,
 trace, outbox and exchange flow on moto (fixtures ``ddb`` / ``seeded`` from ``conftest.py``).

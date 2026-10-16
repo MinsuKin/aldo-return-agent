@@ -5,9 +5,9 @@ The Vite dev server proxies /api to http://localhost:3001. Every request is turn
 v2 event and handed to ``api.handler`` exactly as API Gateway would hand it over, so what runs here
 is the deployed code. The worker runs inline in a thread (``AGENT_MODE=local``) and talks to the
 returns agent at ``AGENT_LOCAL_URL`` (default http://localhost:8080/invocations, started with
-``python agent_app.py``); the ALDO bot runs in process.
+``python agent_app.py``); the personal agent runs in process.
 
-Offline (no AWS at all; an in-memory DynamoDB with the demo fixtures and the ALDO bot's memory):
+Offline (no AWS at all; an in-memory DynamoDB with the demo fixtures and the personal agent's memory):
 
     cd /Users/minsu/Desktop/aldo-return-agent/backend
     uv run python ../scripts/local_api.py --moto            # admin key: local-dev-admin-key-0123456789

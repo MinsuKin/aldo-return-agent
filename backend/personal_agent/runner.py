@@ -1,4 +1,4 @@
-"""Runs one turn of ALDO bot (PIVOT_ADDENDUM 5.5, 10.1; contracts.md F.9).
+"""Runs one turn of the personal agent (PIVOT_ADDENDUM 5.5, 10.1; contracts.md F.9).
 
 ``run(payload)`` takes the worker payload ``{run_id, conv_id, customer_id, message, agent: "personal"}``
 (``customer_id`` is trusted: it comes from the verified session token via the API) and returns
@@ -38,10 +38,10 @@ from .sanitize import count_words, drop_quoting_sentences, limit_words, quotes_a
 from .tools import PersonalRunContext, build_tools, clean_orders
 
 SAFE_ERROR_REPLY = (
-    "ALDO bot couldn't finish that just now. Nothing was ordered. Please try again in a moment."
+    "Your personal agent couldn't finish that just now. Nothing was ordered. Please try again in a moment."
 )
 HARD_STOP_REPLY = (
-    "ALDO bot ran out of steps before it could finish. Nothing was ordered. Please try again."
+    "Your personal agent ran out of steps before it could finish. Nothing was ordered. Please try again."
 )
 CONFIRM_SUFFIX = "Please confirm it in the app; nothing is ordered until you do."
 #: The one sentence after a hand-off to the return flow: it names nobody else (addendum 12.1).
@@ -160,7 +160,7 @@ def run(
     agent_factory: AgentFactory | None = None,
     token_minter: Callable[[str], str] | None = None,
 ) -> dict[str, Any]:
-    """Run one ALDO bot turn. The keyword arguments are test and smoke seams."""
+    """Run one personal agent turn. The keyword arguments are test and smoke seams."""
     run_id, conv_id, owner_id, message = _validate_payload(payload)
     repo = repo or get_repo()
 

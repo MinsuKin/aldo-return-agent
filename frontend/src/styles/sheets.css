@@ -202,19 +202,10 @@
     0 14px 34px rgba(0, 0, 0, 0.5);
   animation: push-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
-/* Small brand-yellow app-icon square (overrides the round bot avatar box in the banner). */
+/* Small app-icon square (overrides the round bot avatar box in the banner). */
 .push .bot-avatar {
   flex: none;
   border-radius: 9px;
-  background: var(--brand);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
-}
-/* Glyph on yellow must be dark ink, never white (contrast rule). */
-.push .bot-avatar .bot-avatar-bubble {
-  fill: var(--brand-ink);
-}
-.push .bot-avatar .bot-avatar-eye {
-  fill: var(--brand);
 }
 .push-text {
   flex: 1;

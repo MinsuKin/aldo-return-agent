@@ -4,7 +4,7 @@ import { formatScalar } from "./format";
 import { provenanceKinds } from "./normalize";
 import { humanize, isObj, num, pick, str } from "./util";
 
-/** "personal" = ALDO bot, purchase workflow. "returns" = ALDO bot, return workflow (addendum 11.5). */
+/** "personal" = the personal agent's purchase workflow. "returns" = the return workflow, run by the ALDO agent (addendum 11.5). */
 export type RunAgent = "personal" | "returns";
 export type RunKind = "message" | "approval" | "requote";
 
@@ -33,9 +33,9 @@ export function runEventActor(ev: RunEvent, run: Pick<RunState, "agent">): strin
 
 // ---- Tool steps (the expandable sub-steps of a run in the trace) ------------------------------
 
-/** Tools whose inputs and results are ALDO bot's own notes and memory: the trace only says that they ran. */
+/** Tools whose inputs and results are the personal agent's own notes and memory: the trace only says that they ran. */
 const PRIVATE_BOT_TOOLS = new Set(["recall_size_memory", "record_decision"]);
-/** Chip keys that could carry the owner's private history; never shown for ALDO bot's own tools. */
+/** Chip keys that could carry the owner's private history; never shown for the personal agent's own tools. */
 const PRIVATE_KEY_RE = /typical|retailer|memory|history|owner|private|kept|returned_too|entries/i;
 
 export const TOOL_LABEL: Record<string, string> = {
@@ -43,7 +43,7 @@ export const TOOL_LABEL: Record<string, string> = {
   ask_aldo_size_assist: "Ask ALDO for size help",
   read_product_reviews: "Read product reviews",
   send_size_decision: "Propose a size",
-  hand_off_to_returns: "Switch to the return workflow",
+  hand_off_to_returns: "Hand over to the ALDO agent",
   record_decision: "Note the decision",
   get_order_context: "Read the order",
   list_my_orders: "List the orders",
@@ -59,7 +59,7 @@ export const TOOL_LABEL: Record<string, string> = {
 export interface ToolStep {
   key: string;
   seq: number;
-  /** Who made the call: ALDO bot's purchase workflow (personal_agent) or its return workflow (aldo_agent). */
+  /** Who made the call: the personal agent's purchase workflow (personal_agent) or the ALDO agent's return workflow (aldo_agent). */
   actor: string;
   /** When the call started (ms since epoch), NaN when the event has no timestamp. */
   tsMs: number;
@@ -73,7 +73,7 @@ export interface ToolStep {
   latencyMs?: number;
   evidence: Chip[];
   provenance: Provenance[];
-  /** Private to ALDO bot: only the fact that the tool ran is shown. */
+  /** Private to your personal agent: only the fact that the tool ran is shown. */
   hidden: boolean;
 }
 
@@ -105,7 +105,7 @@ export function toolSteps(run: RunState): ToolStep[] {
   for (const ev of [...run.events].sort((a, b) => a.seq - b.seq)) {
     const p = isObj(ev.payload) ? ev.payload : {};
     const actor = runEventActor(ev, run);
-    // ALDO bot's purchase workflow keeps its notes and memory private; the return workflow shows server facts.
+    // The personal agent's purchase workflow keeps its notes and memory private; the return workflow shows server facts.
     const personal = actor === "personal_agent";
     if (ev.type === "tool_call") {
       const tool = str(pick(p, ["tool", "tool_name", "name"])) ?? "tool";

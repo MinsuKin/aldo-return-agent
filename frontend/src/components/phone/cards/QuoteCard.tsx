@@ -13,7 +13,7 @@ interface Props {
   quoteId: string;
   /** The newest set of options in the chat; older ones are shown as replaced. */
   isLatest: boolean;
-  /** ALDO bot is still working, so the options may still change. */
+  /** The personal agent is still working, so the options may still change. */
   busy: boolean;
   onChoose: (quote: QuoteView, option: OptionView, trigger: HTMLElement) => void;
   onRequote: (quote: QuoteView) => void;
@@ -335,7 +335,7 @@ export function QuoteCard({ quoteId, isLatest, busy, onChoose, onRequote }: Prop
           {primary && (
             <OptionBlock quote={quote} option={primary} primary disabled={disabled} approved={approvedId === primary.optionId} onChoose={onChoose} />
           )}
-          {busy && !locked && !expired && !dead && <p className="muted small">Available when ALDO bot finishes.</p>}
+          {busy && !locked && !expired && !dead && <p className="muted small">Available when your personal agent finishes.</p>}
 
           {others.length > 0 && !dead && (
             <div className="others">

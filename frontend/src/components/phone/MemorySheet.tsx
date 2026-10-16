@@ -18,7 +18,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** "What ALDO bot remembers": the owner's size memory, plus what ALDO taught it after exchanges. */
+/** "What your personal agent remembers": the owner's size memory, plus what ALDO taught it after exchanges. */
 export function MemorySheet({ memory, loading, error, writeback, onCheckAgain, returnFocusRef, onClose }: Props) {
   const fits = memory?.updates.filter((u) => u.fitFeedback === "size_ok") ?? [];
   const swaps = memory?.updates.filter((u) => u.fitFeedback !== "size_ok") ?? [];
@@ -27,8 +27,8 @@ export function MemorySheet({ memory, loading, error, writeback, onCheckAgain, r
   return (
     <PhoneSheet
       kind="memory"
-      title="What ALDO bot remembers"
-      description="Private to ALDO bot: ALDO never sees these notes."
+      title="What your personal agent remembers"
+      description="Private to your personal agent: ALDO never sees these notes."
       returnFocusRef={returnFocusRef}
       onClose={onClose}
     >

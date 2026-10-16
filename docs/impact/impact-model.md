@@ -1,19 +1,21 @@
 # Agentic Returns Gateway impact model: fit-related returns, ALDO_CA
 
+Presentation companion: `BUSINESS_IMPACT_EXPLAINED.md` explains the assumptions and the new core-exchange sensitivity (about CAD 57k / 129k / 201k), which excludes the repeat-return bonus. Original scenario arithmetic below is retained. Cost amounts are estimates from observed token usage at assumed prices, not billed production costs. The legacy margin-rate rescaling applies a second cost adjustment to an already cost-adjusted CAD 54 and should not be used as a reliable gross-margin estimate.
+
 ## Slide-ready sentences
 
 Business impact
 
 - Of 61,998 completed ALDO_CA return lines between 2025-02-01 and 2026-01-31, 13,317 (21.5%) gave a size reason, Too small or Too big (measured).
-- If 10%, 20% or 30% of those size-related lines became exchanges, annual net value would be about CAD 57,000, CAD 132,000 or CAD 209,000 after agent cost (derived: conversion rates assumed, agent cost measured).
+- If 10%, 20% or 30% of those size-related lines became additional retained exchanges, annual net value would be about CAD 57,000, CAD 132,000 or CAD 209,000 after agent cost (derived: conversion and repeat-return reductions assumed, agent cost estimated from observed tokens at assumed prices).
 - Another 36,462 lines (58.8%) carry a change-of-mind or not-as-expected reason, but 91% of them use the combined label 'Changed my mind / Other', which sits on 72.5% of in-store lines against 9.5% of other lines, so this group is an upper bound (measured).
 - Converting 5%, 10% or 15% of them to a colour or style exchange where the alternative is in stock (60% assumed) would add about CAD 43,000, CAD 88,000 or CAD 135,000 a year on top of the size-related exchanges (gross; the agent already runs on every line), or about CAD 8,000 in the base case if only the 3,139 lines with a specific reason count (assumed).
-- ALDO_CA footwear earned a 64.18% gross margin in fiscal 2025 (72.94% on regular-price sales) and a fit-returned unit carries CAD 52.83 of margin, so one retained exchange pays for about 216 agent runs at CAD 0.2449 per run (derived: margin measured, agent cost measured).
+- ALDO_CA footwear earned a 64.18% gross margin in fiscal 2025 (72.94% on regular-price sales) and a fit-returned unit carries CAD 52.83 of margin, so that margin proxy equates to about 216 agent runs at estimated CAD 0.2449 per run (derived: margin measured, agent cost estimated from observed tokens at assumed prices; not a measured exchange benefit).
 - At the measured margin rate the size-related exchanges retain about CAD 46,000, CAD 92,000 or CAD 138,000 of gross margin a year (a conservative reading), and 288 retained exchanges a year (2.16% of size-related lines) would already pay the whole agent bill (derived: conversion rates assumed).
 
 Scalability
 
-- Because 19.1% of return numbers hold two or more lines (35.5% of lines), one agent run per return number instead of per line lowers the yearly runs from 61,998 to 49,404; at a measured CAD 0.2449 per run (6 live runs at assumed model prices) the annual agent cost falls from about CAD 15,000 to about CAD 12,000 (derived: counts measured).
+- Because 19.1% of return numbers hold two or more lines (35.5% of lines), one agent run per return number instead of per line lowers the modeled yearly runs from 61,998 to 49,404; at estimated CAD 0.2449 per run (6 live runs at assumed model prices) the annual agent cost falls from about CAD 15,000 to about CAD 12,000 (derived: counts measured, equal run cost assumed).
 - On the busiest day (638 lines) the agent would process about 35.5 million tokens, roughly 49,000 tokens per minute over a 12-hour window, with about 0.4 runs in flight on average in the busiest hour (15% of the day, assumed); check account quotas, request an increase before launch (assumed).
 
 Figures in these sentences are rounded; the tables below keep the exact values and every number keeps its tag.
@@ -23,18 +25,18 @@ Figures in these sentences are rounded; the tables below keep the exact values a
 | Headline number | Value | Tag | Basis |
 | --- | ---: | --- | --- |
 | Size-related return lines (Too small + Too big) | 13,317 | measured | 21.48% of 61,998 completed ALDO_CA return lines, 2025-02-01 to 2026-01-31. Lines, not customers. |
-| Annual net value, post-purchase exchange (base case) | CAD 131,570.03 | derived | Range CAD 56,728.49 (low) to CAD 209,341.31 (high). Rests on assumed 10/20/30% exchange conversion and the measured agent cost per run. |
+| Annual net value, post-purchase exchange (base case) | CAD 131,570.03 | derived | Range CAD 56,728.49 (low) to CAD 209,341.31 (high). Rests on assumed exchange conversion and repeat-return reductions, plus agent cost estimated from observed tokens at assumed prices. |
 | Pre-purchase prevention what-if (base case) | CAD 50,604.60 | assumed | 5% of the measured size-related lines prevented. Range CAD 0.00 (0%) to CAD 101,209.20 (10%). Pilot hypothesis, separate lever, not additive. |
 | Preference-return exchange what-if, added to the fit scenarios (base case, gross) | CAD 87,705.69 | assumed | 36,462 preference lines x 60% availability of the alternative colour x 10% conversion (both assumed) x CAD 38.99 per case, derived from the measured median refund, plus the avoided second-return value as in the fit scenarios. Range CAD 42,649.60 (5%) to CAD 135,168.28 (15%); floor CAD 7,550.55 if only the 3,139 lines with a specific reason count. Fit and preference lines never overlap: both levers together give CAD 219,275.72 net in the base case, agent cost counted once. |
 | Return numbers with two or more lines | 19.06% | measured | 9,417 of 49,404 return numbers; they hold 22,011 of 61,998 lines (35.50%), up to 14 lines in one return. 99.19% of them contain two or more distinct SKUs. |
-| Agent cost per run (measured) | CAD 0.2449 | derived | Mean of 6 live runs of the ALDO returns-agent scenarios at assumed model prices (prices in returns_domain.config): USD 0.1775 per run, converted at 1.38 CAD per USD (assumed, from returns_domain.config). Single scenarios range from CAD 0.0864 (H) to CAD 0.3956 (A). |
+| Agent cost per run (estimated from observed tokens) | CAD 0.2449 | derived | Mean estimated cost of 6 live runs of the ALDO returns-agent scenarios at assumed model prices (prices in returns_domain.config): USD 0.1775 per run, converted at 1.38 CAD per USD (assumed, from returns_domain.config). Single scenarios range from CAD 0.0864 (H) to CAD 0.3956 (A). |
 
 Key assumptions
 
 - Exchange conversion of size-related lines 10/20/30% and prevention before purchase 0/5/10% (low/base/high, assumed). Both are assumptions to validate in a pilot.
 - Value per converted or retained case CAD 54.00 and avoided return cost CAD 22.00 (assumed, synthetic unit economics from handoff section 15).
 - Repeat-return reduction on converted cases 0/5/10% (assumed).
-- Agent cost per run CAD 0.2449, measured on 6 live runs at assumed model prices (prices in returns_domain.config).
+- Agent cost per run CAD 0.2449, estimated from observed tokens in 6 live runs at assumed model prices (prices in returns_domain.config).
 - Fit lines are return lines, not customers.
 - Preference-return exchange: conversion 5/10/15% of preference lines where the alternative colour or style is in stock (60% availability), repeat-return reduction as in the fit scenarios, value per case derived from the measured median refund and the synthetic unit economics (all assumed, to validate in a pilot).
 - Fit and preference lines never overlap (one reason group per line), so the two levers can be added; the pre-purchase prevention what-if stays separate.
@@ -165,7 +167,7 @@ annual_net_value = fit_lines x exchange_conversion x value_per_converted_case
 
 ## 5. Agent cost input
 
-Agent cost per run is CAD 0.2449, measured on 6 live runs at assumed model prices (prices in returns_domain.config). Source: `.agents/tasks/agentic-returns-gateway-p0-2026-10-15/eval-baseline-1/results.json` (field `est_cost_per_run_usd`). Tokens are measured by the live eval; the token prices are an assumption set in the eval config. The eval reports USD 0.1775 per run, converted at 1.38 CAD per USD (assumed; one source of truth: backend/returns_domain/config.py (USD_TO_CAD default)).
+Agent cost per run is CAD 0.2449, estimated from observed tokens in 6 live runs at assumed model prices (prices in returns_domain.config). Source: `.agents/tasks/agentic-returns-gateway-p0-2026-10-15/eval-baseline-1/results.json` (field `est_cost_per_run_usd`). Tokens are measured by the live eval; the token prices are an assumption set in the eval config. The eval reports estimated USD 0.1775 per run, converted at 1.38 CAD per USD (assumed; one source of truth: backend/returns_domain/config.py (USD_TO_CAD default)).
 
 ## Pre-purchase prevention what-if (pilot hypothesis)
 
@@ -510,10 +512,10 @@ perk_break_even_exchanges_per_use = perk_fee_per_use / margin_per_retained_excha
 - Return reason groups follow the product taxonomy (backend/returns_domain/taxonomy.py). 'Changed my mind / Other' mixes change of mind with unspecified reasons in one option and makes up 91.39% of the preference group, so the preference group is an upper bound on taste-based returns. The label sits on 72.47% of in-store lines against 9.49% of lines from other channels, so in store it may be a default entry. The preference lever therefore also shows a floor that counts only the 3,139 lines with a specific reason.
 - Comfort complaints, process reasons (return without merchandise, return extension, gift return) and one French spelling of 'too big' sit in the group other because they are ambiguous or not a product problem. The fit group is identical to the earlier definition (Too small and Too big only), and the five groups add up to all lines in scope.
 - The preference lever takes its value per converted case from the measured median refund of the preference lines and the synthetic unit economics of handoff section 15 (item cost 40 percent of price, net extra handling of an exchange CAD 6). At a CAD 100 order the formula returns the CAD 54 of the fit scenarios, which keep the flat CAD 54. The median refund stands in for the item price; line versus transaction grain is unconfirmed.
-- 89.96% of the preference lines were returned in store, where the customer is already at the counter, so the lever assumes an exchange is offered there (by an associate or by ALDO bot); this is not tested. Stores already exchange today: the exchange file has 12,853 CONFIRMED and 4,802 ASSUMED in-store rows attributed to ALDO_CA in the window. The preference conversion rates (5, 10 and 15 percent) and the 60 percent availability of the alternative colour are assumptions to validate in a pilot: they are meant as additional to current in-store exchanges and are not calibrated against them, and no stock data supports the availability.
+- 89.96% of the preference lines were returned in store, where the customer is already at the counter, so the lever assumes an exchange is offered there (by an associate or by the personal agent); this is not tested. Stores already exchange today: the exchange file has 12,853 CONFIRMED and 4,802 ASSUMED in-store rows attributed to ALDO_CA in the window. The preference conversion rates (5, 10 and 15 percent) and the 60 percent availability of the alternative colour are assumptions to validate in a pilot: they are meant as additional to current in-store exchanges and are not calibrated against them, and no stock data supports the availability.
 - Fit and preference lines are disjoint by construction (one reason group per line), so the two levers are added in the combined rows with the agent cost counted once. The pre-purchase prevention what-if stays a separate lever and is not part of that total.
 - Bundle metrics count lines per return number in scope. 99.19% of the multi-line returns contain two or more distinct SKUs, so extra lines are normally different items. The baseline eval has no multi-line scenario, so the agent cost of a bundled run is not measured: one run per return number assumes it costs the same as a single-order run.
-- The measured agent cost is the mean of 6 live runs priced at assumed token prices and is not the production mix: single scenarios differ widely, and the agent cost sensitivity shows the most expensive measured scenario and the CAD 0.50 placeholder used before the live eval.
+- The estimated agent cost uses observed tokens from 6 live runs priced at assumed token prices and is not the production mix: single scenarios differ widely, and the agent cost sensitivity shows the most expensive observed scenario and the CAD 0.50 placeholder used before the live eval.
 - Agent-load numbers use return lines per day as runs per day, the mean of the scenario p50 wall-clock latencies as run duration, an assumed 12-hour active window and an assumed 15 percent busiest-hour share. Concurrency is an average (Little's law) and bursts are higher. This is not a load test. Compare with the account's on-demand quotas for the model: check account quotas, request an increase before launch. No quota numbers are stated.
 - Prompt caching is not modelled: the baseline eval carries no cache-read token counts, so no saving is claimed.
 - The tier perk block gives inputs and cost bounds only; no revenue, retention or loyalty uplift is claimed. The return shipping fee and the monthly allowance come from the demo fixtures; the Platinum share and the uses per member are assumptions.

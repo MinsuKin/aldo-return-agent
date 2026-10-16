@@ -18,7 +18,7 @@ interface Props {
   sizeRequestId: string;
   /** The newest proposal in the chat; older ones are shown as replaced. */
   isLatest: boolean;
-  /** ALDO bot is still working, so the proposal may still change. */
+  /** The personal agent is still working, so the proposal may still change. */
   busy: boolean;
   /** From the A2A stream (reviews_shared): counts only, never review text. */
   reviews?: ReviewEvidence;
@@ -26,7 +26,7 @@ interface Props {
   onAskAgain: () => void;
 }
 
-/** ALDO bot's purchase proposal, built from the server's record. Only the owner's click places the order. */
+/** The personal agent's purchase proposal, built from the server's record. Only the owner's click places the order. */
 export function PurchaseCard({ sizeRequestId, isLatest, busy, reviews, onConfirm, onAskAgain }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const query = useQuery({ queryKey: ["purchase", sizeRequestId], queryFn: () => api.purchase(sizeRequestId), retry: 2 });
@@ -61,7 +61,7 @@ export function PurchaseCard({ sizeRequestId, isLatest, busy, reviews, onConfirm
         </p>
       )}
 
-      {view && view.status === "open" && <p className="muted">ALDO bot is still preparing a proposal. Nothing has been ordered.</p>}
+      {view && view.status === "open" && <p className="muted">Your personal agent is still preparing a proposal. Nothing has been ordered.</p>}
 
       {view && (proposed || decided || expired) && (
         <>
@@ -135,7 +135,7 @@ export function PurchaseCard({ sizeRequestId, isLatest, busy, reviews, onConfirm
                   )}
                   <li>
                     <Icon name="lock" size={14} />
-                    <span>Your own size history stays with ALDO bot.</span>
+                    <span>Your own size history stays with your personal agent.</span>
                   </li>
                 </ul>
               )}
@@ -153,7 +153,7 @@ export function PurchaseCard({ sizeRequestId, isLatest, busy, reviews, onConfirm
                 <div className="alert alert-warn" role="status" data-testid="purchase-expired">
                   <p>This proposal expired, so it can no longer be confirmed. Nothing was ordered.</p>
                   <button type="button" className="btn btn-small" onClick={onAskAgain} disabled={busy}>
-                    Ask ALDO bot again
+                    Ask your personal agent again
                   </button>
                 </div>
               )}
@@ -169,7 +169,7 @@ export function PurchaseCard({ sizeRequestId, isLatest, busy, reviews, onConfirm
                   >
                     Confirm purchase
                   </button>
-                  <p className="muted small">{busy ? "Available when ALDO bot finishes." : "Nothing is ordered until you confirm."}</p>
+                  <p className="muted small">{busy ? "Available when your personal agent finishes." : "Nothing is ordered until you confirm."}</p>
                 </div>
               )}
             </>

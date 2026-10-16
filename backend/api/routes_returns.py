@@ -31,7 +31,7 @@ trace = providers.lazy("trace")
 #: Customer text may never carry the server's own marker (G-13), on any line, in any width.
 _SERVER_MARKER = re.compile(r"^\s*\[server\]", re.IGNORECASE | re.MULTILINE)
 
-#: Runs of the ALDO bot (personal agent) live in its own table; their ids start with this.
+#: Runs of the personal agent live in its own table; their ids start with this.
 PERSONAL_RUN_PREFIX = "PRUN-"
 
 RUN_BUSY_MESSAGE = "Another request is still running in this conversation. Please wait a moment."
@@ -140,7 +140,7 @@ def _field(obj: Any, name: str) -> Any:
 
 
 def _personal_run_events(customer_id: str, run_id: str, after: int) -> Any:
-    """Event page of an ALDO bot run, read from the personal-agent table.
+    """Event page of a personal agent run, read from the personal-agent table.
 
     The owner is the token's customer, so another owner's run id is NOT_FOUND / NOT_AUTHORIZED
     inside the personal-agent module. Without that package there are no such runs.
@@ -192,7 +192,7 @@ def run_payload(
 
     EVERY run of a hand-off's conversation (the single chat: each owner message, the approval, a
     requote) adds two trusted server fields; both keys are absent on every other run:
-    ``memory_context`` (addendum 12.3, the summary of the owner's ALDO bot memory) and
+    ``memory_context`` (addendum 12.3, the summary of the owner's personal agent memory) and
     ``selected_order_id`` (the order ``hand_off_to_returns`` named, the same value as ``order_id``;
     without it the return workflow looks up the owner's recent delivered orders).
     """

@@ -1,5 +1,5 @@
-// ALDO bot's purchase workflow, scripted (addendum 11.2, John act 1), and the hand-off to the return
-// workflow. ALDO bot only PROPOSES a purchase: nothing is ordered until the owner clicks Confirm.
+// The personal agent's purchase workflow, scripted (addendum 11.2, John act 1), and the hand-off to the return
+// workflow. The personal agent only PROPOSES a purchase: nothing is ordered until the owner clicks Confirm.
 
 import { DAVID_ORDER_ID, FIT, INSTRUCTION_LIKE, LOCATIONS, MEMORY_SEEDS, MEN001, MEN001_SIZES, reviewsFor, skuFor, sizeStr, type MockPersona } from "./data.ts";
 import { buildPersonalRun } from "./personal.ts";
@@ -36,7 +36,7 @@ const startRun = (s: Script, p: TurnParams, kind = "personal"): void => {
   s.emit(150, "run_started", { kind, conv_id: p.conv.conv_id, order_id: null, model_id: MODEL_ID, max_rounds: 6 }, undefined, BOT);
 };
 
-/** Messages ALDO bot answers without a tool: greetings, unknown requests. */
+/** Messages the personal agent answers without a tool: greetings, unknown requests. */
 function plainTurn(p: TurnParams, text: string, decision?: string): Turn {
   const s = script();
   startRun(s, p);
@@ -141,7 +141,7 @@ function men001Purchase(p: TurnParams): Script {
   let tools = 0;
   startRun(s, p);
 
-  // ALDO bot's own memory first. Its details stay private to ALDO bot.
+  // The personal agent's own memory first. Its details stay private to the personal agent.
   tools += 1;
   toolStep(
     s,
@@ -233,7 +233,7 @@ function men001Purchase(p: TurnParams): Script {
     },
   );
 
-  // Reviews are untrusted text: ALDO flags instruction-like ones, and ALDO bot leaves them out.
+  // Reviews are untrusted text: ALDO flags instruction-like ones, and the personal agent leaves them out.
   const reviews = reviewsFor(MEN001.style);
   const flagged = reviews.filter((r) => INSTRUCTION_LIKE.test(`${r.title} ${r.text}`)).length;
   tools += 1;
@@ -323,7 +323,7 @@ function men001Purchase(p: TurnParams): Script {
   return s;
 }
 
-// ---- Routing of one owner message while ALDO bot is in its purchase workflow ---------------------------
+// ---- Routing of one owner message while the personal agent is in its purchase workflow ---------------------------
 
 export function buildBotTurn(p: TurnParams): Turn {
   const lower = p.message.toLowerCase();

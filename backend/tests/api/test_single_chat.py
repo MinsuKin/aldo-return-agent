@@ -23,13 +23,13 @@ from .helpers import ApiClient
 ADMIN = {"X-Demo-Admin": ADMIN_KEY}
 ORDER = "DEMO-1001"  # Ava's delivered hero order
 TRIGGER = "I want to return these."
-CONTEXT = {"size_system": "US_W", "typical_size": "7.5", "preferred_colors": ["TAN"], "source": "ALDO bot memory"}
+CONTEXT = {"size_system": "US_W", "typical_size": "7.5", "preferred_colors": ["TAN"], "source": "personal agent memory"}
 PREFIX = "/api/personal-agent/conversations"
 
 
 @pytest.fixture
 def world(client, seeded):
-    """Both tables seeded through the demo reset (it seeds the ALDO bot's memory too)."""
+    """Both tables seeded through the demo reset (it seeds the personal agent's memory too)."""
     assert client.post("/api/demo/reset", {"variant": "default"}, headers=ADMIN).status == 200
     return client
 
@@ -556,7 +556,7 @@ def test_recent_orders_list_the_lines_in_the_order_a_person_counts_them(world):
 
 
 def test_no_user_facing_text_of_the_single_chat_mentions_a_second_agent(world, app, enqueued):
-    """Addendum 12.1: errors and messages talk about ALDO bot only."""
+    """Addendum 12.1: errors and messages talk about the personal agent only."""
     from api import personal_agent_routes as routes
 
     for text in (routes.BUSY_MESSAGE, routes.ENQUEUE_FAILED, routes.GENERIC_ERROR, returns_chat.__doc__ and ""):

@@ -66,7 +66,7 @@ export function PhoneFrame({ scale, inert, children }: Props) {
 
   return (
     <div className="phone-fit" style={{ width: PHONE_W * scale, height: PHONE_H * scale }}>
-      <div className="phone" style={{ transform: `scale(${scale})` }} data-testid="phone" role="group" aria-label="ALDO bot on a phone">
+      <div className="phone" style={{ transform: `scale(${scale})` }} data-testid="phone" role="group" aria-label="Personal agent on a phone">
         <span className="phone-btn phone-btn-action" aria-hidden="true" />
         <span className="phone-btn phone-btn-vol-up" aria-hidden="true" />
         <span className="phone-btn phone-btn-vol-down" aria-hidden="true" />

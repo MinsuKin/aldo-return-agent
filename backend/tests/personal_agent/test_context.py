@@ -48,7 +48,7 @@ def test_johns_context_is_the_example_of_the_addendum(repo: MemoryRepo) -> None:
         "aldo_items": [
             {"order_id": "DEMO-A2A-AB12CD", "product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5", "status": "delivered"}
         ],
-        "source": "ALDO bot memory",
+        "source": "personal agent memory",
     }
     assert "BLACK" not in built["preferred_colors"]  # the black boot was returned too big: not a kept colour
 
@@ -62,15 +62,15 @@ def test_davids_context_has_his_tan_item_and_no_aldo_items_without_agent_orders(
 
 def test_an_owner_without_colours_or_orders_gets_the_sizing_basics_only(repo: MemoryRepo) -> None:
     built = build_memory_context(memory_of(repo, AVA), [])
-    assert built == {"size_system": "US_W", "typical_size": "7.5", "source": "ALDO bot memory"}
+    assert built == {"size_system": "US_W", "typical_size": "7.5", "source": "personal agent memory"}
     assert consulted_fields(built) == ["typical_size"] and entry_count(built) == 1
 
 
 def test_the_builder_accepts_the_dict_form_of_the_memory_view(repo: MemoryRepo) -> None:
     view = memory_of(repo, JOHN).model_dump(mode="json")
     assert build_memory_context(view, ORDERS) == build_memory_context(memory_of(repo, JOHN), ORDERS)
-    assert build_memory_context({}, None) == {"source": "ALDO bot memory"}
-    assert build_memory_context(None, None) == {"source": "ALDO bot memory"}
+    assert build_memory_context({}, None) == {"source": "personal agent memory"}
+    assert build_memory_context(None, None) == {"source": "personal agent memory"}
 
 
 def test_colours_rank_by_how_often_they_were_kept_then_by_memory_order() -> None:
@@ -141,7 +141,7 @@ def test_a_context_that_is_too_big_drops_aldo_items_first_and_keeps_the_basics()
     fat = {"size_system": "US_M", "typical_size": "10.0", "memory": [], "updates": []}
     assert encoded_size(build_memory_context(fat, orders)) <= MAX_CONTEXT_BYTES
     shrunk = context._fit({"size_system": "US_M", "typical_size": "10.0", "preferred_colors": ["RED"] * 5,
-                           "aldo_items": [{"x": "y" * 400}] * 3, "source": "ALDO bot memory"})
+                           "aldo_items": [{"x": "y" * 400}] * 3, "source": "personal agent memory"})
     assert encoded_size(shrunk) <= MAX_CONTEXT_BYTES
     assert shrunk["typical_size"] == "10.0" and shrunk["preferred_colors"] == ["RED"] * 5  # the basics stay
     assert len(shrunk["aldo_items"]) < 3  # items go one by one, from the end, only as far as needed
@@ -154,7 +154,7 @@ def test_malformed_values_are_left_out_not_forwarded() -> None:
             {"outcome": "kept", "color": "R" * 40}, {"outcome": "kept", "color": 7}], "updates": "none"}
     orders = [{"order_id": "../x", "channel": "agent", "lines": []}, {"order_id": "DEMO-A2A-1", "channel": "agent",
               "lines": [{"product_name": "", "color": "BLACK", "size": "9.5"}, {"product_name": "A", "color": "BLACK", "size": "big"}]}]
-    assert build_memory_context(view, orders) == {"source": "ALDO bot memory"}
+    assert build_memory_context(view, orders) == {"source": "personal agent memory"}
 
 
 def test_fields_and_entry_count_describe_what_the_return_workflow_got(repo: MemoryRepo) -> None:

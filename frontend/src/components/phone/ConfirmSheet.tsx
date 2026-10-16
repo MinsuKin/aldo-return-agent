@@ -14,7 +14,7 @@ export interface SheetItem {
 }
 
 interface Props {
-  /** "purchase" (ALDO bot proposals) or "approve" (exchange and return options): drives ids and test ids. */
+  /** "purchase" (personal agent proposals) or "approve" (exchange and return options): drives ids and test ids. */
   kind: "purchase" | "approve";
   title: string;
   description: string;

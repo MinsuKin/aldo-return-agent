@@ -1,18 +1,19 @@
 /* ---- Avatars and the first screen (dark workspace) --------------------------------------- */
 
+/* The ALDO bot mascot image, cropped to a circle. */
 .bot-avatar {
   flex: none;
-  display: inline-grid;
-  place-items: center;
+  display: inline-block;
+  overflow: hidden;
   border-radius: 50%;
-  background: var(--brand);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
+  line-height: 0;
 }
-.bot-avatar-bubble {
-  fill: var(--brand-ink);
-}
-.bot-avatar-eye {
-  fill: var(--brand);
+.bot-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
 }
 .persona-avatar {
   flex: none;

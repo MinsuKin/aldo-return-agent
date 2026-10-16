@@ -1,6 +1,6 @@
 /* ---- Chat ----------------------------------------------------------------------------------
-   Dark workspace chat after the team designer's demo-dashboard: a brand ALDO bot avatar in the
-   header, the owner's messages as right-aligned bubbles, ALDO bot's replies as plain flowing text
+   Dark workspace chat after the team designer's demo-dashboard: a brand personal agent avatar in the
+   header, the owner's messages as right-aligned bubbles, the personal agent's replies as plain flowing text
    (no bubble, no small avatar) like ChatGPT, a shimmering "Thinking" indicator, outlined quick-reply
    cards, and a pill composer with a round white send button. Tokens only (base.css). */
 
@@ -51,16 +51,9 @@
   gap: 9px;
 }
 
-/* Round ALDO bot avatar in brand yellow with a dark chat glyph (overrides the default violet avatar). */
+/* Round ALDO bot avatar with a hairline ring so it holds its edge on the dark header. */
 .chat-header .bot-avatar {
-  background: var(--brand);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
-}
-.chat-header .bot-avatar .bot-avatar-bubble {
-  fill: var(--brand-ink);
-}
-.chat-header .bot-avatar .bot-avatar-eye {
-  fill: var(--brand);
+  box-shadow: 0 0 0 1px var(--border-soft);
 }
 
 .chat-title-text {
@@ -156,7 +149,7 @@
   display: block;
 }
 
-/* ChatGPT style: the owner gets a bubble, ALDO bot flows as plain text. */
+/* ChatGPT style: the owner gets a bubble, the personal agent flows as plain text. */
 .bubble {
   font-size: 14px;
   line-height: 1.5;
@@ -168,7 +161,7 @@
   margin-top: 8px;
 }
 
-/* ALDO bot: plain flowing text, no background, no avatar. */
+/* The personal agent: plain flowing text, no background, no avatar. */
 .bubble-bot {
   align-self: stretch;
   max-width: 100%;

@@ -14,7 +14,7 @@ const MESSAGES: Table = {
   NOT_AUTHORIZED: { message: "That item belongs to another customer, so it cannot be opened from this sign-in." },
   ORDER_NOT_FOUND: { message: "That order could not be found." },
   QUOTE_EXPIRED: {
-    message: "These options have expired. Ask ALDO bot for fresh options, then confirm again.",
+    message: "These options have expired. Ask your personal agent for fresh options, then confirm again.",
     action: "requote",
   },
   IDEMPOTENCY_CONFLICT: {
@@ -22,15 +22,15 @@ const MESSAGES: Table = {
       "A different option was already confirmed on this quote. Only one option can be confirmed per quote, so nothing changed.",
   },
   RUN_IN_PROGRESS: {
-    message: "ALDO bot is still working on the previous message. Try again in a moment.",
+    message: "Your personal agent is still working on the previous message. Try again in a moment.",
     action: "retry",
   },
   STOCK_CHANGED: {
-    message: "Stock changed, so that option is no longer available. ALDO bot will look for another option.",
+    message: "Stock changed, so that option is no longer available. Your personal agent will look for another option.",
   },
   APPROVAL_REQUIRED: { message: "That step needs your confirmation first." },
-  UPSTREAM_TIMEOUT: { message: "ALDO bot took too long to respond. Please try again.", action: "retry" },
-  LIMIT_REACHED: { message: "ALDO bot reached its step limit and handed this to a person." },
+  UPSTREAM_TIMEOUT: { message: "Your personal agent took too long to respond. Please try again.", action: "retry" },
+  LIMIT_REACHED: { message: "Your personal agent reached its step limit and handed this to a person." },
   THROTTLED: { message: "The demo is busy. Wait a few seconds and try again.", action: "retry" },
   NETWORK_ERROR: { message: "Cannot reach the demo API. Check the connection and try again.", action: "retry" },
   POLICY_NOT_ELIGIBLE: { message: "These items are no longer eligible, so nothing was changed." },
@@ -39,14 +39,14 @@ const MESSAGES: Table = {
 /** Purchase confirmation has its own wording for the codes it can hit. */
 const PURCHASE_MESSAGES: Table = {
   APPROVAL_REQUIRED: {
-    message: "ALDO bot has not made a proposal for this request yet, so there is nothing to confirm.",
+    message: "Your personal agent has not made a proposal for this request yet, so there is nothing to confirm.",
   },
   REQUEST_EXPIRED: {
-    message: "This proposal expired, so nothing was ordered. Ask ALDO bot to check again, then confirm the new proposal.",
+    message: "This proposal expired, so nothing was ordered. Ask your personal agent to check again, then confirm the new proposal.",
     action: "requote",
   },
   STOCK_CHANGED: {
-    message: "Stock changed, so that option is gone and nothing was ordered. Ask ALDO bot to look again.",
+    message: "Stock changed, so that option is gone and nothing was ordered. Ask your personal agent to look again.",
     action: "requote",
   },
   IDEMPOTENCY_CONFLICT: {

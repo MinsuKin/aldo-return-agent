@@ -1,4 +1,4 @@
-// Scripted stand-ins for ALDO bot's return workflow (fit exchanges and returns for the regression
+// Scripted stand-ins for the personal agent's return workflow (fit exchanges and returns for the regression
 // customers) and for the approval continuation. Each builder returns a timed list of run events (the
 // same event types and payload shapes as contracts.md B.4 plus the pivot's A2A events). Side effects
 // (quotes, orders, transactions, cases, memory) are applied when the event becomes visible, so
@@ -69,7 +69,7 @@ function understand(message: string): Intent {
   return { mentioned, defect, mind, fit, direction: big && !small ? "too_big" : small ? "too_small" : "unknown", worn, deadline };
 }
 
-// ---- ALDO bot, return workflow (legacy fit-exchange engine) ------------------------------------
+// ---- The personal agent, return workflow (legacy fit-exchange engine) ------------------------------------
 
 interface AldoParams {
   customerId: string;
@@ -579,7 +579,7 @@ export function buildApprovalRun(p: ApprovalParams): Script {
     A,
   );
 
-  // The write-back to ALDO bot happens right after an exchange is created (provisional).
+  // The write-back to the personal agent happens right after an exchange is created (provisional).
   s.emit(
     300,
     "decision",
@@ -590,7 +590,7 @@ export function buildApprovalRun(p: ApprovalParams): Script {
           const newSize = opt.replacement_size ?? originalSize;
           const colourSwap = !!opt.replacement_color && opt.replacement_color.toLowerCase() !== line.color.toLowerCase() && newSize === originalSize;
           const reasonCode = colourSwap ? "PREFERENCE" : Number(newSize) > Number(originalSize) ? "TOO_SMALL" : "TOO_BIG";
-          // Queued, not delivered: the real API delivers it when ALDO bot's memory is next read.
+          // Queued, not delivered: the real API delivers it when the personal agent's memory is next read.
           enqueueWriteback(p.customerId, {
             update_id: updateId,
             order_id: order.order_id,
@@ -621,7 +621,7 @@ export function buildApprovalRun(p: ApprovalParams): Script {
       think: 450,
       actor: A,
       onResult: () => {
-        // Back to the purchase workflow once the return is done.
+        // Back to the personal agent once the return is done.
         if (p.conv.agent !== "personal") return;
         const prev = p.conv.ret;
         p.conv.mode = "bot";

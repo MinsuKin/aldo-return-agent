@@ -1,4 +1,4 @@
-// ALDO bot's return workflow, scripted for John (a colour exchange in store) and David (three of ten
+// The personal agent's return workflow, scripted for John (a colour exchange in store) and David (three of ten
 // items returned by mail with the Platinum perk), plus the regression customers through the older engine.
 // One owner message is one turn; what the owner already told the workflow lives in conv.ret.
 

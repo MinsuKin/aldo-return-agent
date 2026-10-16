@@ -1,4 +1,4 @@
-"""Settings and fixed limits of ALDO bot (the personal agent).
+"""Settings and fixed limits of the personal agent.
 
 Nothing runs at import time: every accessor reads the environment when called, so tests and
 local runs can change variables freely. Everything that has a field in

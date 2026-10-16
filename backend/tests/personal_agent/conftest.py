@@ -1,4 +1,4 @@
-"""Fixtures for the ALDO bot tests: moto DynamoDB for the personal-agent table only, never real AWS.
+"""Fixtures for the personal agent tests: moto DynamoDB for the personal-agent table only, never real AWS.
 
 * ``pa_env`` (autouse): fake credentials, a signing key, the repo fixtures directory, the personal
   agent variables cleared, and the process-wide singletons reset.

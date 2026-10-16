@@ -1,16 +1,18 @@
 # Final hackathon demo presentation plan
 
+Superseded by `FINAL_A2A_PITCH.md` for the A2A-led Figma revision. This document retains the earlier plan and demo detail. See `impact/BUSINESS_IMPACT_EXPLAINED.md` for the financial explanation and the revised core exchange scenario.
+
 Prepared October 15, 2026 for the October 16 final. Planning deliverable for a later Figma Slides build.
 
 ## Recommended format
 
 Use **two main slides around a 4½-minute product demo**, with three backup slides available for the jury question. Target 7:30 against the official eight-minute presentation limit. The final instructions allow any slide count and one jury question after the presentation.
 
-The story: ALDO's gateway connects a purchase decision with the outcome that improves the shopper's next decision. ALDO bot demonstrates that loop: it helps a shopper choose a size using their memory and ALDO's fit evidence. When an item still comes back, it offers a suitable exchange or return, asks for confirmation, and records the outcome for future purchases.
+The story: ALDO's gateway connects a purchase decision with the outcome that improves the shopper's next decision. The personal agent demonstrates that loop: it helps a shopper choose a size using their memory and ALDO's fit evidence. When an item still comes back, it offers a suitable exchange or return, asks for confirmation, and records the outcome for future purchases.
 
 The user's attached gateway concept is an additional narrative reference. It places the **ALDO Agent Gateway at the center**, with shopper memory contributing to the purchase decision and the confirmed return outcome flowing back to memory. Preserve this central idea in the opening slide. Its external personal agent, cart update and corrected-size path describe the intended broader concept; use the current implementation to determine which actions the demo can claim.
 
-Product naming: **ALDO Fit Gateway** is the project. **ALDO bot** is the customer-facing experience. Purchase and Return are workflows within that experience. The trace calls the deterministic gateway **ALDO Data** and the simulated store notice **ALDO Store Desk**.
+Product naming: **ALDO Fit Gateway** is the project. **The Personal agent** is the customer-facing experience and the **ALDO agent** handles returns. Purchase and Return are the two workflows. The trace calls the deterministic gateway **ALDO Data** and the simulated store notice **ALDO Store Desk**.
 
 Use the current John and David scenarios. The old Stessy wedding scenario is now a regression flow and should not lead the final demo.
 
@@ -34,7 +36,7 @@ Choose a size using shopper memory and ALDO fit evidence
 **After purchase**
 Offer an exchange or return and remember the confirmed outcome
 
-Demo: one ALDO bot, with purchase and return workflows
+Demo: a Personal agent and an ALDO agent, with purchase and return workflows
 
 Team CMD Commerce
 
@@ -46,19 +48,19 @@ Follow the previous pitch folder's light monochrome direction: white background,
 
 Use the attached reference to make the gateway the visual center. On the left, keep the project title and one compact baseline statement. Across the remaining area, create a simple editable concept diagram with shopper memory at the left, ALDO Fit Gateway in the center, and ALDO fit evidence and stock at the right. Label the purchase exchange with “Fit evidence and stock” and “Recommended size”. A lower return connector back to memory reads “Confirmed outcome updates memory”. Put “Customer confirms before action” beneath the gateway. Avoid reproducing the screenshot's code-block styling or dense text tree.
 
-This diagram replaces the previously suggested phone screenshot on the opening slide so it has one clear visual composition. The live demo supplies the interface evidence. In the notes, explain that the prototype implements the shopper-memory side through ALDO bot's purchase workflow, while external personal-agent integration is the broader product direction.
+This diagram replaces the previously suggested phone screenshot on the opening slide so it has one clear visual composition. The live demo supplies the interface evidence. In the notes, explain that the prototype implements the shopper-memory side through the personal agent's purchase workflow, while external personal-agent integration is the broader product direction.
 
 Use the real interface as visual evidence. Candidate existing asset: `docs/eval/screenshots/ui-mock/05-act1-purchase-proposal.png`. It is a mock screenshot of an earlier flow, so inspect it before reuse and preferably replace it with a fresh John capture after a successful rehearsal.
 
 ### Speaker notes, 0:00–1:15
 
-“We're CMD Commerce. We built ALDO Fit Gateway, with one ALDO bot that helps customers buy and resolve returns.
+“We're CMD Commerce. We built ALDO Fit Gateway, with a Personal agent that helps customers buy and an ALDO agent that resolves returns.
 
 “In the supplied twelve-month ALDO Canada window, 13,317 completed return lines gave a size reason. That's 21.5% of the return lines in scope. Each one is an opportunity to improve the fit decision or help the customer keep a suitable replacement.
 
 “The gateway connects the shopper's memory with ALDO's fit evidence and available stock. Before purchase, that helps the bot recommend a size. After an exchange, the confirmed outcome flows back to memory. A size correction can improve the next recommendation. In John's colour exchange, it records that the size already fit.
 
-“Our prototype shows this through one ALDO bot with purchase and return workflows. The customer confirms every purchase or return, and server code enforces the policy.
+“Our prototype shows this through a Personal agent and an ALDO agent covering purchase and return workflows. The customer confirms every purchase or return, and server code enforces the policy.
 
 “We'll show John, who wants a pair his local store couldn't supply, and David, who needs to return several items by mail.”
 

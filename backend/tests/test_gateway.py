@@ -1117,9 +1117,9 @@ def test_the_proposal_summary_is_rendered_from_the_recorded_offer():
 # ======================================================================== agent card
 
 
-def test_the_agent_card_is_aldo_bot_with_the_two_workflows_and_the_gateway_services_as_skills():
+def test_the_agent_card_is_aldo_agent_with_the_two_workflows_and_the_gateway_services_as_skills():
     card = gateway.agent_card("https://d111.cloudfront.net/")
-    assert card["name"] == "ALDO bot"  # addendum 12.1: ALDO bot is the top-level brand
+    assert card["name"] == "ALDO agent"  # the agent an owner's personal agent calls
     assert card["url"] == "https://d111.cloudfront.net/api/gateway"
     assert card["version"] and card["description"]
     assert [s["id"] for s in card["skills"]] == [
@@ -1139,10 +1139,10 @@ def test_the_agent_card_is_aldo_bot_with_the_two_workflows_and_the_gateway_servi
     assert card["defaultInputModes"] == ["application/json"] == card["defaultOutputModes"]
 
 
-def test_the_agent_card_calls_the_agent_alado_bot_and_never_shows_a_second_agent():
+def test_the_agent_card_calls_the_agent_aldo_agent_and_never_shows_a_second_agent():
     card = gateway.agent_card("https://example.com")
     text = json.dumps(card)
-    assert "ALDO bot" in card["description"]
+    assert "ALDO agent" in card["description"]
     assert "Muse" not in text and "Returns Agent" not in text and "Fit Gateway" not in text
     skills = {s["id"]: s for s in card["skills"]}
     assert "purchase workflow" in card["description"] and "return workflow" in card["description"]

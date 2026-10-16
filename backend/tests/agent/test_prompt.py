@@ -116,9 +116,9 @@ def test_server_marker_matches_the_runner_texts() -> None:
 FORBIDDEN_BRANDING = ("returns agent", "another agent", "hand-off", "handoff", "via aldo", "second agent")
 
 
-def test_the_prompt_speaks_as_aldo_bot_and_never_names_another_agent(text: str) -> None:
-    assert text.startswith("You are ALDO bot, the owner's personal shopping assistant at ALDO")
-    assert "Speak in the first person as ALDO bot" in text
+def test_the_prompt_speaks_as_the_personal_agent_and_never_names_another_agent(text: str) -> None:
+    assert text.startswith("You are the owner's personal agent, their shopping assistant")
+    assert "Speak in the first person as the owner's personal agent" in text
     assert "the only assistant the owner talks to" in text
     assert "never mention handing over, switching, workflows or a second assistant" in text
     lowered = text.lower()

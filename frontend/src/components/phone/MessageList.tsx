@@ -5,9 +5,9 @@ import { RichText } from "./RichText";
 
 interface Props {
   entries: Entry[];
-  /** Shown as the first ALDO bot bubble; written by the client, not by the server. */
+  /** Shown as the first personal agent bubble; written by the client, not by the server. */
   greeting: string;
-  /** Label of the typing indicator while ALDO bot is working, or null when it is idle. */
+  /** Label of the typing indicator while the personal agent is working, or null when it is idle. */
   typing: string | null;
   renderCard: (card: CardRef, isLatest: boolean) => ReactNode;
   /** Changes whenever the owner acts (sends a message, confirms): the transcript then follows to the end again. */
@@ -23,7 +23,7 @@ function atTopOfLastCard(el: HTMLElement): boolean {
 }
 
 /**
- * The transcript: the owner's messages on the right, ALDO bot's replies and inline cards on the left.
+ * The transcript: the owner's messages on the right, the personal agent's replies and inline cards on the left.
  * It is the polite live region of the phone, so new replies are announced; cards hide their ticking
  * timers from assistive technology.
  */
@@ -67,7 +67,7 @@ export function MessageList({ entries, greeting, typing, renderCard, followKey }
       role="log"
       aria-live="polite"
       aria-relevant="additions text"
-      aria-label="Conversation with ALDO bot"
+      aria-label="Conversation with your personal agent"
       tabIndex={0}
       onScroll={() => void onScroll()}
       data-testid="chat-log"
@@ -75,7 +75,7 @@ export function MessageList({ entries, greeting, typing, renderCard, followKey }
       <div ref={innerRef} className="chat-log-inner">
         <div className="row row-bot" data-testid="greeting">
           <div className="bubble bubble-bot">
-            <span className="sr-only">ALDO bot: </span>
+            <span className="sr-only">Personal agent: </span>
             <p>{greeting}</p>
           </div>
         </div>
@@ -97,7 +97,7 @@ export function MessageList({ entries, greeting, typing, renderCard, followKey }
               return (
                 <div key={e.key} className="row row-bot" {...marks} data-testid="bubble-bot">
                   <div className="bubble bubble-bot">
-                    <span className="sr-only">ALDO bot: </span>
+                    <span className="sr-only">Personal agent: </span>
                     <RichText text={e.text} />
                   </div>
                 </div>

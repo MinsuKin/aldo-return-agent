@@ -4,15 +4,15 @@ import type { RunEvent } from "../api/types";
 import { transactionKind } from "../lib/normalize";
 import { pick, str } from "../lib/util";
 
-/** Whether ALDO's size update to ALDO bot is still owed after an exchange. */
+/** Whether ALDO's size update to the personal agent is still owed after an exchange. */
 export type WritebackState = "idle" | "waiting" | "late";
 
-/** After an exchange is created, ALDO's size update to ALDO bot is delivered when memory is read. */
+/** After an exchange is created, ALDO's size update to the personal agent is delivered when memory is read. */
 const WINDOW_MS = 15_000;
 const RETRY_MS = 2_500;
 
 /**
- * The API flushes the write-back outbox before it reads ALDO bot's memory, so reading memory is what
+ * The API flushes the write-back outbox before it reads the personal agent's memory, so reading memory is what
  * delivers the update. As soon as the A2A stream shows an exchange without its memory_updated event,
  * read memory right away and retry for at most WINDOW_MS, then say so and offer "Check again".
  */

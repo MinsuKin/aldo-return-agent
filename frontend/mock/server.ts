@@ -442,13 +442,13 @@ route("POST", "/api/personal-agent/conversations", true, (c) => {
   return { status: 201, body: { conv_id: conv.conv_id, mode: conv.mode } };
 });
 
-// One chat with ALDO bot (addendum 11.5): while the conversation is in the purchase workflow ("bot") a
-// message goes to ALDO bot; after a hand-off ("returns") it goes straight to the return workflow.
+// One chat with the personal agent (addendum 11.5): while the conversation is in the purchase workflow ("bot") a
+// message goes to the personal agent; after a hand-off ("returns") it goes straight to the return workflow.
 route("POST", "/api/personal-agent/conversations/:conv/messages", true, (c) => {
   materialize();
   const conv = requireConv(c.customerId, c.params.conv, "personal");
   const text = validateText(c.body);
-  if (activeRunOf(conv)) throw new ApiError(409, "RUN_IN_PROGRESS", "ALDO bot is still working.", true);
+  if (activeRunOf(conv)) throw new ApiError(409, "RUN_IN_PROGRESS", "Your personal agent is still working.", true);
   const mode = conv.mode;
   const runId = newId(mode === "returns" ? "RUN-" : "PRUN-", 10);
   const params = { customerId: c.customerId, conv, runId, message: text };
@@ -479,7 +479,7 @@ route("GET", "/api/a2a/events", true, (c) => {
   return { status: 200, body: { events, next_after: events.length ? events[events.length - 1].seq : after } };
 });
 
-// ---- Route: product reviews for ALDO bot (delegated token only, addendum 11.5) ---------------------------
+// ---- Route: product reviews for the personal agent (delegated token only, addendum 11.5) ---------------------------
 
 route(
   "POST",
@@ -509,7 +509,7 @@ route(
   "delegated_gateway",
 );
 
-// ---- Routes: purchase proposals (ALDO bot proposes, only the owner's click orders) ---------------------
+// ---- Routes: purchase proposals (the personal agent proposes, only the owner's click orders) ---------------------
 
 function requestFor(customerId: string, id: string): SizeRequest {
   const sr = state.sizeRequests.get(id);
@@ -573,8 +573,8 @@ route("POST", "/api/purchases/:id/confirm", true, (c) => {
       },
     };
   }
-  if (sr.status === "open") throw new ApiError(409, "APPROVAL_REQUIRED", "ALDO bot has not made a proposal for this request yet.");
-  if (sr.proposed_option_id !== optionId) throw new ApiError(409, "IDEMPOTENCY_CONFLICT", "That is not the option ALDO bot proposed.");
+  if (sr.status === "open") throw new ApiError(409, "APPROVAL_REQUIRED", "Your personal agent has not made a proposal for this request yet.");
+  if (sr.proposed_option_id !== optionId) throw new ApiError(409, "IDEMPOTENCY_CONFLICT", "That is not the option your personal agent proposed.");
   if (now() >= sr.expiresAtMs) throw new ApiError(409, "REQUEST_EXPIRED", "This proposal has expired.");
   if (atp(option.sku, option.location_id) < 1) throw new ApiError(409, "STOCK_CHANGED", "That option is no longer in stock.");
   return { status: 200, body: placeOrder(sr, option, "owner_click") };
@@ -583,7 +583,7 @@ route("POST", "/api/purchases/:id/confirm", true, (c) => {
 // ---- Mock-only controls (not part of the real API) ------------------------------------------------
 
 route("POST", "/__mock/delegated-token", false, (c) => {
-  // The real API mints delegated tokens server-side for ALDO bot; this lets a test call /api/gateway/reviews.
+  // The real API mints delegated tokens server-side for the personal agent; this lets a test call /api/gateway/reviews.
   const p = persona(str(c.body.customer_id) ?? "");
   if (!p) throw new ApiError(422, "VALIDATION_ERROR", "Unknown persona.");
   return { status: 200, body: mintToken(p.customer_id, "delegated_gateway") };

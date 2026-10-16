@@ -1,15 +1,10 @@
-/** ALDO bot's avatar: a small chat-bubble glyph, drawn here (no logos or external assets). */
+import aldoBot from "../../assets/aldo-bot.png";
+
+/** The personal agent's avatar: the ALDO bot mascot. Decorative; the "Personal agent" text beside it names it. */
 export function BotAvatar({ size = 40 }: { size?: number }) {
   return (
     <span className="bot-avatar" style={{ width: size, height: size }} aria-hidden="true">
-      <svg viewBox="0 0 40 40" width={size * 0.62} height={size * 0.62} focusable="false">
-        <path
-          className="bot-avatar-bubble"
-          d="M10 10h20a4 4 0 014 4v10a4 4 0 01-4 4H20l-7 6v-6h-3a4 4 0 01-4-4V14a4 4 0 014-4z"
-        />
-        <circle className="bot-avatar-eye" cx="16" cy="19" r="1.9" />
-        <circle className="bot-avatar-eye" cx="24" cy="19" r="1.9" />
-      </svg>
+      <img src={aldoBot} alt="" width={size} height={size} draggable={false} />
     </span>
   );
 }

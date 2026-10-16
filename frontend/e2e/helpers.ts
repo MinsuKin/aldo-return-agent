@@ -34,7 +34,7 @@ export async function resetDemo(request: APIRequestContext, variant: "default" |
   expect(res.ok(), `reset ${variant} -> ${res.status()}`).toBeTruthy();
 }
 
-/** Pick a customer on the phone's first screen ("Who is using ALDO bot?"). */
+/** Pick a customer on the phone's first screen ("Who is using the personal agent?"). */
 export async function signInAs(page: Page, name: string, query = ""): Promise<void> {
   await page.goto(`/${query}`);
   await page.getByRole("button", { name: new RegExp(`^${name}\\b`) }).click();

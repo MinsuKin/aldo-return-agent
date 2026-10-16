@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 const ITEM_RE = /^\s*(\d{1,2})[.)]\s+(.*)$/;
 
 /**
- * Plain text from ALDO bot with paragraphs and numbered lists (for example the ten items of an order).
+ * Plain text from the personal agent with paragraphs and numbered lists (for example the ten items of an order).
  * Never interprets HTML or markdown: text is rendered as text.
  */
 export function RichText({ text }: { text: string }) {

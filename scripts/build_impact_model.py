@@ -1436,7 +1436,7 @@ def build_agent_cost_sensitivity(scenarios: dict, cost: dict, profile, total_req
     Keeps the net values the model showed with the earlier CAD 0.50 placeholder visible (they are the stress case)."""
     measured = cost["cost_per_run_cad"]
     cases = {"measured_mean": measured}
-    labels = {"measured_mean": f"Measured mean of {runs_label(cost)}"}
+    labels = {"measured_mean": f"Estimated mean from observed tokens in {runs_label(cost)}"}
     if profile is not None:
         top = profile["cost_usd_max"]
         cases["highest_measured_scenario"] = (top["cost_usd"] * cost["usd_to_cad"]).quantize(
@@ -1476,7 +1476,7 @@ def build_slide_summary(total_lines, fit_lines, fit_share, scenarios, prevention
          "value": net["values"]["base"], "unit": "CAD_cents", "tag": net["tag"], "display": net["display"]["base"],
          "basis": f"Range {net['display']['low']} (low) to {net['display']['high']} (high). Rests on assumed "
                   f"{conversions}% exchange conversion"
-                  + (" and the measured agent cost per run." if cost_measured
+                  + (" and agent cost estimated from observed tokens at assumed prices." if cost_measured
                      else " and a placeholder agent cost (pending_measurement).")},
         {"key": "prevention_value_base", "label": "Pre-purchase prevention what-if (base case)",
          "value": what_if["values"]["base"], "unit": "CAD_cents", "tag": "assumed",
@@ -1491,7 +1491,7 @@ def build_slide_summary(total_lines, fit_lines, fit_share, scenarios, prevention
         f"Value per converted or retained case {fmt_cad(to_cents(VALUE_PER_CONVERSION_CAD))} and avoided return cost "
         f"{fmt_cad(to_cents(AVOIDED_RETURN_COST_CAD))} (assumed, synthetic unit economics from handoff section 15).",
         f"Repeat-return reduction on converted cases {repeats}% (assumed).",
-        (f"Agent cost per run {fmt_rate(per_run)}, measured on {runs_label(cost)} at assumed model prices "
+        (f"Agent cost per run {fmt_rate(per_run)}, estimated from observed tokens in {runs_label(cost)} at assumed model prices "
          "(prices in returns_domain.config)."
          if cost_measured else
          f"Agent cost per run {fmt_rate(per_run)} is a placeholder (pending_measurement) until the live eval."),
@@ -1551,7 +1551,7 @@ def append_v2_summary(summary: dict, reason_groups: dict, preference: dict, bund
             basis += (f". Single scenarios range from {fmt_rate(lo['cost_usd'] * cost['usd_to_cad'])} ({lo['id']}) to "
                       f"{fmt_rate(hi['cost_usd'] * cost['usd_to_cad'])} ({hi['id']})")
         headline.append({
-            "key": "agent_cost_per_run_measured", "label": "Agent cost per run (measured)",
+            "key": "agent_cost_per_run_measured", "label": "Agent cost per run (estimated from observed tokens)",
             "value": jnum(cost["cost_per_run_cad"], 4), "unit": "CAD_per_run", "tag": "derived",
             "display": fmt_rate(cost["cost_per_run_cad"]), "basis": basis + "."})
     summary["key_assumptions"].append(
@@ -1586,7 +1586,7 @@ def build_slide_sentences(total_lines, fit_lines, fit_share, scenarios, reason_g
     n_returns, n_multi = bm["return_numbers"]["value"], bm["returns_with_2plus_lines"]["value"]
     share_returns = pct_of(n_multi, n_returns)
     share_lines = pct_of(bm["lines_in_multi_line_returns"]["value"], total_lines)
-    cost_phrase = (f"a measured {fmt_rate(cost['cost_per_run_cad'])} per run ({runs_label(cost)} at assumed model prices)"
+    cost_phrase = (f"an estimated {fmt_rate(cost['cost_per_run_cad'])} per run ({runs_label(cost)} at assumed model prices)"
                    if measured else f"a placeholder {fmt_rate(cost['cost_per_run_cad'])} per run")
 
     sentences = [
@@ -1596,9 +1596,9 @@ def build_slide_sentences(total_lines, fit_lines, fit_share, scenarios, reason_g
          "Too big (measured)."),
         ("Business impact", net["tag"],
          f"If {or_list([str(SCENARIOS[n]['conversion_pct']) + '%' for n in names])} of those size-related lines became "
-         f"exchanges, annual net value would be about {or_list([fmt_cad_round(net['values'][n]) for n in names])} after "
-         f"agent cost ({net['tag']}: conversion rates assumed, "
-         + ("agent cost measured)." if measured else "agent cost a placeholder, pending measurement).")),
+         f"additional retained exchanges, annual net value would be about {or_list([fmt_cad_round(net['values'][n]) for n in names])} after "
+         f"agent cost ({net['tag']}: conversion and repeat-return reductions assumed, "
+         + ("agent cost estimated from observed tokens at assumed prices)." if measured else "agent cost a placeholder, pending measurement).")),
         ("Business impact", "measured",
          f"Another {fmt_int(pref_lines)} lines ({fmt_dec(pct_of(pref_lines, total_lines), 1)}%) carry a "
          "change-of-mind or not-as-expected reason, but "
@@ -1883,7 +1883,7 @@ def margin_slide_sentences(margin: dict, scenarios: dict) -> list:
                  f"unit carries {be['margin_per_retained_exchange']['display']} of margin, so one retained exchange pays "
                  f"for about {be['agent_runs_paid_by_one_exchange']['display']} agent runs at "
                  f"{be['agent_cost_per_run']['display']} per run (derived: margin measured, agent cost "
-                 f"{'measured' if be['agent_cost_per_run']['tag'] == 'derived' else 'a placeholder'})."},
+                 f"{'estimated from observed tokens at assumed prices' if be['agent_cost_per_run']['tag'] == 'derived' else 'a placeholder'})."},
         {"slide": "Business impact", "tag": so["tag"],
          "text": f"At the measured margin rate the size-related exchanges retain about "
                  f"{or_list([fmt_cad_round(so['values'][n]) for n in names])} of gross margin a year (a conservative "
@@ -2051,7 +2051,7 @@ def build_model(returns: dict, exchanges: dict, cost: dict, returns_path: Path, 
     cost_measured = cost["status"] == "measured"
     if cost_measured:
         cost_text = (
-            f"Agent cost per run is {fmt_rate(cost['cost_per_run_cad'])}, measured on {runs_label(cost)} at assumed "
+            f"Agent cost per run is {fmt_rate(cost['cost_per_run_cad'])}, estimated from observed tokens in {runs_label(cost)} at assumed "
             f"model prices (prices in returns_domain.config). Source: `{cost['file']}` (field `{cost['field']}`). "
             "Tokens are measured by the live eval; the token prices are an assumption set in the eval config."
             + (f" The eval reports USD {fmt_dec(cost['raw_value'], 4)} per run, converted at {cost['usd_to_cad']} CAD "
@@ -2151,7 +2151,7 @@ def build_model(returns: dict, exchanges: dict, cost: dict, returns_path: Path, 
         "exchange CAD 6). At a CAD 100 order the formula returns the CAD 54 of the fit scenarios, which keep the flat "
         "CAD 54. The median refund stands in for the item price; line versus transaction grain is unconfirmed.",
         f"{pref_groups['share_in_store']['display']} of the preference lines were returned in store, where the customer is "
-        "already at the counter, so the lever assumes an exchange is offered there (by an associate or by ALDO bot); this "
+        "already at the counter, so the lever assumes an exchange is offered there (by an associate or by the personal agent); this "
         "is not tested. Stores already exchange today: the exchange file has "
         f"{exchange_evidence['confirmed_aldo_ca_stores']['display']} CONFIRMED and "
         f"{exchange_evidence['assumed_aldo_ca_stores']['display']} ASSUMED in-store rows attributed to ALDO_CA in the "
@@ -2168,7 +2168,7 @@ def build_model(returns: dict, exchanges: dict, cost: dict, returns_path: Path, 
     ]
     if cost_measured:
         caveats.append(
-            f"The measured agent cost is the mean of {runs_label(cost)} priced at assumed token prices and is not the "
+            f"The estimated agent cost uses observed tokens from {runs_label(cost)} priced at assumed token prices and is not the "
             "production mix: single scenarios differ widely, and the agent cost sensitivity shows the most expensive "
             f"measured scenario and the CAD {PLACEHOLDER_AGENT_COST_PER_RUN_CAD} placeholder used before the live eval.")
     caveats += [
@@ -2425,6 +2425,12 @@ def render_markdown(m: dict) -> str:
     src = m["sources"]
     out = [
         f"# {m['title']}",
+        "",
+        "Presentation companion: `BUSINESS_IMPACT_EXPLAINED.md` explains the assumptions and the new core-exchange "
+        "sensitivity (about CAD 57k / 129k / 201k), which excludes the repeat-return bonus. Original scenario "
+        "arithmetic below is retained. Cost amounts are estimates from observed token usage at assumed prices, "
+        "not billed production costs. The legacy margin-rate rescaling applies a second cost adjustment to an "
+        "already cost-adjusted CAD 54 and should not be used as a reliable gross-margin estimate.",
         "",
         *md_slide_sentences(ss),
         "## Slide summary",

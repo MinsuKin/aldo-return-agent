@@ -1,5 +1,5 @@
 /* ---- Inline cards (dark workspace) ---------------------------------------------------------
-   The structured blocks ALDO bot renders inside the chat: purchase proposal, options / quote,
+   The structured blocks the personal agent renders inside the chat: purchase proposal, options / quote,
    order, transaction, case. One shared shell (CardFrame -> .msg-card): a near-black card on an
    outline, a header row (title + mono id / status chip), a body, footer actions. Facts render as
    the team designer's two-column table (label column on --panel-2, hairline rows, 8px radius).

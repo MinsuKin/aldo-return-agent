@@ -1,6 +1,6 @@
 """John's whole story through the real API, worker and stores, with scripted models (demo plan 11.2).
 
-ALDO bot (the real Strands agent loop, real tools, real gateway) is driven by a scripted model.
+The personal agent (the real Strands agent loop, real tools, real gateway) is driven by a scripted model.
 The return workflow's runtime is a scripted stand-in that uses the real domain functions (policy
 check, options, quote, execution) the way the Returns Agent's tools do. Everything between them is
 real: the routes, the conversation mode, the worker, the hand-off, the quote, the approval click,
@@ -151,7 +151,7 @@ def stock(sku: str, location: str) -> int:
 
 def john_until_the_quote(stack: Stack) -> SimpleNamespace:
     """Acts 1 and 2 of the story, up to the return workflow's quote. Returns what the next steps need."""
-    # ---- act 1: ALDO bot proposes, the owner clicks, the order exists, the delivery notice comes
+    # ---- act 1: the personal agent proposes, the owner clicks, the order exists, the delivery notice comes
     conv = stack.api("POST", PREFIX, {}).json["conv_id"]
     assert stack.mode(conv) == {"conv_id": conv, "mode": "bot", "returns_order_id": None}
     bought = stack.say(conv, BUY, policy=john_policy())
@@ -206,7 +206,7 @@ def john_until_the_quote(stack: Stack) -> SimpleNamespace:
     assert payload["memory_context"] == {
         "size_system": "US_M", "typical_size": "10.0", "preferred_colors": ["BROWN", "WHITE"],
         "aldo_items": [{"order_id": order_id, "product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5", "status": "delivered"}],
-        "source": "ALDO bot memory",
+        "source": "personal agent memory",
     }
     from agent import owner_context  # the Return workflow's own validator keeps every field (it drops only the constant `source`)
 

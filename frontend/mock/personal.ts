@@ -1,6 +1,6 @@
-// ALDO bot (the personal agent), scripted.
+// The personal agent, scripted.
 //
-// ALDO bot only PROPOSES a purchase: send_size_decision records a proposal on the size request and
+// The personal agent only PROPOSES a purchase: send_size_decision records a proposal on the size request and
 // emits size_recommended. No order exists until the owner clicks Confirm (POST /purchases/{id}/confirm).
 
 import { FIT, HERO, LOCATIONS, MEMORY_SEEDS, skuFor, sizeStr } from "./data.ts";

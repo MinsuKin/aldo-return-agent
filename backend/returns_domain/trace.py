@@ -146,7 +146,7 @@ A2A_PUBLIC_FIELDS: dict[str, frozenset[str]] = {
             "provenance",
         }
     ),
-    # The switch between the two ALDO bot workflows is internal routing (addendum 12.1): `mode` is
+    # The switch between the two workflows (personal agent purchase, ALDO agent return) is internal routing (addendum 12.1): `mode` is
     # the conversation mode afterwards ("returns" / "bot"); no field names a second agent.
     "handoff_to_returns": frozenset({"order_id", "product_name", "size", "color", "mode"}),
     "handback": frozenset({"order_id", "outcome", "transaction_id", "case_id", "mode"}),

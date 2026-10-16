@@ -31,7 +31,7 @@ export function Composer({ inputRef, busy, error, onSend }: Props) {
       )}
       <form className="composer" onSubmit={(e) => void submit(e)}>
         <label htmlFor="chat-input" className="sr-only">
-          Message to ALDO bot
+          Message to your personal agent
         </label>
         <input
           id="chat-input"
@@ -39,7 +39,7 @@ export function Composer({ inputRef, busy, error, onSend }: Props) {
           type="text"
           value={text}
           maxLength={MAX_MESSAGE_CHARS}
-          placeholder="Message ALDO bot"
+          placeholder="Message your personal agent"
           autoComplete="off"
           onChange={(e) => setText(e.target.value)}
           data-testid="chat-input"

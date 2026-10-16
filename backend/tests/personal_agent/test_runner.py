@@ -138,7 +138,7 @@ def test_the_system_prompt_names_the_bot_the_owner_and_the_demo_date(harness: Ha
     harness.use(ScriptedModel(good_policy()))
     harness.turn()
     prompt = harness.models[0].seen_system_prompts[0]
-    assert prompt.startswith("You are ALDO bot, Ava's personal shopping agent")
+    assert prompt.startswith("You are the personal agent, Ava's personal shopping agent")
     assert "Saturday 2026-10-17" in prompt and "Friday 2026-10-16" in prompt
     assert harness.models[0].seen_tool_names[0] == [
         "recall_size_memory", "ask_aldo_size_assist", "read_product_reviews", "send_size_decision",
@@ -478,7 +478,7 @@ def test_a_mens_persona_sends_its_size_system_from_the_profile_and_recalls_its_o
     assert [e["size"] for e in recall["entries"]] == ["10.0", "10.5", "10.0"]
     assert gateway.assist_requests[0]["size_system"] == "US_M"
     assert "ALDO Men 001" in gateway.assist_requests[0]["product_query"]  # the style name and the word ALDO survive
-    assert harness.captured["prompt"].startswith("You are ALDO bot, John's personal shopping agent")
+    assert harness.captured["prompt"].startswith("You are the personal agent, John's personal shopping agent")
 
 
 # ------------------------------------------------------------ John: the men's style (demo plan 11.2)

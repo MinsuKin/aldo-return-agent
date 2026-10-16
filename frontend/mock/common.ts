@@ -1,9 +1,9 @@
-// Shared helpers of the scripted ALDO bot (purchase workflow in bot2.ts, return workflow in returns2.ts).
+// Shared helpers of the scripted personal agent (purchase workflow in bot2.ts, return workflow in returns2.ts).
 
 import type { MockPersona } from "./data.ts";
 import { persona, type Conv, type RunKind, type Script } from "./state.ts";
 
-/** Technical actor ids (the UI shows "ALDO bot · Purchase" and "ALDO bot · Return"). */
+/** Technical actor ids (the UI shows "Personal agent" and "ALDO agent"). */
 export const BOT = "personal_agent";
 export const RET = "aldo_agent";
 

@@ -1,7 +1,7 @@
 """Who may call what: the authorization matrix of the single chat's new and changed routes.
 
 Real gateway, real routes, both tables on moto. One table, four callers per route: nobody, the
-owner's session, another owner's session, and the ALDO bot's delegated token. The same callers are
+owner's session, another owner's session, and the personal agent's delegated token. The same callers are
 swept over every other route in ``test_gateway_routes.py`` (delegated token rejected everywhere).
 """
 

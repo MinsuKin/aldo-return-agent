@@ -4,7 +4,7 @@
   AgentCore runtime with the conversation's session id (or POST to ``AGENT_LOCAL_URL`` when
   ``AGENT_MODE=local``), and make sure the run ends: if the runtime fails, or returns while the run
   is still ``running``, the run is closed as an error with a customer-safe message.
-* ``agent == "personal"``: the ALDO bot's run is executed in process by
+* ``agent == "personal"``: the personal agent's run is executed in process by
   ``personal_agent.runner.run``; its own once-only start guard makes a repeat harmless.
 
 Every invocation starts by flushing the write-back outbox (``gateway.flush_outbox(limit=10)``),
@@ -62,7 +62,7 @@ READ_TIMEOUT_MARGIN_S = 15  # leave time to close the run before the Lambda is k
 CONNECT_TIMEOUT_S = 5
 
 GENERIC_FAILURE_TEXT = "Something went wrong on our side. Please try again."
-PERSONAL_FAILURE_TEXT = "ALDO bot ran into a problem on our side. Please try again."
+PERSONAL_FAILURE_TEXT = "Your personal agent ran into a problem on our side. Please try again."
 
 #: AgentCore errors worth reporting as "upstream trouble, try again" (the rest is INTERNAL_ERROR).
 _TRANSIENT_CLIENT_CODES = frozenset(
@@ -173,7 +173,7 @@ def _run_aldo(payload: Mapping[str, Any], remaining_ms: int | None) -> dict[str,
         return {"run_id": run_id, "status": "duplicate"}
     # The agent finishes its own run. A run that is still "running" here was left behind.
     _fail_if_running(customer_id, run_id, ErrorCode.INTERNAL_ERROR.value)
-    # A return that reached a transaction or a case ends the hand-off: the chat goes back to ALDO bot.
+    # A return that reached a transaction or a case ends the hand-off: the chat goes back to the personal agent.
     returns_chat.settle_after_run(customer_id, payload["conv_id"], run_id)
     return {"run_id": run_id, "status": result.get("status", "completed")}
 
@@ -299,11 +299,11 @@ def _parse_answer(raw: bytes | str) -> dict[str, Any]:
     return answer
 
 
-# ------------------------------------------------------------------------ the ALDO bot
+# ------------------------------------------------------------------------ the personal agent
 
 
 def _run_personal(payload: Mapping[str, Any]) -> dict[str, Any]:
-    """The ALDO bot (personal agent) runs in this process; its runner owns the run lifecycle."""
+    """The personal agent runs in this process; its runner owns the run lifecycle."""
     run_id = payload["run_id"]
     try:
         runner = providers.optional("personal_agent.runner")

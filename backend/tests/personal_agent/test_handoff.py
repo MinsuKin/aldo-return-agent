@@ -176,7 +176,7 @@ def test_the_hand_off_switches_the_mode_stores_the_message_and_the_trusted_conte
     assert state["memory_context"] == {
         "size_system": "US_M", "typical_size": "10.0", "preferred_colors": ["BROWN", "WHITE"],
         "aldo_items": [{"order_id": ORDER, "product_name": "ALDO Men 001", "color": "BLACK", "size": "9.5", "status": "delivered"}],
-        "source": "ALDO bot memory",
+        "source": "personal agent memory",
     }
     assert ctx.handoff_order_id == ORDER and ctx.handoff_context == state["memory_context"]
 
@@ -223,7 +223,7 @@ def test_the_public_stream_shows_the_hand_off_then_the_memory_that_was_consulted
     assert stream.types == ["handoff_to_returns", "memory_consulted"]
     (_, _, first, actor_1), (_, _, second, actor_2) = stream.events
     assert actor_1 == "personal_agent" and first == {"order_id": ORDER, "mode": "returns", "product_name": "ALDO Men 001", "size": "9.5", "color": "BLACK"}
-    assert actor_2 == "aldo_agent"  # the return workflow, shown as "ALDO bot · Return"
+    assert actor_2 == "aldo_agent"  # the return workflow, shown as "ALDO agent"
     assert second == {"n_entries": 4, "fields": ["typical_size", "preferred_colors", "aldo_items"]}
     public = json.dumps([e[2] for e in stream.events])  # the payloads; the owner is the stream's key, not shown
     for private in ("Retailer", "loafer", "boot", "sneaker", "10.5", "returned", "synthetic", TRIGGER, "DEMO-CUST"):

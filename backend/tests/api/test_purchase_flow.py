@@ -1,6 +1,6 @@
 """The purchase story through HTTP with the real gateway module on moto (PIVOT_ADDENDUM 10.1).
 
-size-assist and size-decision are called with the ALDO bot's DELEGATED token; the owner reads the
+size-assist and size-decision are called with the personal agent's DELEGATED token; the owner reads the
 proposal and confirms with a SESSION token; only that click creates the order. Assertions are on
 table state: the SIZEREQ item, the order, ATP and the A2A stream.
 """

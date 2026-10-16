@@ -248,7 +248,7 @@ def test_the_distance_phrase(minutes, phrase):
 
 
 def test_the_notice_and_next_step_speak_as_the_store_and_never_name_another_agent(world):
-    """Addendum 12.1: ALDO bot is the only brand; the store and ALDO answer, no 'Returns Agent' exists for the user."""
+    """Addendum 12.1: the personal agent is the only assistant the owner sees; the store and ALDO answer, no 'Returns Agent' exists for the user."""
     texts = []
     for kind, color in (("exchange_store_pickup", "BROWN"), ("return_in_store", None)):
         hq = colour_quote(world, color=color, types=(kind, "return_mail"))

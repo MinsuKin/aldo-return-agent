@@ -670,7 +670,7 @@ def test_seed_writes_the_v2_items(ddb):
     order_items = store.query("ORDER#DEMO-3001")
     assert sorted(i["sk"] for i in order_items) == sorted(["META", *[f"LINE#DEMO-3001-L{n}" for n in range(1, 11)]])
     assert [i["order_id"] for i in store.query(f"CUST#{DAVID}", index="GSI1")] == ["DEMO-3001"]
-    assert store.query(f"CUST#{JOHN}", index="GSI1") == []  # John's order is created live through ALDO bot
+    assert store.query(f"CUST#{JOHN}", index="GSI1") == []  # John's order is created live through the personal agent
     sizes = store.query(f"STYLE#{MEN_STYLE}#BROWN", index="GSI1")
     assert [i["size"] for i in sizes] == [f"{8 + 0.5 * n:.1f}" for n in range(9)]
 

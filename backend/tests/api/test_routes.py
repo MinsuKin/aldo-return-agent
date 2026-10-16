@@ -379,7 +379,7 @@ def test_a_malformed_or_expired_token_is_a_401_everywhere(client, app, seeded):
 
 
 def test_session_routes_reject_delegated_tokens(client, app, seeded):
-    """A delegated token (the ALDO bot's) must be refused by every non-gateway route."""
+    """A delegated token (the personal agent's) must be refused by every non-gateway route."""
     token = delegated_token()
     session_routes = [
         (spec.method, spec.path) for spec in app.routes if spec.auth == http.SESSION

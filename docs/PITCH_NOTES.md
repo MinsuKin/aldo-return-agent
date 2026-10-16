@@ -7,7 +7,7 @@ Use for the "Scalability and feasibility" slide and for jury questions.
 What is true today (say this):
 - The raw ALDO files (OMS orders, returns, in-store exchanges, the 2025 transaction detail) are analysed offline on a laptop with plain Python. They are never uploaded to AWS.
 - The analysis produces small derived files: per-style fit signals, the impact model, and demo fixtures. These are bundled with the backend and read at run time.
-- At run time ALDO bot reads those small precomputed files, so answers are fast and no large file is scanned during a conversation.
+- At run time the agents read those small precomputed files, so answers are fast and no large file is scanned during a conversation.
 - AWS services the live demo actually uses: Amazon Bedrock (Claude Sonnet 5.5), Bedrock AgentCore Runtime, API Gateway, Lambda, DynamoDB, CloudFront, Secrets Manager.
 
 What to propose as the next step (say "design", not "built"):

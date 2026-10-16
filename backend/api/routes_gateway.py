@@ -2,7 +2,7 @@
 
 Two token families, never mixed:
 
-* ``/gateway/*`` accepts ONLY delegated tokens (the ALDO bot's short-lived, capped token). A
+* ``/gateway/*`` accepts ONLY delegated tokens (the personal agent's short-lived, capped token). A
   session token is NOT_AUTHORIZED there. The calls are deterministic gateway functions: a
   size assist returns ALDO's own facts, the reviews are untrusted customer text with flags, a
   size decision only RECORDS a proposal.

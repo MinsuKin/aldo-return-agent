@@ -1,4 +1,4 @@
-"""Deterministic option order and display text for the return workflow of ALDO bot.
+"""Deterministic option order and display text for the return workflow of the personal agent.
 
 PIVOT_ADDENDUM C9: rank store-pickup exchange first, then the other exchanges, then returns.
 Eligible refund options are never dropped here, only ordered (requirement R6.5). In-store exchange

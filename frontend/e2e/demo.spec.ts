@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { ADMIN_SECRET, IS_MOCK, MOCK_URL, latestSizeRequestId, mockPost, onMock, resetDemo, signInAs } from "./helpers";
 
-// Functional specs for the phone UI: one chat with ALDO bot on a phone (left) and the live A2A trace (right).
+// Functional specs for the phone UI: one chat with the personal agent on a phone (left) and the live A2A trace (right).
 // They run against the mock API by default (scripted John and David as in addendum 11.2) and, with
 // E2E_TARGET=deployed, against the real site (scripted wording is only asserted on the mock).
 
@@ -24,7 +24,7 @@ test.describe("first screen and layout", () => {
     await resetDemo(request, "default");
     await page.goto("/");
     await expect(page.getByTestId("proto-banner")).toHaveText(STRIP);
-    await expect(page.getByRole("heading", { name: "Who is using ALDO bot?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Who is using the personal agent?" })).toBeVisible();
     const john = page.getByTestId("persona-DEMO-CUST-JOHN");
     const david = page.getByTestId("persona-DEMO-CUST-DAVID");
     await expect(john).toContainText("Silver member");
@@ -79,7 +79,7 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(page.getByTestId("workflow-pill")).toContainText("Purchase");
     await expect(page.getByTestId("chat-log")).toHaveAttribute("aria-live", "polite");
 
-    // ---- Act 1: ALDO bot proposes, nothing is ordered before the click -----------------------------
+    // ---- Act 1: the personal agent proposes, nothing is ordered before the click -----------------------------
     await page.getByTestId("quick-john-1").click();
     await expect(page.getByTestId("bubble-user").last()).toContainText("ALDO Men 001");
     const card = page.getByTestId("purchase-card");
@@ -100,15 +100,15 @@ test.describe("John (Silver): the stage demo", () => {
       await expect(page.getByTestId("bubble-bot").last()).toContainText("I haven't ordered anything yet");
     });
 
-    // The trace: ALDO Data shares the fit signal and the (flagged) reviews, ALDO bot proposes.
+    // The trace: ALDO Data shares the fit signal and the (flagged) reviews, the personal agent proposes.
     for (const type of ["size_assist_requested", "fit_signal_shared", "size_requested", "reviews_shared", "size_recommended"]) {
       await expect(traceEvent(page, type).first()).toBeVisible();
     }
     await expect(traceEvent(page, "fit_signal_shared").first()).toContainText("derived from provided ALDO data");
     await expect(traceEvent(page, "reviews_shared").first()).toContainText("1 flagged");
-    await expect(traceEvent(page, "size_assist_requested").first().getByTestId("actor-chip")).toHaveText("ALDO bot · Purchase");
+    await expect(traceEvent(page, "size_assist_requested").first().getByTestId("actor-chip")).toHaveText("Personal agent");
     await expect(traceEvent(page, "fit_signal_shared").first().getByTestId("actor-chip")).toHaveText("ALDO Data");
-    // Public fields only: ALDO bot's private memory (retailers, typical size) is not in the trace.
+    // Public fields only: the personal agent's private memory (retailers, typical size) is not in the trace.
     const traceText = (await trace(page).innerText()).toLowerCase();
     expect(traceText).not.toContain("retailer");
     expect(traceText).not.toContain("typical");
@@ -118,7 +118,7 @@ test.describe("John (Silver): the stage demo", () => {
     await group.getByTestId("run-toggle").click();
     await expect(group.getByTestId("run-toggle")).toHaveAttribute("aria-expanded", "true");
     await expect(group.locator('[data-tool="ask_aldo_size_assist"]')).toBeVisible();
-    await expect(group.locator('[data-tool="recall_size_memory"]')).toContainText("Private to ALDO bot");
+    await expect(group.locator('[data-tool="recall_size_memory"]')).toContainText("Private to your personal agent");
     await expect(group.locator('[data-tool="recall_size_memory"]')).not.toContainText("10.5");
 
     // Confirm opens a sheet; Escape closes it and nothing is ordered.
@@ -149,9 +149,9 @@ test.describe("John (Silver): the stage demo", () => {
     await page.getByTestId("quick-john-2").click();
     await expect(page.getByTestId("workflow-pill")).toContainText("Return");
     await expect(page.getByTestId("bubble-bot").last()).toContainText("reason");
-    await expect(traceEvent(page, "handoff_to_returns").first()).toContainText("Switching to the return workflow");
+    await expect(traceEvent(page, "handoff_to_returns").first()).toContainText("Personal agent hands over to the ALDO agent");
     await expect(traceEvent(page, "memory_consulted").first()).toContainText("Using your preferences");
-    await expect(traceEvent(page, "memory_consulted").first().getByTestId("actor-chip")).toHaveText("ALDO bot · Return");
+    await expect(traceEvent(page, "memory_consulted").first().getByTestId("actor-chip")).toHaveText("ALDO agent");
 
     await page.getByTestId("quick-john-3").click();
     await expect(page.getByTestId("bubble-bot").last()).toContainText("Brown");
@@ -207,16 +207,16 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(trace(page)).toContainText("Owner confirmed the chosen option");
     for (const type of ["transaction_created", "store_notified", "handback"]) await expect(traceEvent(page, type).first()).toBeVisible();
     await expect(traceEvent(page, "store_notified").first().getByTestId("actor-chip")).toHaveText("ALDO Store Desk");
-    await expect(traceEvent(page, "handback").first()).toContainText("Back to the purchase workflow");
-    // ALDO sends a size update once ALDO bot's memory is read (the UI does that right after the exchange).
+    await expect(traceEvent(page, "handback").first()).toContainText("Back to the personal agent");
+    // ALDO sends a size update once the personal agent's memory is read (the UI does that right after the exchange).
     await expect(traceEvent(page, "memory_updated").first()).toContainText("size 9.5 fits", { timeout: 30_000 });
     await expect(traceEvent(page, "memory_updated").first()).toContainText("provisional");
 
-    // ---- ALDO bot's memory sheet ----------------------------------------------------------------------------
+    // ---- The personal agent's memory sheet ----------------------------------------------------------------------------
     await page.getByTestId("memory-open").click();
     const memory = page.getByTestId("memory-dialog");
     await expect(memory).toBeVisible();
-    await expect(memory).toContainText("What ALDO bot remembers");
+    await expect(memory).toContainText("What your personal agent remembers");
     await expect(memory.getByTestId("memory-typical")).toContainText("10.0");
     await expect(memory.getByTestId("memory-entries").locator("li")).toHaveCount(3);
     await expect(memory.getByTestId("memory-fit")).toContainText("Size 9.5 fits");
@@ -241,7 +241,7 @@ test.describe("David (Platinum): the bundle return", () => {
 
     await page.getByTestId("quick-david-1").click();
     await expect(page.getByTestId("workflow-pill")).toContainText("Return");
-    // Addendum 11.2: ALDO bot shows the 10 items (numbered) and asks which ones and why. This was finding F2 (the hand-off
+    // Addendum 11.2: the personal agent shows the 10 items (numbered) and asks which ones and why. This was finding F2 (the hand-off
     // reply was one short sentence and listed nothing); the runner now composes the numbered list, so it is a hard check.
     await expect(page.getByTestId("bubble-bot").last().locator("li")).toHaveCount(10);
     await expect(page.getByTestId("bubble-bot").last()).toContainText(/which (three|ones|items)/i);
@@ -306,7 +306,7 @@ test.describe("David (Platinum): the bundle return", () => {
 });
 
 test.describe("recoveries and navigation", () => {
-  test("an expired proposal is refused, ALDO bot is asked again, and nothing was ordered", async ({ page, request }) => {
+  test("an expired proposal is refused, the personal agent is asked again, and nothing was ordered", async ({ page, request }) => {
     test.skip(!IS_MOCK, "uses mock-only controls");
     await resetDemo(request, "default");
     await signInAs(page, "John");
@@ -320,7 +320,7 @@ test.describe("recoveries and navigation", () => {
     await page.getByTestId("confirm-purchase-open").click();
     await page.getByTestId("confirm-purchase").click();
     await expect(page.getByTestId("purchase-error")).toContainText("expired");
-    await page.getByTestId("purchase-error").getByRole("button", { name: "Ask ALDO bot again" }).click();
+    await page.getByTestId("purchase-error").getByRole("button", { name: "Ask your personal agent again" }).click();
     await expect(page.getByTestId("purchase-dialog")).toHaveCount(0);
     await expect(page.getByTestId("bubble-user")).toHaveCount(2);
     await expect(page.getByTestId("purchase-card")).toHaveCount(2);
@@ -364,7 +364,7 @@ test.describe("recoveries and navigation", () => {
     await expect(page.getByTestId("cases-view")).toBeVisible();
     await expect(page.getByTestId("cases-empty")).toBeVisible();
     await expect(page.getByTestId("proto-banner")).toHaveText(STRIP);
-    await page.getByRole("link", { name: "Back to ALDO bot" }).click();
+    await page.getByRole("link", { name: "Back to personal agent" }).click();
     await expect(page.getByTestId("chat-screen")).toBeVisible();
     await page.getByTestId("switch-customer").click();
     await expect(page.getByTestId("persona-picker")).toBeVisible();

@@ -29,7 +29,7 @@ function SignedInStage({ session, scale, onSwitch }: SignedInProps) {
   const convo = useConversation(feed.events, feed.nudge);
   const wb = useWriteback(feed.events);
 
-  // The A2A feed polls quickly while ALDO bot works or a size update from ALDO is still owed.
+  // The A2A feed polls quickly while the personal agent works or a size update from ALDO is still owed.
   const waiting = wb.writeback === "waiting";
   useEffect(() => {
     setHot(convo.busy || waiting);
@@ -40,7 +40,7 @@ function SignedInStage({ session, scale, onSwitch }: SignedInProps) {
 
   return (
     <>
-      <section className="phone-col" aria-label="ALDO bot phone">
+      <section className="phone-col" aria-label="Personal agent phone">
         <PhoneFrame scale={scale} inert={modalOpen}>
           <ChatScreen
             customer={{
@@ -90,7 +90,7 @@ export function Stage({ admin, notice, onSwitch }: Props) {
         <SignedInStage key={session.customer.customer_id} session={session} scale={scale} onSwitch={onSwitch} />
       ) : (
         <>
-          <section className="phone-col" aria-label="ALDO bot phone">
+          <section className="phone-col" aria-label="Personal agent phone">
             <PhoneFrame scale={scale}>
               <PersonaPicker admin={admin} notice={notice} onReset={() => void qc.resetQueries()} />
             </PhoneFrame>

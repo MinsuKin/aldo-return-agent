@@ -1,4 +1,4 @@
-"""The ALDO bot routes through a real Powertools resolver (HTTP API v2 events, moto table, fake enqueue)."""
+"""The personal agent routes through a real Powertools resolver (HTTP API v2 events, moto table, fake enqueue)."""
 
 from __future__ import annotations
 

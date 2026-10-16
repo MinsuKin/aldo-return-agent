@@ -100,7 +100,7 @@ function approveContent(o: OptionView): { facts: SheetFact[]; items?: SheetItem[
   return { facts, items };
 }
 
-/** The chat with ALDO bot: header, transcript with inline cards, quick replies, composer, sheets and push banner. */
+/** The chat with the personal agent: header, transcript with inline cards, quick replies, composer, sheets and push banner. */
 export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNudge, onSwitch, onModalChange }: Props) {
   const qc = useQueryClient();
   const [sheet, setSheet] = useState<Sheet | null>(null);
@@ -250,8 +250,8 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
     });
   };
 
-  const typing = convo.busy ? (convo.activeAgent === "returns" ? "ALDO bot is working on your return" : "ALDO bot is typing") : null;
-  const greeting = `Hi ${customer.name}. I'm ALDO bot. I can buy shoes for you, remember your sizes, and sort out exchanges and returns. Nothing is ordered until you confirm it.`;
+  const typing = convo.busy ? (convo.activeAgent === "returns" ? "Your personal agent is working on your return" : "Your personal agent is typing") : null;
+  const greeting = `Hi ${customer.name}. I'm your personal agent. I can buy shoes for you, remember your sizes, and sort out exchanges and returns. Nothing is ordered until you confirm it.`;
   const returning = convo.mode === "returns";
 
   return (
@@ -264,7 +264,7 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
         <div className="chat-title">
           <BotAvatar size={40} />
           <div className="chat-title-text">
-            <h2>ALDO bot</h2>
+            <h2>Personal agent</h2>
             <p className="chat-sub" data-testid="chat-sub">
               {customer.name}
               {customer.tierLabel ? ` · ${customer.tierLabel}` : ""}
@@ -276,7 +276,7 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
             <span className="sr-only">Workflow: </span>
             {returning ? "Return" : "Purchase"}
           </span>
-          <button type="button" className="icon-btn memory-btn" onClick={openMemory} aria-label="What ALDO bot remembers" title="What ALDO bot remembers" data-testid="memory-open">
+          <button type="button" className="icon-btn memory-btn" onClick={openMemory} aria-label="What your personal agent remembers" title="What your personal agent remembers" data-testid="memory-open">
             <Icon name="memory" size={20} />
             {updateCount > seenUpdates && <span className="memory-dot" data-testid="memory-dot" aria-hidden="true" />}
           </button>
@@ -292,14 +292,14 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
         <ConfirmSheet
           kind="purchase"
           title="Confirm your purchase"
-          description="ALDO bot proposed this purchase. Check the details, then confirm. Nothing is ordered until you confirm."
+          description="Your personal agent proposed this purchase. Check the details, then confirm. Nothing is ordered until you confirm."
           heading={`${sheet.view.productName ?? "ALDO style"}, size ${sheet.view.size ?? "?"}`}
           facts={purchaseFacts(sheet.view)}
           footnote={`Request ${sheet.view.sizeRequestId}${sheet.view.optionId ? `, option ${sheet.view.optionId}` : ""}`}
           confirmLabel="Confirm and place order"
           busy={sheetBusy}
           error={sheetError}
-          errorActionLabel="Ask ALDO bot again"
+          errorActionLabel="Ask your personal agent again"
           onErrorAction={askAgain}
           returnFocusRef={triggerRef}
           onConfirm={() => void confirmPurchase()}

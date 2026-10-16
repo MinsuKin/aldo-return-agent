@@ -1,4 +1,4 @@
-"""The ALDO bot's real router, included by the API, and the whole fit-gateway story end to end.
+"""The personal agent's real router, included by the API, and the whole fit-gateway story end to end.
 
 Real ``api.personal_agent_routes``, ``personal_agent.memory`` and ``returns_domain.gateway`` on two
 moto tables. The worker hand-off is a list; the "worker + agent" steps that follow an approval are
@@ -26,7 +26,7 @@ ADMIN = {"X-Demo-Admin": ADMIN_KEY}
 
 @pytest.fixture
 def world(client, seeded):
-    """Both tables seeded (the demo reset seeds the ALDO bot's memory too)."""
+    """Both tables seeded (the demo reset seeds the personal agent's memory too)."""
     assert client.post("/api/demo/reset", {"variant": "default"}, headers=ADMIN).status == 200
     return client
 
@@ -220,7 +220,7 @@ def test_the_whole_fit_gateway_story(local_app, enqueued):
     client = local_app
     assert wiring.register_local_write_back() is True
 
-    # 1. The ALDO bot asks ALDO for sizes and proposes one (delegated token) ...
+    # 1. The personal agent asks ALDO for sizes and proposes one (delegated token) ...
     assisted = client.post(
         "/api/gateway/size-assist",
         {"intent": "size_assist", "product_query": "Stessy", "color": "BLACK", "size_system": "US_W", "deadline_date": "2026-10-17", "channel_pref": None},

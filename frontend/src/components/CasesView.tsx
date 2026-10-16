@@ -19,7 +19,7 @@ function CaseRow({ c }: { c: CaseView }) {
   );
 }
 
-/** Minimal read-only list of the signed-in customer's cases that ALDO bot passed to a person. */
+/** Minimal read-only list of the signed-in customer's cases that the personal agent passed to a person. */
 export function CasesView() {
   const cases = useQuery({ queryKey: ["cases", "list"], queryFn: api.cases, retry: 1, refetchOnMount: "always" });
   const rows = (cases.data ?? []).map(normalizeCase);
@@ -28,12 +28,12 @@ export function CasesView() {
     <section className="page-card" aria-labelledby="cases-title" data-testid="cases-view">
       <p>
         <a href="#/" className="back-link">
-          Back to ALDO bot
+          Back to personal agent
         </a>
       </p>
       <h2 id="cases-title">Cases</h2>
       <p className="muted">
-        Requests ALDO bot passed to a person for review. This list is read-only, and ALDO bot never promises an outcome.
+        Requests your personal agent passed to a person for review. This list is read-only, and your personal agent never promises an outcome.
       </p>
 
       {cases.isPending && <p role="status">Loading cases...</p>}
@@ -45,7 +45,7 @@ export function CasesView() {
           </button>
         </div>
       )}
-      {cases.data && rows.length === 0 && <p data-testid="cases-empty">No cases yet. When ALDO bot passes a request to a person, it appears here.</p>}
+      {cases.data && rows.length === 0 && <p data-testid="cases-empty">No cases yet. When your personal agent passes a request to a person, it appears here.</p>}
       {rows.length > 0 && (
         <div className="table-wrap" tabIndex={0} role="region" aria-label="Cases table">
           <table className="table">

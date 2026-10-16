@@ -1,4 +1,4 @@
-"""ALDO bot accepts the write-back of a BUNDLE return (``outcome`` ``return_created``, an ``items`` list).
+"""The personal agent accepts the write-back of a BUNDLE return (``outcome`` ``return_created``, an ``items`` list).
 
 The body comes from the domain's own ``memory_updates.build_bundle_update`` so the two sides cannot
 drift apart. Part one is the receiver (validation, idempotency, the memory view); part two runs David's
@@ -233,7 +233,7 @@ def test_a_signed_bad_bundle_is_a_422_that_names_fields_and_writes_nothing(repo:
 @pytest.fixture
 def both(flow, monkeypatch: pytest.MonkeyPatch) -> Iterator[MemoryRepo]:
     """The seeded ALDO table (tests/conftest.py ``flow``) plus a seeded personal table, one moto session,
-    and the ``local`` transport wired from the outbox to ALDO bot's receiver."""
+    and the ``local`` transport wired from the outbox to the personal agent's receiver."""
     table = MemoryRepo()
     table.create_table()
     table.seed()
