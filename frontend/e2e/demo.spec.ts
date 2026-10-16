@@ -241,10 +241,9 @@ test.describe("David (Platinum): the bundle return", () => {
 
     await page.getByTestId("quick-david-1").click();
     await expect(page.getByTestId("workflow-pill")).toContainText("Return");
-    // Addendum 11.2: ALDO bot shows the 10 items (numbered) and asks which three and why. SOFT on purpose: finding F2 in
-    // test-findings.md (the deployed hand-off is one short sentence, addendum 12.1, and lists nothing). The assertion stays
-    // red until that is decided, and the rest of the flow still runs.
-    await expect.soft(page.getByTestId("bubble-bot").last().locator("li")).toHaveCount(10);
+    // Addendum 11.2: ALDO bot shows the 10 items (numbered) and asks which ones and why. This was finding F2 (the hand-off
+    // reply was one short sentence and listed nothing); the runner now composes the numbered list, so it is a hard check.
+    await expect(page.getByTestId("bubble-bot").last().locator("li")).toHaveCount(10);
     await expect(page.getByTestId("bubble-bot").last()).toContainText(/which (three|ones|items)/i);
     await expect(traceEvent(page, "handoff_to_returns").first()).toBeVisible();
 

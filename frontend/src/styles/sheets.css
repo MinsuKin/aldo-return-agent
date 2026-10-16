@@ -1,46 +1,60 @@
-/* ---- Sheets (modal, inside the phone) ------------------------------------------------------ */
+/* ---- Sheets (modal bottom sheets, inside the phone) --------------------------------------- */
+/* Dark workspace tokens only; the sheet is a modal that slides up over a dimmed, blurred phone.
+   Markup/test-ids are owned by the TSX and unchanged — this file is looks only. */
 
 .sheet-scrim {
   position: absolute;
   inset: 0;
   z-index: 30;
-  background: rgba(14, 17, 21, 0.5);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: flex-end;
   animation: fade 0.18s ease-out;
 }
+
 .sheet {
   width: 100%;
   max-height: 90%;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border-radius: 28px 28px 0 0;
+  background: var(--panel);
+  color: var(--fg);
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -18px 40px -12px rgba(0, 0, 0, 0.6);
   padding-bottom: 24px;
-  animation: sheet-up 0.24s ease-out;
+  animation: sheet-up 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .sheet:focus {
   outline: none;
 }
+
+/* Small drag-handle bar. */
 .sheet-grabber {
   align-self: center;
   width: 40px;
   height: 5px;
   border-radius: 3px;
-  background: #cdd2d8;
-  margin: 8px 0 4px;
+  background: var(--surface-5);
+  margin: 10px 0 4px;
 }
+
 .sheet-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 4px 16px 6px 20px;
+  padding: 4px 16px 8px 20px;
 }
 .sheet-head h2 {
-  font-size: 20px;
+  font-size: 17px;
+  font-weight: 600;
   letter-spacing: -0.01em;
+  color: var(--fg);
 }
+
 .sheet-body {
   overflow-y: auto;
   padding: 2px 20px 6px;
@@ -49,31 +63,59 @@
   gap: 12px;
 }
 .sheet-body h3 {
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
   margin-bottom: 6px;
 }
+/* The sheet's lead description reads muted. */
+.sheet-body > .muted {
+  color: var(--fg-muted);
+  font-size: 14px;
+}
+
+/* Summary card: a --card surface on the --panel sheet, with hairline fact rows. */
 .sheet-summary {
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 12px;
-  background: #fafbfc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  background: var(--card);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .sheet-heading {
-  font-weight: 650;
-  font-size: 16px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--fg);
 }
+/* Fact rows inside the sheet get hairline separators (designer's return card). */
+.sheet-summary .facts > div {
+  padding: 7px 0;
+  border-top: 1px solid var(--border-soft);
+}
+.sheet-summary .facts > div:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.sheet-summary .facts > div:last-child {
+  padding-bottom: 0;
+}
+.sheet-summary .facts dt {
+  color: var(--fg-muted);
+}
+.sheet-summary .facts dd {
+  color: var(--fg);
+}
+
 .sheet-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   padding-top: 2px;
 }
+
 @keyframes fade {
   from {
     opacity: 0;
@@ -93,31 +135,135 @@
   }
 }
 
+/* ---- Memory sheet: list rows with provisional / confirmed badges -------------------------- */
 .memory-typical {
-  font-size: 16px;
+  font-size: 15px;
+  color: var(--fg);
 }
 .memory-list {
   list-style: none;
   padding: 0;
   display: grid;
-  gap: 5px;
+  gap: 6px;
   font-size: 14px;
+  color: var(--fg);
 }
 .memory-list li {
-  padding: 6px 10px;
-  border-radius: 10px;
-  background: #f4f5f7;
-  border: 1px solid #e3e6ea;
+  padding: 8px 11px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+.memory-list li .icon {
+  color: var(--green);
 }
 .memory-list + .memory-list {
   margin-top: 6px;
 }
-.outcome-kept {
-  color: #14532d;
+/* Outcome words: kept = green, size swap = amber, on a surface-2 row use --fg-muted base. */
+.outcome {
   font-weight: 600;
+}
+.outcome-kept {
+  color: var(--green);
 }
 .outcome-returned_too_big,
 .outcome-returned_too_small {
-  color: #7a3f06;
+  color: var(--amber);
+}
+
+/* ---- Push banner: iOS-like dark glass notification (slides down inside the phone) --------- */
+/* Imported after chat.css, so these win by source order and replace the old light-theme push. */
+.push-region {
+  position: absolute;
+  top: 60px;
+  left: 10px;
+  right: 10px;
+  z-index: 40;
+  pointer-events: none;
+}
+.push {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 10px 11px 12px;
+  border-radius: 18px;
+  background: rgba(34, 34, 38, 0.82);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 14px 34px rgba(0, 0, 0, 0.5);
+  animation: push-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+/* Small brand-yellow app-icon square (overrides the round bot avatar box in the banner). */
+.push .bot-avatar {
+  flex: none;
+  border-radius: 9px;
+  background: var(--brand);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+/* Glyph on yellow must be dark ink, never white (contrast rule). */
+.push .bot-avatar .bot-avatar-bubble {
+  fill: var(--brand-ink);
+}
+.push .bot-avatar .bot-avatar-eye {
+  fill: var(--brand);
+}
+.push-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--fg);
+}
+.push-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--fg);
+}
+.push-title strong {
   font-weight: 600;
+}
+.push-title span {
+  color: var(--fg-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.push-body {
+  font-size: 14px;
+  color: var(--fg-muted);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.push-dismiss {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg-muted);
+}
+.push-dismiss:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--fg);
+  border-color: transparent;
+}
+@keyframes push-in {
+  from {
+    transform: translateY(-130%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }

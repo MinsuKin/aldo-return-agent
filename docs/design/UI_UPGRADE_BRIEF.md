@@ -36,5 +36,9 @@ npx tsc -b
 ```
 `a11y.spec.ts` saves a screenshot of every key state into `E2E_SHOT_DIR` and runs axe on 14 screens. ALL tests must pass with zero axe serious/critical (the David test's soft `li == 10` assertion is only for the live site; on the mock it passes). Read the screenshots with the read tool (Image mode) and iterate until your area matches the designer's feel. If node reports `EPERM lstat` on the scratch root, prefix the command with `TMPDIR=/Users/minsu/Desktop/aldo-return-agent/infra/build/cdk-tmp`. At the end stop ONLY the servers you started.
 
+## Defects seen in the OLD UI (visual inspection of the deployed site, `docs/eval/screenshots/v2/visual/REPORT.md`): fix them in your area
+- CHAT agent: David's chat-header sub line `David · Platinum member` is cut to `Platinum mem…` at every viewport (John's `Silver member` fits). Make the full text visible at the 440px design width (shrink gaps/padding, let the sub line use the remaining width, or wrap to two lines). Do not change the text.
+- FRAME agent: at a 390x844 viewport the layout is stacked; check that the phone scales to the viewport width, the page scrolls normally and nothing is cut off. The old UI had no dark theme at all, so a `prefers-color-scheme` variant is not needed: the new theme is dark only.
+
 ## Rules
 No git write operations of any kind. Never open or print `new.txt`, `aldo.txt`, `demo_plan.txt`. No secrets. Do not deploy. Do not call the deployed CloudFront site. Final message at most 25 lines: changes per file, tests run with counts, screenshots viewed, residual issues.

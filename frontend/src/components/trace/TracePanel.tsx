@@ -56,17 +56,19 @@ export function TracePanel({ items, signedIn, live }: Props) {
   };
 
   const empty = items.length === 0;
+  // Idle / Waiting / Live / Done, as the component already computes.
+  const status = live ? "Live" : signedIn ? (empty ? "Idle" : "Done") : "Waiting";
+  const statusState = live ? "running" : status === "Done" ? "done" : "idle";
 
   return (
-    <section className="trace-panel" aria-labelledby="trace-title" data-testid="trace-panel">
-      <header className="trace-head">
-        <div>
-          <h2 id="trace-title">A2A trace</h2>
-          <p className="muted small">Agent-to-agent events as they happen. Newest at the bottom.</p>
-        </div>
-        <span className={`live-pill${live ? " is-live" : ""}`} data-testid="live-pill">
-          <span className="live-dot" aria-hidden="true" />
-          {live ? "Live" : signedIn ? "Idle" : "Waiting"}
+    <section className="trace-panel panel" aria-labelledby="trace-title" data-testid="trace-panel">
+      <header className="panel-bar">
+        <Icon name="hierarchy" size={16} />
+        <h2 id="trace-title" className="pb-title">
+          A2A trace
+        </h2>
+        <span className="pb-progress" data-state={statusState} data-testid="live-pill">
+          <span className="pb-phase">{status}</span>
         </span>
       </header>
 
@@ -78,6 +80,7 @@ export function TracePanel({ items, signedIn, live }: Props) {
             </li>
           ))}
         </ul>
+        <p className="trace-desc">Agent-to-agent events as they happen. Newest at the bottom.</p>
         <p className="trace-note" data-testid="trace-note">
           Trace: public fields only, ALDO bot&apos;s private memory never appears here.
         </p>
@@ -85,7 +88,7 @@ export function TracePanel({ items, signedIn, live }: Props) {
 
       <div
         ref={scrollRef}
-        className="trace-scroll"
+        className="trace"
         role="log"
         aria-live="off"
         aria-label="Agent-to-agent event timeline"
@@ -94,7 +97,7 @@ export function TracePanel({ items, signedIn, live }: Props) {
         data-testid="a2a-trace"
       >
         {empty && (
-          <p className="muted empty" data-testid="trace-empty">
+          <p className="trace-empty" data-testid="trace-empty">
             {signedIn
               ? "No events yet. Say something to ALDO bot and its steps appear here, live."
               : "Pick a customer on the phone. The agent-to-agent trace appears here, live."}

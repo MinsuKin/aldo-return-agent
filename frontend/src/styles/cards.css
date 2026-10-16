@@ -1,198 +1,319 @@
-/* ---- Inline cards -------------------------------------------------------------------------- */
+/* ---- Inline cards (dark workspace) ---------------------------------------------------------
+   The structured blocks ALDO bot renders inside the chat: purchase proposal, options / quote,
+   order, transaction, case. One shared shell (CardFrame -> .msg-card): a near-black card on an
+   outline, a header row (title + mono id / status chip), a body, footer actions. Facts render as
+   the team designer's two-column table (label column on --panel-2, hairline rows, 8px radius).
+   Tokens only; the one primary action per card is ALDO yellow (.btn-primary from components.css).
+   No horizontal overflow at the phone width: long ids and values wrap. */
 
 .msg-card {
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 12px 14px 14px;
+  border-radius: 12px;
+  padding: 13px 14px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 1px 2px rgba(20, 23, 26, 0.06);
+  gap: 11px;
+  box-shadow: var(--shadow);
+  animation: popIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  min-width: 0;
 }
+
+/* Status variants. Neutral is proposed / open. Success (decided / confirmed) gets a green accent
+   on the left edge; a replaced / expired card is dimmed and quiet. */
 .msg-card-success {
-  border-color: #86bf9a;
+  border-color: color-mix(in srgb, var(--green) 42%, var(--border));
+  box-shadow:
+    inset 3px 0 0 var(--green),
+    var(--shadow);
 }
 .msg-card-warn {
-  border-color: #d9a431;
+  border-color: color-mix(in srgb, var(--amber) 42%, var(--border));
+  box-shadow:
+    inset 3px 0 0 var(--amber),
+    var(--shadow);
 }
+.msg-card[data-status="replaced"],
+.msg-card[data-status="expired"],
+.msg-card[data-status="superseded"] {
+  opacity: 0.62;
+  box-shadow: none;
+}
+
 .msg-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+  min-width: 0;
 }
 .msg-card-head h3 {
-  font-size: 16.5px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .msg-card-head h3:focus {
   outline: none;
 }
 .msg-card-head h3:focus-visible {
-  outline: 3px solid var(--focus);
+  outline: 2px solid var(--brand);
   outline-offset: 3px;
 }
+/* The reference id on the right of the header: mono, dim, wraps rather than overflowing. */
+.msg-card-head .mono {
+  flex: none;
+  text-align: right;
+  overflow-wrap: anywhere;
+  color: var(--fg-dim);
+}
 
+/* ---- Product line (swatch + name + size) --------------------------------------------------- */
 .product-row {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 .product-row .swatch {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex: none;
 }
 .product-name {
-  font-weight: 650;
-  font-size: 16px;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--fg);
+  overflow-wrap: anywhere;
 }
 .product-size {
-  color: var(--muted);
-  font-size: 14px;
+  color: var(--fg-muted);
+  font-size: 13px;
 }
 .product-size strong {
-  color: var(--text);
-  font-size: 21px;
+  color: var(--fg);
+  font-size: 18px;
+  font-weight: 600;
   line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 .swatch {
   display: inline-block;
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   vertical-align: -2px;
   flex: none;
 }
 
+/* ---- Facts: the designer's two-column table ------------------------------------------------
+   label cell on --panel-2 with a right hairline, value cell medium weight, rows separated by
+   hairlines, outer 8px radius clipped by overflow:hidden. Built on the <dl className="facts">
+   each card renders (dt = label, dd = value); the border between rows is drawn on the row <div>. */
 .facts {
   display: grid;
-  gap: 6px;
+  gap: 0;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  overflow: hidden;
 }
 .facts > div {
   display: grid;
-  grid-template-columns: 88px 1fr;
-  gap: 8px;
+  grid-template-columns: minmax(92px, 34%) 1fr;
+  border-top: 1px solid var(--border-soft);
+}
+.facts > div:first-child {
+  border-top: 0;
 }
 .facts dt {
-  color: var(--muted);
-  font-size: 13.5px;
+  color: var(--fg-muted);
+  font-size: 13px;
+  padding: 8px 12px;
+  background: var(--panel-2);
+  border-right: 1px solid var(--border-soft);
 }
 .facts dd {
   font-weight: 500;
+  font-size: 13px;
+  color: var(--fg);
+  padding: 8px 12px;
   overflow-wrap: anywhere;
+  min-width: 0;
 }
 
+/* ---- Evidence list (why this size): badges inside a quiet inner panel ----------------------- */
 .evidence-list {
   list-style: none;
-  padding: 8px 10px;
+  margin: 0;
+  padding: 10px 12px;
   display: grid;
-  gap: 5px;
-  background: #f5f6f8;
-  border-radius: 12px;
-  font-size: 13.5px;
+  gap: 7px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--fg-muted);
 }
 .evidence-list li {
   display: flex;
-  gap: 7px;
+  gap: 8px;
   align-items: flex-start;
 }
 .evidence-list .icon {
-  margin-top: 2px;
+  margin-top: 1px;
+  color: var(--fg-dim);
 }
+
+/* ---- Rationale (muted) --------------------------------------------------------------------- */
 .why {
-  font-size: 14px;
+  font-size: 13px;
+  color: var(--fg-muted);
+  line-height: 1.5;
 }
 .why-label {
-  font-weight: 650;
+  font-weight: 600;
+  color: var(--fg);
 }
+
+/* ---- Countdown pill: amber when short (contrast kept >= 4.5:1 on the card) ------------------ */
 .card-expiry {
-  display: flex;
+  display: inline-flex;
+  align-self: flex-start;
   align-items: center;
-  gap: 5px;
-  font-size: 13px;
-  color: var(--muted);
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+  padding: 3px 11px;
+  font-variant-numeric: tabular-nums;
 }
+.card-expiry.card-expiry-soon {
+  color: var(--amber);
+  background: var(--amber-soft);
+  border-color: color-mix(in srgb, var(--amber) 36%, transparent);
+}
+.card-expiry .icon {
+  color: currentColor;
+}
+
 .card-actions {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
-/* Options */
-
+/* ============================================================ Options / quote */
 .opt {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px 12px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: #fafbfc;
+  gap: 9px;
+  padding: 11px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  min-width: 0;
 }
+/* The primary (recommended) option: a soft ALDO-yellow tint border lifts it above the others. */
 .opt-primary {
-  border: 2px solid var(--ink);
-  background: #fff;
+  border: 1px solid var(--brand-ring);
+  background: var(--brand-soft);
 }
 .opt-approved {
-  border-color: #16803c;
+  border-color: color-mix(in srgb, var(--green) 50%, var(--border));
+  background: var(--green-soft);
 }
 .opt-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 .opt-head h4 {
-  font-size: 15.5px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  overflow-wrap: anywhere;
 }
 .swap-product {
-  font-weight: 650;
+  font-weight: 600;
+  color: var(--fg);
+  overflow-wrap: anywhere;
 }
 .swap {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  font-size: 16px;
+  font-size: 14px;
+  color: var(--fg-muted);
 }
+.swap strong {
+  color: var(--fg);
+}
+.swap .icon {
+  color: var(--fg-dim);
+}
+
+/* ---- Bundle: compact numbered rows --------------------------------------------------------- */
 .bundle-count {
-  font-weight: 650;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fg-muted);
   margin-bottom: 4px;
 }
 .bundle-list {
   list-style: decimal inside;
+  margin: 0;
   padding: 0;
   display: grid;
-  gap: 4px;
-  font-size: 14px;
+  gap: 2px;
+  font-size: 13.5px;
 }
 .bundle-list li {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: baseline;
-  gap: 6px;
+  gap: 7px;
+  padding: 5px 2px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--fg);
+}
+.bundle-list li:first-child {
+  border-top: 0;
 }
 .bundle-list li::marker {
-  color: var(--muted);
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
 }
 .bundle-name {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.bundle-name .muted {
+  color: var(--fg-muted);
+}
 .bundle-price {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  color: var(--fg);
 }
+
+/* ---- Totals: refund emphasised, fee struck-through when waived ------------------------------ */
 .totals {
   display: grid;
-  gap: 3px;
-  padding-top: 6px;
-  border-top: 1px dashed var(--border);
-  font-size: 14.5px;
+  gap: 4px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 13.5px;
 }
 .totals > div {
   display: flex;
@@ -200,45 +321,77 @@
   gap: 10px;
 }
 .totals dt {
-  color: var(--muted);
+  color: var(--fg-muted);
 }
 .totals dd {
   font-variant-numeric: tabular-nums;
+  color: var(--fg);
 }
 .totals-main {
   font-weight: 700;
-  font-size: 16px;
+  font-size: 15px;
 }
 .totals-main dt {
-  color: var(--text);
+  color: var(--fg);
 }
+.totals-main dd {
+  color: var(--fg);
+}
+/* The standard fee shown struck-through next to the waived CAD 0.00. */
+.strike {
+  color: var(--fg-dim);
+}
+.strike s {
+  text-decoration-color: var(--fg-dim);
+}
+
+/* ---- Benefit note: green, like the designer's "free & fastest" accent ---------------------- */
 .benefit {
   display: flex;
   align-items: flex-start;
-  gap: 6px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #0a4b2c;
-  background: #e1f4e8;
-  border-radius: 10px;
-  padding: 5px 9px;
-}
-.conditions {
-  padding-left: 18px;
+  gap: 7px;
   font-size: 13px;
-  color: #3a424b;
+  font-weight: 600;
+  color: var(--green);
+  background: var(--green-soft);
+  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  border-radius: 8px;
+  padding: 7px 10px;
 }
+.benefit .icon {
+  margin-top: 1px;
+  color: currentColor;
+}
+
+.conditions {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  line-height: 1.5;
+}
+
+/* ---- "See other options": a quiet disclosure --------------------------------------------- */
 .others {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 .others-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   align-self: flex-start;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+.others-toggle:hover:not(:disabled) {
+  color: var(--fg);
+}
+.others-toggle .icon {
+  color: var(--fg-dim);
 }
 .others-panel {
   display: flex;
@@ -249,36 +402,76 @@
   display: none;
 }
 
+/* ============================================================ Order / transaction */
 .order-how {
-  font-size: 14px;
+  font-size: 13px;
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
 }
+
+/* Delivery status: a pulsing green dot while out for delivery, calm once delivered. */
 .delivery {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 9px 11px;
-  border-radius: 12px;
-  background: #eef1f4;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
 }
 .delivery-line {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
+  font-size: 13.5px;
+  color: var(--fg);
+}
+.delivery-line .icon {
+  color: var(--cyan);
+}
+.delivery[data-state] .delivery-line::before,
+.delivery-line.delivery-dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.delivery[data-state="out"] .delivery-line::before {
+  background: var(--green);
+  box-shadow: 0 0 0 3px var(--green-soft);
+  animation: pulse 1.6s ease-in-out infinite;
 }
 .delivery-done {
-  color: #0a4b2c;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  color: var(--green);
 }
+.delivery-done::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  flex: none;
+}
+.delivery-done .icon {
+  color: var(--green);
+}
+/* Progress track while out for delivery. */
 .delivery-bar {
-  height: 6px;
+  height: 5px;
   border-radius: 3px;
-  background: #d5dae0;
+  background: var(--track);
   overflow: hidden;
 }
 .delivery-bar span {
   display: block;
   height: 100%;
   width: 0;
-  background: var(--ink);
+  background: var(--green);
   animation-name: fill;
   animation-timing-function: linear;
   animation-fill-mode: forwards;
@@ -289,29 +482,39 @@
   }
 }
 
+/* ---- Store notice: an amber-tinted note ---------------------------------------------------- */
 .store-notice {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: #fdf1d6;
-  color: #5c3204;
-  font-size: 13.5px;
+  gap: 3px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: var(--amber-soft);
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
+  color: var(--amber);
+  font-size: 13px;
 }
 .store-notice .muted {
-  color: #5c3204;
+  color: color-mix(in srgb, var(--amber) 72%, var(--fg-muted));
 }
 .store-notice-head {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  font-weight: 650;
+  font-weight: 600;
 }
+.store-notice-head .icon {
+  color: currentColor;
+}
+
+/* ---- Demo control (exchange pickup) -------------------------------------------------------- */
 .demo-control {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  gap: 4px;
+}
+.demo-control .small {
+  color: var(--fg-muted);
 }

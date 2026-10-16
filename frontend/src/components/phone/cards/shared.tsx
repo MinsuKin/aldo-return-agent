@@ -70,8 +70,9 @@ export function Countdown({ expiresAt, active, label, testId }: { expiresAt: num
   const remaining = expiresAt - now;
   if (remaining <= 0) return null;
   const clock = new Intl.DateTimeFormat("en-CA", { hour: "numeric", minute: "2-digit" }).format(expiresAt);
+  const soon = remaining <= 5 * 60 * 1000;
   return (
-    <p className="card-expiry" data-testid={testId}>
+    <p className={`card-expiry${soon ? " card-expiry-soon" : ""}`} data-testid={testId}>
       <Icon name="clock" size={14} />
       <span aria-hidden="true">
         {label} in {formatCountdown(remaining)}

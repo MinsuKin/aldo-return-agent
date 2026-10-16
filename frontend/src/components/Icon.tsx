@@ -31,7 +31,8 @@ export type IconName =
   | "truck"
   | "bell"
   | "close"
-  | "lock";
+  | "lock"
+  | "hierarchy";
 
 // Simple 24x24 stroke icons. Decorative: meaning is always carried by adjacent text.
 const PATHS: Record<IconName, ReactNode> = {
@@ -153,6 +154,16 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <rect x="5" y="11" width="14" height="9" rx="2" />
       <path d="M8 11V8a4 4 0 118 0v3" />
+    </>
+  ),
+  /* frame icons */
+  /* trace icons */
+  hierarchy: (
+    <>
+      <rect x="9" y="3" width="6" height="4" rx="1" />
+      <rect x="3" y="17" width="6" height="4" rx="1" />
+      <rect x="15" y="17" width="6" height="4" rx="1" />
+      <path d="M12 7v4M6 17v-3h12v3M12 11v3" />
     </>
   ),
 };

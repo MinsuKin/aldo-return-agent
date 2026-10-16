@@ -1,4 +1,7 @@
 /* ---- The phone --------------------------------------------------------------------------- */
+/* Dark titanium device chrome after the designer's demo (demo-dashboard/styles.css .phone / .notch /
+   .status-bar). The 440 x 956 box and scale() mechanics are unchanged — only looks change here.
+   Device-chrome gradients/shadows are the one place raw colours are allowed (brief). */
 
 .phone-fit {
   position: relative;
@@ -14,17 +17,36 @@
   transform-origin: top left;
   border-radius: 55px;
   padding: 5px;
-  background: linear-gradient(135deg, #9a9da3 0%, #43464b 16%, #1d1f22 50%, #43464b 84%, #9a9da3 100%);
+  /* Brushed titanium rail: light edge -> dark body -> light edge, warmed slightly. */
+  background: linear-gradient(135deg, #a7abb2 0%, #4a4d53 15%, #1b1d20 50%, #4a4d53 85%, #a7abb2 100%);
   box-shadow:
-    0 30px 60px -22px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(0, 0, 0, 0.4);
+    0 30px 70px -22px rgba(0, 0, 0, 0.62),
+    0 0 0 1px rgba(0, 0, 0, 0.5);
 }
 
+/* Titanium frame detail: concentric rings INSIDE the 5px bezel padding (never spill the clip).
+   An inset highlight ring + a soft inner shade read as a machined metal edge. */
+.phone::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 53px;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    inset 0 1px 2px rgba(255, 255, 255, 0.22),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.55);
+}
+
+/* Subtle side buttons — raised titanium nubs that sit just outside the rail (<= ~3px spill). */
 .phone-btn {
   position: absolute;
   width: 4px;
   border-radius: 2px;
-  background: #3a3d42;
+  background: linear-gradient(180deg, #55585e, #2d2f33);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 1px 2px rgba(0, 0, 0, 0.5);
 }
 .phone-btn-action {
   left: -3px;
@@ -48,6 +70,7 @@
 }
 
 .phone-bezel {
+  position: relative;
   width: 100%;
   height: 100%;
   border-radius: 50px;
@@ -61,10 +84,12 @@
   height: 100%;
   border-radius: 44px;
   overflow: hidden;
-  background: #fff;
+  /* Dark OLED glass. */
+  background: linear-gradient(180deg, #0e0e11 0%, #0b0b0d 100%);
   isolation: isolate;
 }
 
+/* ---- Status bar: time left, island centred, signal/wifi/battery right, all in --fg ---- */
 .statusbar {
   position: absolute;
   top: 0;
@@ -76,10 +101,16 @@
   align-items: center;
   padding: 6px 34px 0 40px;
   z-index: 50;
-  color: #101215;
+  color: var(--fg);
   font: 600 16px/1 var(--sans);
+  font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
+.statusbar-time {
+  letter-spacing: 0.01em;
+}
+
+/* Dynamic island: a soft black pill with a glassy lens dot on the right. */
 .statusbar-island {
   position: absolute;
   top: 11px;
@@ -89,11 +120,33 @@
   height: 37px;
   border-radius: 20px;
   background: #000;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 1px 3px rgba(0, 0, 0, 0.9);
 }
+.statusbar-island::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  width: 11px;
+  height: 11px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #2b2d33 0%, #141418 55%, #09090b 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(90, 100, 130, 0.35),
+    inset -1px -1px 1px rgba(80, 90, 120, 0.4);
+}
+
 .statusbar-icons {
   display: flex;
   align-items: center;
   gap: 6px;
+  color: var(--fg);
+}
+.statusbar-icons svg {
+  display: block;
 }
 
 .phone-content {
@@ -106,6 +159,7 @@
   flex-direction: column;
 }
 
+/* Light home-indicator pill on the dark screen. */
 .home-indicator {
   position: absolute;
   bottom: 8px;
@@ -114,7 +168,7 @@
   height: 5px;
   transform: translateX(-50%);
   border-radius: 3px;
-  background: #14161a;
+  background: rgba(236, 236, 239, 0.9);
   z-index: 50;
   pointer-events: none;
 }
