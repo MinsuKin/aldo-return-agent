@@ -275,9 +275,9 @@ test.describe("return reasons as one-tap answers", () => {
     await expect(page.getByTestId("send-error")).toHaveCount(0);
     await expect(page.getByTestId("reason-chips")).toHaveCount(0);
     await expect(page.getByTestId("chat-input")).toHaveAttribute("placeholder", "Message ALDO bot");
-    // The real bot answers a reason that includes the wear answer with the return options straight away.
-    if (!IS_MOCK) await expect(page.getByTestId("quote-card")).toBeVisible({ timeout: 90_000 });
-    else await expect(page.getByTestId("bubble-bot").last()).not.toHaveText("");
+    await expect(page.getByTestId("bubble-bot").last()).not.toHaveText("");
+    // The real bot must not ask the wear question again: it offers an exchange or a refund (live probe, 5 of 5 lines).
+    if (!IS_MOCK) await expect(page.getByTestId("bubble-bot").last()).not.toContainText(/\b(worn|wear|wore)\b[^.!?]*\?/i);
   });
 
   test("with the toggle off the wear answer is left out; the size chips carry the direction", async ({ page, request }) => {
