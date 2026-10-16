@@ -18,13 +18,8 @@ export function ProvenanceBadge({ kind }: { kind: Provenance }) {
   return <Badge tone={tone}>{PROVENANCE_LABEL[kind]}</Badge>;
 }
 
-/** Demo tier of a customer (addendum 11.1 D2), for example "Silver member". */
+/** Demo tier of a customer (addendum 11.1 D2), for example "Silver member". Hidden for simplicity. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function TierBadge({ tier, label }: { tier: string; label?: string }) {
-  if (!tier || tier === "none") return null;
-  const tone: BadgeTone = tier === "platinum" ? "platinum" : tier === "silver" ? "silver" : "neutral";
-  return (
-    <Badge tone={tone} title="Membership tier">
-      {label ?? `${tier.charAt(0).toUpperCase()}${tier.slice(1)} member`}
-    </Badge>
-  );
+  return null;
 }
