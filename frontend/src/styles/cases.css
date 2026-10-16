@@ -1,0 +1,88 @@
+/* ---- Cases page (dark workspace) ---------------------------------------------------------- */
+
+.page-card {
+  width: min(1000px, calc(100% - 36px));
+  margin: 16px auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  max-height: calc(100% - 32px);
+}
+.page-card h2 {
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+.back-link {
+  color: var(--link);
+  font-size: 13.5px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table th[scope="row"],
+.table td.nowrap {
+  white-space: nowrap;
+}
+.table th[scope="row"] {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--fg);
+}
+.table th,
+.table td {
+  text-align: left;
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+  color: var(--fg);
+}
+.table tbody tr:last-child th,
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.table tbody tr:hover {
+  background: var(--panel-2);
+}
+.table thead th {
+  background: var(--surface-3);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--fg-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-right-color: currentColor;
+  }
+  .dots i,
+  .is-live .live-dot {
+    animation: none;
+  }
+  .push,
+  .sheet,
+  .sheet-scrim {
+    animation: none;
+  }
+  .delivery-bar span {
+    animation: none;
+    width: 55%;
+  }
+}

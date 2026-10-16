@@ -71,6 +71,13 @@ HANDOFF_NOTE = (
     "The conversation now continues with the return flow. Reply with ONE short sentence such as "
     "\"Sure, let's sort out your return.\" and do not mention any other agent, assistant or team."
 )
+HANDOFF_NOTE_MULTI = (
+    "The conversation now continues with the return flow. This order has {n} items. If the owner "
+    "did not say which items to return, reply with ONE short sentence, then the items exactly as "
+    "given in the items field, one per line, then ask which ones and the reason in one question. "
+    "If the owner already named the items, reply with ONE short sentence only. Copy the items "
+    "exactly as given; never invent them. Do not mention any other agent, assistant or team."
+)
 LIMIT_MESSAGE = "Tool call limit reached for this run. Stop calling tools and answer the owner."
 
 MAX_SIZES = 16
@@ -84,6 +91,7 @@ MAX_REVIEW_TITLE = 120
 MAX_REVIEW_TEXT = 300
 MAX_FLAGS = 3
 MAX_ORDERS = 6
+MAX_CATEGORY = 24
 
 _SIZE_REQUEST_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
 _OPTION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,31}$")
@@ -130,6 +138,8 @@ class PersonalRunContext:
     handed_off: bool = False  # the conversation was switched to the return flow in this run
     handoff_order_id: str | None = None  # ... for this order (None when the bot named none)
     handoff_context: dict[str, Any] | None = None
+    #: The numbered lines (``1. Lededanten, black derby, size 10.0``) of a handed-off order with several items.
+    handoff_items: list[str] = field(default_factory=list)
     _terms: PrivateTerms | None = field(default=None, repr=False)
 
     def emit(self, event_type: str, payload: Mapping[str, Any]) -> None:
@@ -472,13 +482,17 @@ def tool_hand_off_to_returns(ctx: PersonalRunContext, order_id: str | None = Non
                 ErrorCode.VALIDATION_ERROR, "The conversation was already handed over in this run."
             )
         if ctx.handed_off:  # a repeat inside the same run
-            return ToolOutput(data={"handed_off": True, "order_id": wanted, "note": HANDOFF_NOTE}, source_refs=[])
+            data = _handoff_data(wanted, order)
+            ctx.handoff_items = list(data.get("items") or [])
+            return ToolOutput(data=data, source_refs=[])
         memory_view = ctx.repo.get_owner_memory(ctx.owner_id)
         context = build_memory_context(memory_view, ctx.orders or [])
         changed = ctx.repo.set_returns_mode(
             ctx.owner_id, ctx.conv_id, wanted, handoff_text=ctx.message, memory_context=context
         )
         ctx.handed_off, ctx.handoff_order_id, ctx.handoff_context = True, wanted, context
+        handoff_data = _handoff_data(wanted, order)
+        ctx.handoff_items = list(handoff_data.get("items") or [])
         ctx.emit("handoff_to_returns", {"order_id": wanted} if wanted else {})
         if changed:
             fields = consulted_fields(context)
@@ -495,13 +509,48 @@ def tool_hand_off_to_returns(ctx: PersonalRunContext, order_id: str | None = Non
                 actor="aldo_agent",
             )
         return ToolOutput(
-            data={"handed_off": True, "order_id": wanted, "note": HANDOFF_NOTE},
+            data=handoff_data,
             evidence={**({"order_id": wanted} if wanted else {}), "context_fields": consulted_fields(context)},
             source_refs=[f"ORDER#{wanted}"] if wanted else [],
             provenance="synthetic",
         )
 
     return run_tool(ctx, "hand_off_to_returns", {"order_id": order_id}, work)
+
+
+def _handoff_data(order_id: str | None, order: Mapping[str, Any] | None) -> dict[str, Any]:
+    """The tool result for the model: a single-line order is unchanged; a multi-line order gains an
+    ``items`` list (one pre-formatted string per line) and a note that asks for the numbered list."""
+    lines = order.get("lines") if order else None
+    if isinstance(lines, list) and len(lines) > 1:
+        items = [_item_line(index, line) for index, line in enumerate(lines, start=1)]
+        return {
+            "handed_off": True,
+            "order_id": order_id,
+            "items": items,
+            "note": HANDOFF_NOTE_MULTI.format(n=len(items)),
+        }
+    return {"handed_off": True, "order_id": order_id, "note": HANDOFF_NOTE}
+
+
+def _item_line(index: int, line: Mapping[str, Any]) -> str:
+    """``1. Lededanten, black derby, size 10.0`` (name, lower-case colour, category if any, size)."""
+    name = _text(line.get("product_name"), 60) or "item"
+    descriptor = " ".join(
+        part
+        for part in (
+            (_text(line.get("color"), 20) or "").lower(),
+            _text(line.get("category"), MAX_CATEGORY),
+        )
+        if part
+    )
+    size = _text(line.get("size"), 6)
+    parts = [name]
+    if descriptor:
+        parts.append(descriptor)
+    if size:
+        parts.append(f"size {size}")
+    return f"{index}. " + ", ".join(parts)
 
 
 def _order_argument(order_id: object) -> str | None:
@@ -824,14 +873,16 @@ def clean_orders(raw: object) -> list[dict[str, Any]] | None:
         for line in (entry.get("lines") if isinstance(entry.get("lines"), list) else [])[:12]:
             if not isinstance(line, Mapping):
                 continue
-            lines.append(
-                {
-                    "product_name": _text(line.get("product_name"), 60),
-                    "color": _text(line.get("color"), 20),
-                    "size": _text(line.get("size"), 6),
-                    "qty": _int(line.get("qty"), 1),
-                }
-            )
+            clean_line: dict[str, Any] = {
+                "product_name": _text(line.get("product_name"), 60),
+                "color": _text(line.get("color"), 20),
+                "size": _text(line.get("size"), 6),
+                "qty": _int(line.get("qty"), 1),
+            }
+            category = _text(line.get("category"), MAX_CATEGORY)
+            if category:
+                clean_line["category"] = category
+            lines.append(clean_line)
         orders.append(
             {
                 "order_id": order_id,

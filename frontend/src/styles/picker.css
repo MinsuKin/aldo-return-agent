@@ -1,0 +1,157 @@
+/* ---- Avatars and the first screen (dark workspace) --------------------------------------- */
+
+.bot-avatar {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
+}
+.bot-avatar-bubble {
+  fill: var(--brand-ink);
+}
+.bot-avatar-eye {
+  fill: var(--brand);
+}
+.persona-avatar {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface-4);
+  color: var(--fg);
+  font-weight: 700;
+}
+
+.picker {
+  padding: 8px 22px 44px;
+  gap: 14px;
+  overflow-y: auto;
+}
+.picker-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding-top: 30px;
+}
+.picker-head h2 {
+  font-size: 25px;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+
+.persona-cards {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+/* dark list rows with hairline borders */
+.persona-card {
+  width: 100%;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  color: var(--fg);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.persona-card:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  background: var(--surface-3);
+}
+.persona-card:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.persona-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.persona-name {
+  font-weight: 650;
+  font-size: 17px;
+  color: var(--fg);
+}
+.persona-where {
+  color: var(--fg-muted);
+  font-size: 13.5px;
+}
+.persona-cards-compact .persona-card {
+  min-height: 56px;
+  padding: 8px 12px;
+}
+
+.picker-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-soft);
+}
+.picker-admin h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-muted);
+}
+
+/* ?admin=1 panel: a quiet amber-tinted dashed card, consistent with .btn-demo. */
+.admin-controls {
+  border: 1px dashed var(--amber);
+  border-radius: var(--radius-lg);
+  background: var(--amber-soft);
+  padding: 8px 12px;
+}
+.admin-controls summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--amber);
+}
+.admin-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 4px;
+}
+.admin-body .field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.admin-body label {
+  color: var(--fg);
+  font-weight: 500;
+}
+.admin-body input {
+  padding: 6px 8px;
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--fg);
+}
+.admin-body input:focus {
+  border-color: var(--brand);
+  outline: none;
+}
+.admin-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.admin-status {
+  min-height: 1.4em;
+}

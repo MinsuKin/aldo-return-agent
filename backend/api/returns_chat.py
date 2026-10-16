@@ -27,6 +27,7 @@ the memory context all come from the personal-agent table, which only trusted co
 
 from __future__ import annotations
 
+import re
 from typing import Any, Callable, Mapping, Sequence
 
 from returns_domain import config
@@ -83,7 +84,8 @@ def recent_orders(customer_id: str, limit: int = RECENT_ORDERS) -> list[dict[str
     """The owner's recent ALDO orders, newest first, compact: what the bot needs to pick an order.
 
     ``order_id``, ``channel`` (``agent`` for orders ALDO bot's purchases created), ``ordered_at``,
-    ``delivered_at`` and the lines (``product_name``, ``color``, ``size``, ``qty``).
+    ``delivered_at`` and the lines (``product_name``, ``color``, ``size``, ``qty``, and ``category``
+    when the fixture names what the shoe is; it is left out otherwise).
     """
     compact: list[dict[str, Any]] = []
     for order in list(orders.list_orders(customer_id))[:limit]:
@@ -93,17 +95,27 @@ def recent_orders(customer_id: str, limit: int = RECENT_ORDERS) -> list[dict[str
                 "channel": order.channel,
                 "ordered_at": order.ordered_at,
                 "delivered_at": order.delivered_at,
-                "lines": [
-                    {
-                        "product_name": line.product_name,
-                        "color": line.color,
-                        "size": line.size,
-                        "qty": line.purchased_qty,
-                    }
-                    for line in order.lines[:MAX_LINES_PER_ORDER]
-                ],
+                "lines": [_compact_line(line) for line in sorted(order.lines, key=_natural_line_key)[:MAX_LINES_PER_ORDER]],
             }
         )
+    return compact
+
+
+def _natural_line_key(line: Any) -> tuple[Any, ...]:
+    """Order lines as a person counts them (L2 before L10); the table returns them as strings (L1, L10, L2 ...)."""
+    return tuple(int(part) if part.isdigit() else part for part in re.split(r"(\d+)", str(getattr(line, "line_id", ""))))
+
+
+def _compact_line(line: Any) -> dict[str, Any]:
+    """One order line for the bot's prompt; ``category`` is included only when the fixture has it."""
+    compact: dict[str, Any] = {
+        "product_name": line.product_name,
+        "color": line.color,
+        "size": line.size,
+        "qty": line.purchased_qty,
+    }
+    if getattr(line, "category", None):
+        compact["category"] = line.category
     return compact
 
 

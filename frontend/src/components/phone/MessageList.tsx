@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { useStickToEnd } from "../../hooks/useStickToEnd";
 import type { CardRef, Entry } from "../../state/conversation";
-import { BotAvatar } from "./Avatars";
 import { RichText } from "./RichText";
 
 interface Props {
@@ -75,7 +74,6 @@ export function MessageList({ entries, greeting, typing, renderCard, followKey }
     >
       <div ref={innerRef} className="chat-log-inner">
         <div className="row row-bot" data-testid="greeting">
-          <BotAvatar size={28} />
           <div className="bubble bubble-bot">
             <span className="sr-only">ALDO bot: </span>
             <p>{greeting}</p>
@@ -98,7 +96,6 @@ export function MessageList({ entries, greeting, typing, renderCard, followKey }
             case "bot":
               return (
                 <div key={e.key} className="row row-bot" {...marks} data-testid="bubble-bot">
-                  <BotAvatar size={28} />
                   <div className="bubble bubble-bot">
                     <span className="sr-only">ALDO bot: </span>
                     <RichText text={e.text} />
@@ -122,12 +119,9 @@ export function MessageList({ entries, greeting, typing, renderCard, followKey }
 
         {typing && (
           <div className="row row-bot" data-last="true" data-kind="typing" data-testid="typing">
-            <BotAvatar size={28} />
-            <div className="bubble bubble-bot bubble-typing" role="status">
-              <span className="dots" aria-hidden="true">
-                <i />
-                <i />
-                <i />
+            <div className="typing" role="status">
+              <span className="thinking-text" aria-hidden="true">
+                Thinking
               </span>
               <span className="sr-only">{typing}</span>
             </div>

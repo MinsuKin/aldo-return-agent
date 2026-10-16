@@ -1,0 +1,349 @@
+/* ---- The A2A trace: a dark panel, a header bar, Linear-style event rows ------------------------
+   Design system from base.css (near-black elevation ramp, actor hues, Geist + Geist Mono). The panel
+   fills the trace column, stays taller than 0.9x the phone at 1440x900 and scrolls INSIDE (.trace);
+   below 1100px the shell stacks it under the phone with a bounded height. Contrast: every dim/mono/
+   chip text is >= 4.5:1 (--fg-dim is used only on panel/panel-2 surfaces here). */
+
+.trace-panel {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* (a) Header bar: surface-3, an inline-SVG type-hierarchy icon + title, status text on the right. */
+.panel-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 14px;
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--border);
+}
+.panel-bar > .icon {
+  color: var(--fg-muted);
+}
+.panel-bar .pb-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+
+/* Status: plain muted text (idle/done) or a shimmering gradient while live. No pill background. */
+.pb-progress {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+}
+.pb-progress .pb-phase {
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--fg-muted);
+}
+.pb-progress[data-state="idle"] .pb-phase {
+  color: var(--fg-muted);
+}
+.pb-progress[data-state="done"] .pb-phase {
+  color: var(--fg-muted);
+}
+/* Live: a shiny gradient sweep across the phase text, like an LLM thinking. */
+.pb-progress[data-state="running"] .pb-phase {
+  background: linear-gradient(100deg, var(--fg-dim) 30%, var(--fg) 50%, var(--fg-dim) 70%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer 1.8s linear infinite;
+}
+
+/* (b) Under the header: the actor legend, a one-line description and the public-fields-only note. */
+.trace-legend {
+  flex: none;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.actor-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+}
+.trace-desc {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.trace-note {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+/* The actor chip = a 16px coloured icon square + the name, in the hue on its soft tint. */
+.actor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px 3px 3px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.actor-node {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-on-color);
+}
+.actor-node .icon {
+  vertical-align: 0;
+}
+.actor-chip.actor-personal_agent {
+  color: var(--violet);
+  background: var(--violet-soft);
+}
+.actor-chip.actor-personal_agent .actor-node {
+  background: var(--violet);
+}
+.actor-chip.actor-aldo_agent {
+  /* Return orange, lightened off the token to clear 4.5:1 on its soft tint at 11px. */
+  color: color-mix(in srgb, var(--orange) 78%, #ffffff);
+  background: var(--orange-soft);
+}
+.actor-chip.actor-aldo_agent .actor-node {
+  background: var(--orange);
+}
+.actor-chip.actor-aldo_gateway {
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+.actor-chip.actor-aldo_gateway .actor-node {
+  background: var(--blue);
+}
+.actor-chip.actor-aldo_store {
+  color: var(--amber);
+  background: var(--amber-soft);
+}
+.actor-chip.actor-aldo_store .actor-node {
+  background: var(--amber);
+}
+.actor-chip.actor-system {
+  color: var(--fg-muted);
+  background: var(--panel-2);
+}
+.actor-chip.actor-system .actor-node {
+  background: var(--fg-dim);
+}
+
+/* (c) Event rows: the scrolling timeline. */
+.trace {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overflow-anchor: none;
+  scroll-behavior: smooth;
+  padding-bottom: 56px;
+}
+.trace-empty {
+  color: var(--fg-dim);
+  font-size: 13px;
+  text-align: center;
+  padding: 50px 20px;
+}
+.timeline {
+  list-style: none;
+  padding: 0;
+}
+
+.event {
+  position: relative;
+  padding: 11px 20px;
+  border-bottom: 1px solid var(--border-soft);
+  animation: slideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.event:last-child {
+  border-bottom: 0;
+}
+.event:hover {
+  background: var(--panel-2);
+}
+
+.ev-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ev-latency {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.ev-title {
+  font-size: 13px;
+  font-weight: 500;
+  margin: 7px 0 2px;
+  color: var(--fg);
+}
+.ev-detail {
+  font-size: 12px;
+  color: var(--fg-muted);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.chips {
+  margin-top: 8px;
+}
+
+/* (d) The tool-call group toggle: a quiet row with a chevron; expanded rows in mono. */
+.run-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  padding: 4px 11px 4px 7px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--fg-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.run-toggle:hover {
+  background: var(--surface-3);
+  color: var(--fg);
+  border-color: var(--border-hover);
+}
+.run-toggle .icon {
+  color: var(--fg-dim);
+}
+
+.steps {
+  list-style: none;
+  padding: 6px 0 2px 8px;
+  margin: 6px 0 0;
+  border-left: 1px solid var(--border);
+  display: grid;
+  gap: 10px;
+}
+.steps[hidden] {
+  display: none;
+}
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 10px;
+}
+.step-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 12px;
+}
+.step-line .icon {
+  color: var(--fg-muted);
+}
+.step-label {
+  font-weight: 600;
+  color: var(--fg);
+}
+.step-tool {
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+.step-latency {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+}
+.step-args {
+  font-size: 11px;
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+}
+/* The "Private to ALDO bot" note, dimmed. */
+.step-private {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--fg-dim);
+}
+.step-private .icon {
+  color: var(--fg-dim);
+}
+.step-error {
+  background: var(--amber-soft);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  margin-left: -8px;
+}
+
+/* An error code, as a mono amber pill. */
+.code-amber {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--amber-soft);
+  color: var(--amber);
+  border: 1px solid color-mix(in srgb, var(--amber) 40%, transparent);
+  border-radius: var(--radius-pill);
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* (f) Jump to latest: a small floating pill, bottom-centre. */
+.jump-latest {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-hover);
+  background: var(--surface-4);
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: background 0.15s ease;
+}
+.jump-latest:hover {
+  background: var(--surface-5);
+}

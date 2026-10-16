@@ -1,0 +1,397 @@
+/* ---- Chat ----------------------------------------------------------------------------------
+   Dark workspace chat after the team designer's demo-dashboard: a brand ALDO bot avatar in the
+   header, the owner's messages as right-aligned bubbles, ALDO bot's replies as plain flowing text
+   (no bubble, no small avatar) like ChatGPT, a shimmering "Thinking" indicator, outlined quick-reply
+   cards, and a pill composer with a round white send button. Tokens only (base.css). */
+
+.chat {
+  position: relative;
+  background: var(--bg-elev);
+}
+
+/* ---- Header: avatar, name + sub line, Switch / memory, workflow pill ---- */
+.chat-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-elev);
+}
+
+/* The back / Switch control: a quiet ghost icon button. */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  color: var(--fg-muted);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 6px 7px 4px;
+  min-height: 34px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.back-btn:hover {
+  background: var(--surface-3);
+  color: var(--fg);
+}
+
+.chat-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* Round ALDO bot avatar in brand yellow with a dark chat glyph (overrides the default violet avatar). */
+.chat-header .bot-avatar {
+  background: var(--brand);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
+}
+.chat-header .bot-avatar .bot-avatar-bubble {
+  fill: var(--brand-ink);
+}
+.chat-header .bot-avatar .bot-avatar-eye {
+  fill: var(--brand);
+}
+
+.chat-title-text {
+  min-width: 0;
+  line-height: 1.3;
+}
+.chat-title h2 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+/* Sub line (customer · tier). Wraps to two lines so the full text shows at the 440px design width
+   (fixes David's "Platinum mem…" clip); it never truncates. */
+.chat-sub {
+  font-size: 12px;
+  color: var(--fg-muted);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.chat-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Workflow pill: a soft chip, violet for Purchase, orange for Return. */
+.workflow-pill {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+  background: var(--violet-soft);
+  color: var(--violet);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.workflow-pill[data-mode="returns"] {
+  background: var(--orange-soft);
+  color: var(--orange);
+}
+
+/* The memory icon button sits as a quiet circle (.icon-btn, components.css); it is 36px tall. */
+.chat-tools .memory-btn {
+  width: 34px;
+  height: 34px;
+}
+.memory-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--orange);
+  border: 2px solid var(--bg-elev);
+}
+
+/* ---- Transcript ---- */
+.chat-log {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* The transcript positions itself (useStickToEnd); browser scroll anchoring would nudge it. */
+  overflow-anchor: none;
+  background: var(--bg-elev);
+  padding: 16px 16px 12px;
+}
+.chat-log-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.row {
+  display: flex;
+}
+.row-bot {
+  justify-content: flex-start;
+}
+.row-user {
+  justify-content: flex-end;
+}
+.row-notice {
+  justify-content: center;
+}
+.row-card {
+  display: block;
+}
+
+/* ChatGPT style: the owner gets a bubble, ALDO bot flows as plain text. */
+.bubble {
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.bubble p + p,
+.bubble p + ol,
+.bubble ol + p {
+  margin-top: 8px;
+}
+
+/* ALDO bot: plain flowing text, no background, no avatar. */
+.bubble-bot {
+  align-self: stretch;
+  max-width: 100%;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--fg);
+  animation: fadeUp 0.4s ease both;
+}
+
+/* The owner: a right-aligned rounded bubble on surface-4 (use --fg-muted, never --fg-dim, on it). */
+.bubble-user {
+  align-self: flex-end;
+  max-width: 85%;
+  background: var(--surface-4);
+  color: var(--fg);
+  padding: 9px 14px;
+  border-radius: 18px;
+  animation: popIn 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rich-list {
+  margin: 4px 0 0;
+  padding-left: 22px;
+}
+.rich-list li + li {
+  margin-top: 1px;
+}
+
+.notice {
+  font-size: 12px;
+  color: var(--fg-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  padding: 4px 11px;
+  border-radius: var(--radius-pill);
+}
+
+/* ---- "Thinking" shimmer (ChatGPT-style gradient text) ---- */
+.typing {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  animation: fadeUp 0.3s ease both;
+}
+.typing .thinking-text {
+  font-size: 14px;
+  font-weight: 500;
+  background: linear-gradient(100deg, var(--fg-dim) 20%, var(--fg) 45%, var(--fg-dim) 70%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* ---- Quick replies: outlined cards ---- */
+.quick {
+  flex: none;
+  display: grid;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  background: var(--bg-elev);
+  border-top: 1px solid var(--border-soft);
+}
+.quick-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--fg);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.quick-chip:hover:not(:disabled),
+.quick-chip:focus-visible:not(:disabled) {
+  background: var(--surface-3);
+  border-color: var(--border-hover);
+}
+.quick-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.quick-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fg);
+}
+.quick-text {
+  color: var(--fg-muted);
+  font-size: 12px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- Composer: pill input + round white send button ---- */
+.composer-wrap {
+  flex: none;
+  padding: 10px 12px 14px;
+  background: var(--bg-elev);
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.composer .field,
+.composer input {
+  flex: 1;
+}
+.composer input {
+  min-width: 0;
+  height: 40px;
+  padding: 0 44px 0 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-hover);
+  background: var(--surface-2);
+  color: var(--fg);
+  caret-color: var(--brand);
+  outline: none;
+}
+/* Placeholder on surface-2 must clear 4.5:1 — --fg-muted does; --fg-dim would not here. */
+.composer input::placeholder {
+  color: var(--fg-muted);
+}
+.composer input:focus-visible {
+  border-color: var(--border-hover);
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* Round WHITE send button with a dark arrow-up; dimmed while the input is empty, full with text. */
+.send-btn {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: #ffffff;
+  color: #111111;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.send-btn:not(:disabled):hover {
+  transform: scale(1.06);
+}
+/* Disabled = dimmed; aria-hidden white-on-white arrow is decorative, so the dim state does not fail axe. */
+.send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Push notification (iOS-style, dark) ---- */
+.push-region {
+  position: absolute;
+  top: 52px;
+  left: 10px;
+  right: 10px;
+  z-index: 40;
+  pointer-events: none;
+}
+.push {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px 10px 12px;
+  border-radius: 18px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  animation: push-in 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+.push-text {
+  flex: 1;
+  min-width: 0;
+}
+.push-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--fg);
+}
+.push-title span {
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.push-body {
+  font-size: 14px;
+  color: var(--fg);
+}
+.push-dismiss {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+}
+@keyframes push-in {
+  from {
+    transform: translateY(-130%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
