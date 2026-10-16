@@ -5,14 +5,14 @@
   display: inline-grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--violet);
-  box-shadow: 0 0 0 1px var(--violet-soft);
+  background: var(--brand);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15) inset;
 }
 .bot-avatar-bubble {
-  fill: var(--fg-on-color);
+  fill: var(--brand-ink);
 }
 .bot-avatar-eye {
-  fill: var(--violet);
+  fill: var(--brand);
 }
 .persona-avatar {
   flex: none;

@@ -220,10 +220,10 @@
   background: var(--panel-2);
   min-width: 0;
 }
-/* The primary (recommended) option: a soft ALDO-yellow tint border lifts it above the others. */
+/* The primary (recommended) option: an ALDO-yellow ring and a barely warm fill lift it above the others. */
 .opt-primary {
   border: 1px solid var(--brand-ring);
-  background: var(--brand-soft);
+  background: color-mix(in srgb, var(--brand) 6%, var(--panel-2));
 }
 .opt-approved {
   border-color: color-mix(in srgb, var(--green) 50%, var(--border));

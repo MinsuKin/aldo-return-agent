@@ -26,8 +26,19 @@ async function axeSoft(page: Page, label: string): Promise<void> {
   const other = results.violations.filter((v) => v.impact !== "serious" && v.impact !== "critical");
   const fmt = (v: (typeof results.violations)[number]) =>
     `${v.id} [${v.impact}] ${v.nodes.length} node(s): ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(" | ")}`;
+  // For colour-contrast also say which pair failed (foreground on background, ratio), so the log is actionable.
+  const detail = (v: (typeof results.violations)[number]) =>
+    v.id !== "color-contrast"
+      ? ""
+      : v.nodes
+          .slice(0, 3)
+          .map((n) => {
+            const d = (n.any[0]?.data ?? {}) as { fgColor?: string; bgColor?: string; contrastRatio?: number; fontSize?: string };
+            return `    ${n.target.join(" ")} fg=${d.fgColor} bg=${d.bgColor} ratio=${d.contrastRatio} size=${d.fontSize}`;
+          })
+          .join("\n");
   log(`axe ${label}: ${blocking.length} serious/critical, ${other.length} moderate/minor (${results.passes.length} rules passed)`);
-  for (const v of blocking) log(`  BLOCKING ${fmt(v)}`);
+  for (const v of blocking) log(`  BLOCKING ${fmt(v)}${detail(v) ? `\n${detail(v)}` : ""}`);
   for (const v of other) log(`  note ${fmt(v)}`);
   expect.soft(blocking.map(fmt), `axe serious/critical violations on ${label}`).toEqual([]);
 }
@@ -102,6 +113,11 @@ test.describe("a11y: axe scan of the phone screens", () => {
     await signInAs(page, "David");
     await page.getByTestId("quick-david-1").click();
     await expect(page.getByTestId("workflow-pill")).toContainText("Return");
+    // The first reply lists the ten items, numbered (addendum 11.2): scan and keep a picture of that list.
+    await expect(page.getByTestId("bubble-bot").last().locator("li")).toHaveCount(10);
+    await expect(page.getByTestId("typing")).toHaveCount(0);
+    await axeSoft(page, "David: the ten items listed");
+    await shot(page, "a11y-david-0-items");
     await page.getByTestId("quick-david-2").click();
     const quote = page.getByTestId("quote-card");
     await expect(quote).toBeVisible();

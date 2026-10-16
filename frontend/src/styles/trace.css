@@ -118,40 +118,40 @@
 .actor-node .icon {
   vertical-align: 0;
 }
-.actor-personal_agent {
+.actor-chip.actor-personal_agent {
   color: var(--violet);
   background: var(--violet-soft);
 }
-.actor-personal_agent .actor-node {
+.actor-chip.actor-personal_agent .actor-node {
   background: var(--violet);
 }
-.actor-aldo_agent {
+.actor-chip.actor-aldo_agent {
   /* Return orange, lightened off the token to clear 4.5:1 on its soft tint at 11px. */
   color: color-mix(in srgb, var(--orange) 78%, #ffffff);
   background: var(--orange-soft);
 }
-.actor-aldo_agent .actor-node {
+.actor-chip.actor-aldo_agent .actor-node {
   background: var(--orange);
 }
-.actor-aldo_gateway {
+.actor-chip.actor-aldo_gateway {
   color: var(--blue);
   background: var(--blue-soft);
 }
-.actor-aldo_gateway .actor-node {
+.actor-chip.actor-aldo_gateway .actor-node {
   background: var(--blue);
 }
-.actor-aldo_store {
+.actor-chip.actor-aldo_store {
   color: var(--amber);
   background: var(--amber-soft);
 }
-.actor-aldo_store .actor-node {
+.actor-chip.actor-aldo_store .actor-node {
   background: var(--amber);
 }
-.actor-system {
+.actor-chip.actor-system {
   color: var(--fg-muted);
   background: var(--panel-2);
 }
-.actor-system .actor-node {
+.actor-chip.actor-system .actor-node {
   background: var(--fg-dim);
 }
 
