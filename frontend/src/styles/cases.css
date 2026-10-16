@@ -58,6 +58,11 @@
 .table tbody tr:hover {
   background: var(--panel-2);
 }
+/* The summary is long text: never let it collapse into a narrow, very tall column. At phone width the table
+   scrolls sideways inside its card instead. */
+.table td:last-child {
+  min-width: 260px;
+}
 .table thead th {
   background: var(--surface-3);
   font-size: 12.5px;

@@ -1,6 +1,6 @@
 # Visual inspection of the redesigned UI (deployed site, static screens)
 
-Site: https://d38111d70jquli.cloudfront.net (bundle `index-52TPgxIl.js` / `index-CwwmClWm.css`). Spec: `frontend/e2e/visual.spec.ts`, load-only (no message sent, nothing confirmed, no reset).
+Site: https://d38111d70jquli.cloudfront.net (bundle `index-BQOBgxUo.js` / `index-D6Px8-96.css`, deployed 2026-10-15 21:55 ET). Spec: `frontend/e2e/visual.spec.ts`, load-only (no message sent, nothing confirmed, no reset); every screen at every size must also have no horizontal page scroll (asserted).
 These 20 PNGs are the **after** set. The same screens of the old light UI are in `../design/before/` (its report: `../design/before/REPORT.md`). The designer's reference: `../design/ref/`.
 
 Matrix: 5 screens (persona picker, John chat, David chat, admin picker `?admin=1`, Cases) x 1440x900 light, 1440x900 dark, 1000x900 (stacked), 390x844 (phone). The theme is dark only, so every `*-dark.png` is identical to its `*-light.png`: the matrix stays so the file names match the old set.
@@ -23,7 +23,12 @@ Opened and read in full: `persona-picker-1440x900-light`, `john-chat-1440x900-li
 2. The recommended option had a muddy olive fill (14% yellow): now a 6% warm tint with the yellow ring.
 3. The first-screen avatar was violet while the top bar, chat header and push icon are ALDO yellow: now one brand colour.
 4. The push banner let the header text ghost through in a browser without backdrop blur: opacity .82 -> .92.
-5. (from the old UI) David's header sub line was truncated: fixed by the chat restyle.
+5. 390x844: the stacked layout was 6 px wider than the viewport (`.phone-col` 402 px, finding F12), found by the extra-state QA; fixed in `shell.css`, now asserted for all 20 screens.
+6. Cases page at phone width: with a real case the long Summary collapsed into a narrow, very tall column; it now keeps a 260 px minimum and the table scrolls sideways inside its card (`cases.css`).
+7. (from the old UI) David's header sub line was truncated: fixed by the chat restyle.
+
+## More states (mock and live), `../design/states/`
+`phone/` (14) and `trace/` (14): replaced and expired purchase and quote cards, error and info alerts, typing shimmer, memory sheet, approve dialogs (desktop and 390), hover and keyboard focus rings, order out for delivery and delivered, push banner, expanded tool-call group, Jump to latest, row hover, admin statuses and focus, stacked layouts with a populated chat at 1000 and 390, 1280x720, skip link. `cases-populated-1440x900.png` and `-390x844.png`: the Cases page with a real review case (scenario D3: bundle of 5 items, CAD 819.95 over the CAD 750 Platinum limit, POLICY_REVIEW). John's Cases page stays empty while David's shows that case, so the list is scoped to the signed-in customer.
 
 ## Observations, not changed (outside a design-only change)
 - Signing in again as the same customer shows the previous run's events in the trace (status "Done") next to a fresh chat, until the demo is reset. This is the existing behaviour (the A2A stream belongs to the customer); reset before every demo.

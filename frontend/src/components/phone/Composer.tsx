@@ -7,12 +7,14 @@ interface Props {
   inputRef: RefObject<HTMLInputElement | null>;
   busy: boolean;
   error: ErrorInfo | null;
+  /** Hint inside the empty box (default "Message ALDO bot"). */
+  placeholder?: string;
   /** Resolves true when the message was accepted, so the box can clear. */
   onSend: (text: string) => Promise<boolean>;
 }
 
 /** The message row at the bottom of the phone: a rounded text box and a round send button. */
-export function Composer({ inputRef, busy, error, onSend }: Props) {
+export function Composer({ inputRef, busy, error, placeholder, onSend }: Props) {
   const [text, setText] = useState("");
 
   async function submit(e: FormEvent) {
@@ -39,7 +41,7 @@ export function Composer({ inputRef, busy, error, onSend }: Props) {
           type="text"
           value={text}
           maxLength={MAX_MESSAGE_CHARS}
-          placeholder="Message ALDO bot"
+          placeholder={placeholder ?? "Message ALDO bot"}
           autoComplete="off"
           onChange={(e) => setText(e.target.value)}
           data-testid="chat-input"

@@ -177,12 +177,17 @@ If something blocks you (expired credentials, a denied AWS call, an ambiguity in
 
 ## 9. Outcome of the test campaign (written 2026-10-15 about 21:10 EDT by the testing agent)
 
-Built on the deployed system with the redesigned dark UI (bundle `index-52TPgxIl.js`). Details and evidence: `.agents/tasks/agentic-returns-gateway-p0-2026-10-15/test-findings.md` (gitignored; copy it out if you need it elsewhere), numbers: `docs/eval/results.json` and `docs/eval/results.md`, pictures: `docs/eval/screenshots/v2/`, videos: `docs/eval/recordings/`.
+Built on the deployed system with the redesigned dark UI (bundle `index-BQOBgxUo.js`, deployed 21:55 ET). Details and evidence: `.agents/tasks/agentic-returns-gateway-p0-2026-10-15/test-findings.md` (gitignored; copy it out if you need it elsewhere), numbers: `docs/eval/results.json` and `docs/eval/results.md`, pictures: `docs/eval/screenshots/v2/`, videos: `docs/eval/recordings/`.
 
-- L1: backend 3171 passed / 2 skipped; frontend `tsc -b` and `vite build` clean.
+- L1: backend 3174 passed / 2 skipped; frontend `tsc -b` and `vite build` clean.
 - L2: `checkpoint2.py` 19/19; eval P5 45/45.
-- L3: live eval 19/19 runs (A B C D E H P1-P4 J1-J3 D1-D3 P5 S1 K1), 43 model runs, all on the primary model, estimated USD 0.0130 per returns-agent run.
-- L4: deployed site `demo.spec.ts` + `a11y.spec.ts` 9 passed / 4 skipped (mock-only) / 0 failed; axe 15 screens 0 serious/critical and 0 moderate/minor; keyboard-only purchase passes; Track B (driven browser) not used for the final pass, the screenshots come from the scripted tracks.
+- L3: live eval 19/19 runs (A B C D E H P1-P4 J1-J3 D1-D3 P5 S1 K1) after the last backend change, 43 model runs, all on the primary model, estimated USD 0.0126 per returns-agent run.
+- L4: deployed site `demo.spec.ts` + `a11y.spec.ts` + `visual.spec.ts` 30 passed / 4 skipped (mock-only) / 0 failed; axe 17 screens 0 serious/critical and 0 moderate/minor; keyboard-only purchase passes; recordings John x2 and David x2 passed on the deployed site; the driven browser (Track B) was used only to open the deployed site and the Cases page, the evidence comes from the scripted track.
 - L5: S1, J3, D2, D3, J1/D1 races, J2 cross-persona, K1 concurrency: all hold. Opus fallback verified live (6 forced-fallback runs, 79/79 checks).
-- Fixed and deployed by the testing agent: F2 (ten items listed), F4 (perk tier on the bundle card), F5 (chip for David's second reason), F6 (accessible name), F7 (landmark, by the redesign). Harness: F1, F9 (reset retry). Open and not changed: F9 product side (reset vs in-flight runs), F10, F3, F8, the J3 flake watch.
+- Fixed and deployed by the testing agent: F2 (ten items listed), F4 (perk tier on the bundle card), F5 (chip for David's second reason), F6 (accessible name), F7 (landmark, by the redesign), F11 (the bot asked for "two other items" at David's optional second return; prompt rule "every return request stands alone"), F12 (6 px sideways scroll at 390 px). Harness: F1, F9 (reset retry). Open and not changed: F9 product side (reset vs in-flight runs), F10, F3, F8, the J3 flake watch.
 - Re-run recipe: `cd backend && ../scripts/with_aws_env.sh env SECRETS_ARN=<arn> uv run --no-sync python ../scripts/eval_scenarios.py --scenarios all --runs 1 --base-url https://d38111d70jquli.cloudfront.net --out-dir ../docs/eval/run-final`, then the deployed browser specs through `scripts/test_run_e2e_deployed.py e2e/demo.spec.ts e2e/a11y.spec.ts`. One live scenario at a time; the demo is single tenant.
+
+### 9a. Polish round (2026-10-15 22:00-22:20 EDT)
+- The owner's note `extra_polish_detail.txt` (reason buttons after "I want to return this") is implemented as `ReasonChips`: while ALDO bot asks why, six chips (Changed my mind, Damaged or defective, Size too big, Size too small, Wrong colour, Something else) sit above the scripted replies, with a visible "They're unworn" toggle (on by default) because the live bot asks the wear question first and loops on it. The text box stays free. Tests: `demo.spec.ts` (stage test + "return reasons as one-tap answers"), `a11y.spec.ts` (axe with the chips on screen).
+- The message box no longer touches the iPhone home indicator (`.composer-wrap` bottom padding 26 px).
+- Edit the chip lines in `frontend/src/components/phone/ReasonChips.tsx` (`RETURN_REASONS`, `reasonLine`); after any change re-run the live check of the lines against the real bot (the bare size/colour lines stall on the wear question).
