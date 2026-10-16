@@ -9,13 +9,14 @@ import { colorWord, formatCents, friendlyDate } from "../../lib/format";
 import { normalizeMemory, type OptionView, type PurchaseView, type QuoteView } from "../../lib/normalize";
 import { quickRepliesFor, type QuickReply } from "../../lib/script";
 import { num, pick } from "../../lib/util";
+import { isV3 } from "../../lib/v3";
 import type { CardRef } from "../../state/conversation";
 import { Icon } from "../Icon";
 import { BotAvatar } from "./Avatars";
 import { CaseCard } from "./cards/CaseCard";
 import { OrderCard } from "./cards/OrderCard";
 import { PurchaseCard, type ReviewEvidence } from "./cards/PurchaseCard";
-import { QuoteCard, confirmLabel } from "./cards/QuoteCard";
+import { QuoteCard, confirmLabel, goodwillNote, isGoodwill } from "./cards/QuoteCard";
 import { TransactionCard } from "./cards/TransactionCard";
 import { Composer } from "./Composer";
 import { ConfirmSheet, type SheetFact, type SheetItem } from "./ConfirmSheet";
@@ -31,6 +32,8 @@ export interface ChatCustomer {
   tier: string;
   tierLabel?: string;
   locationLabel?: string;
+  /** The cohort ("v2" | "v3", spec demo-stories-v3) when the stage passes it; without it the customer id decides. */
+  profile?: string;
 }
 
 interface Props {
@@ -90,7 +93,8 @@ function approveContent(o: OptionView): { facts: SheetFact[]; items?: SheetItem[
     if (bundle || o.type === "return_mail" || o.feeCents > 0) facts.push({ label: "Shipping", value: formatCents(o.feeCents, o.currency) });
     facts.push({ label: "Refund total", value: formatCents(o.refundCents, o.currency) });
   }
-  if (o.benefit) facts.push({ label: "Perk", value: o.benefit.note });
+  // ALDO goodwill (the v3 pilot's label waiver) is not a tier perk: its row says so and shows the server's note.
+  if (o.benefit) facts.push(isGoodwill(o.benefit) ? { label: "Goodwill", value: goodwillNote(o.benefit) } : { label: "Perk", value: o.benefit.note });
   const items: SheetItem[] | undefined = bundle
     ? o.lines.map((l) => ({
         name: `${l.productName}${l.kind ? ` ${l.kind}` : ""}`,
@@ -251,8 +255,11 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
       if (ok) inputRef.current?.focus();
     });
   };
-  // While the ALDO agent waits for the reason of a return, offer the usual reasons as one-tap answers.
-  const askingReason = isAskingForReason(convo.entries);
+  // While the ALDO agent waits for the reason of a return, offer the usual reasons as one-tap answers. For the v3 cohort,
+  // once the owner has already said why (Dusky's fit answer is offered), the agent's question is about one item: the
+  // generic reasons would compete with that line, so only the quick reply is shown.
+  const v3 = isV3(customer.customerId, customer.profile);
+  const askingReason = isAskingForReason(convo.entries) && !(v3 && replies.some((r) => r.afterReasons));
   useEffect(() => {
     if (!askingReason) setTypeOwnReason(false);
   }, [askingReason]);
@@ -265,6 +272,8 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
   const typing = convo.busy ? (convo.activeAgent === "returns" ? "Your personal agent is working on your return" : "Your personal agent is typing") : null;
   const greeting = `Hi ${customer.name}. I'm your personal agent. I can:\n\n- Buy shoes for you\n- Remember your sizes\n- Sort out exchanges and returns\n\nNothing is ordered until you confirm it.`;
   const returning = convo.mode === "returns";
+  // Hidden for demo simplicity: tier label (e.g. "Silver member") removed from subtitle.
+  const subDetail: string | undefined = undefined;
 
   return (
     <div className="screen chat" data-testid="chat-screen">
@@ -279,7 +288,7 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
             <h2>Personal agent</h2>
             <p className="chat-sub" data-testid="chat-sub">
               {customer.name}
-              {customer.tierLabel ? ` · ${customer.tierLabel}` : ""}
+              {subDetail ? ` · ${subDetail}` : ""}
             </p>
           </div>
         </div>
