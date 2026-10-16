@@ -180,40 +180,24 @@
   min-width: 0;
 }
 
-/* ---- Evidence list (why this size): badges inside a quiet inner panel ----------------------- */
-.evidence-list {
-  list-style: none;
-  margin: 0;
-  padding: 10px 12px;
-  display: grid;
-  gap: 7px;
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--fg-muted);
+/* ---- Document-style card body (purchase proposal): bold-label bullets under a short heading ---- */
+.msg-card .md-list,
+.msg-card .md-heading {
+  font-size: 13.5px;
+  line-height: 1.55;
 }
-.evidence-list li {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-}
-.evidence-list .icon {
-  margin-top: 1px;
-  color: var(--fg-dim);
-}
-
-/* ---- Rationale (muted) --------------------------------------------------------------------- */
-.why {
-  font-size: 13px;
-  color: var(--fg-muted);
-  line-height: 1.5;
-}
-.why-label {
-  font-weight: 600;
+.msg-card .md-list {
   color: var(--fg);
 }
-
+.md-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* Supporting evidence reads quieter than the key facts above it. */
+.md-section .md-list {
+  color: var(--fg-muted);
+}
 /* ---- Countdown pill: amber when short (contrast kept >= 4.5:1 on the card) ------------------ */
 .card-expiry {
   display: inline-flex;
@@ -255,10 +239,10 @@
   background: var(--panel-2);
   min-width: 0;
 }
-/* The primary (recommended) option: an ALDO-yellow ring and a barely warm fill lift it above the others. */
+/* The primary (recommended) option: a lighter neutral border lifts it above the others. The fill stays the
+   same neutral as the card, so the popup matches the rest of the app (yellow is kept for the action button). */
 .opt-primary {
-  border: 1px solid var(--brand-ring);
-  background: color-mix(in srgb, var(--brand) 6%, var(--panel-2));
+  border-color: color-mix(in srgb, var(--fg) 24%, var(--border));
 }
 .opt-approved {
   border-color: color-mix(in srgb, var(--green) 50%, var(--border));

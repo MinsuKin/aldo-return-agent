@@ -9,6 +9,7 @@ import "./styles/shell.css";
 import "./styles/components.css";
 import "./styles/phone.css";
 import "./styles/picker.css";
+import "./styles/markdown.css";
 import "./styles/chat.css";
 import "./styles/cards.css";
 import "./styles/sheets.css";

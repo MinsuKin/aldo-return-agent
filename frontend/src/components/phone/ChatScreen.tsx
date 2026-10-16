@@ -263,7 +263,7 @@ export function ChatScreen({ customer, convo, a2a, writeback, onCheckAgain, onNu
   };
 
   const typing = convo.busy ? (convo.activeAgent === "returns" ? "Your personal agent is working on your return" : "Your personal agent is typing") : null;
-  const greeting = `Hi ${customer.name}. I'm your personal agent. I can buy shoes for you, remember your sizes, and sort out exchanges and returns. Nothing is ordered until you confirm it.`;
+  const greeting = `Hi ${customer.name}. I'm your personal agent. I can:\n\n- Buy shoes for you\n- Remember your sizes\n- Sort out exchanges and returns\n\nNothing is ordered until you confirm it.`;
   const returning = convo.mode === "returns";
 
   return (

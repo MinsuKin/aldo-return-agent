@@ -10,7 +10,8 @@ const MAX_SCALE = 1.3;
 
 /**
  * Scale that fits the phone into the stage: by height when the phone sits beside the trace (no page
- * scroll), by width only when the two are stacked. The stage's own size never depends on the scale, so
+ * scroll), by width only when the two are stacked. In the wide layout the height also leaves
+ * `--phone-pad-y` free above and below the phone. The stage's own size never depends on the scale, so
  * observing it cannot feed back.
  */
 export function useFitScale(stageRef: RefObject<HTMLElement | null>, wide: boolean): number {
@@ -25,8 +26,10 @@ export function useFitScale(stageRef: RefObject<HTMLElement | null>, wide: boole
       const innerW = stage.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight);
       const innerH = stage.clientHeight - px(cs.paddingTop) - px(cs.paddingBottom);
       const gap = px(cs.columnGap) || 16;
+      // Space kept free above and below the phone inside the striped panel (--phone-pad-y in shell.css).
+      const padY = wide ? 2 * px(cs.getPropertyValue("--phone-pad-y")) : 0;
       const byWidth = wide ? (innerW - gap - MIN_TRACE_W) / PHONE_W : innerW / PHONE_W;
-      const byHeight = wide ? innerH / PHONE_H : Number.POSITIVE_INFINITY;
+      const byHeight = wide ? (innerH - padY) / PHONE_H : Number.POSITIVE_INFINITY;
       const next = Math.max(MIN_SCALE, Math.min(MAX_SCALE, byWidth, byHeight));
       setScale((prev) => (Math.abs(prev - next) < 0.002 ? prev : next));
     };

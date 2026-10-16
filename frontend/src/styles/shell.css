@@ -75,16 +75,20 @@
   /* Vertical breathing room for the phone comes from here, not from .phone-col (useFitScale reads
      the stage inner height). Horizontal padding frames the two columns. */
   padding: 16px 18px 18px;
+  /* Gap between the phone frame and the top / bottom edge of the striped panel (wide layout).
+     useFitScale reads this variable and subtracts 2x from the height it fits the phone into, so
+     changing the number here is all it takes: the CSS padding and the scale stay in step. */
+  --phone-pad-y: 28px;
 }
 
 /* Left column = the designer's panel: dark surface, hairline border, 14px radius, a faint diagonal
-   stripe pattern. The panel is drawn with a pseudo-element so .phone-col keeps HORIZONTAL padding
-   only (vertical breathing room is .stage padding; the phone scale is computed from the stage's
-   inner size by useFitScale, which we must not fight). */
+   stripe pattern. The panel is drawn with a pseudo-element. Its vertical padding is --phone-pad-y,
+   which useFitScale also subtracts from the stage's inner height, so the phone is scaled to fit
+   inside that padding instead of touching the panel edges. */
 .phone-col {
   position: relative;
   flex: none;
-  padding: 0 24px;
+  padding: var(--phone-pad-y) 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,9 +116,13 @@
   z-index: 1;
 }
 
+/* The trace column stacks two separate containers: the key (actor chips) on top, the trace panel
+   filling the rest. */
 .trace-col {
   min-width: 0;
   display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 @media (min-width: 1100px) {
@@ -146,7 +154,7 @@
     padding-bottom: 24px;
   }
   .phone-col {
-    padding: 20px 24px;
+    padding: var(--phone-pad-y) 24px;
     max-width: 100%;
     min-width: 0;
   }

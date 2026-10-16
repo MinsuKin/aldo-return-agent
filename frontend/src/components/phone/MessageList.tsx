@@ -76,7 +76,7 @@ export function MessageList({ entries, greeting, typing, renderCard, followKey }
         <div className="row row-bot" data-testid="greeting">
           <div className="bubble bubble-bot">
             <span className="sr-only">Personal agent: </span>
-            <p>{greeting}</p>
+            <RichText text={greeting} />
           </div>
         </div>
 

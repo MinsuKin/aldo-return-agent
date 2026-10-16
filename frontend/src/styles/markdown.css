@@ -1,0 +1,47 @@
+/* ---- Markdown-style text: shared by the personal agent's chat replies and the document-style cards ---
+   One look for lists, short headings, bold and inline code, so a reply and a card read like the same
+   kind of page (ChatGPT style: plain flowing text, real bullets, bold labels). Tokens from base.css. */
+
+.md-list {
+  margin: 0;
+  padding-left: 20px;
+}
+ul.md-list {
+  list-style: disc;
+}
+ol.md-list {
+  list-style: decimal;
+}
+.md-list li {
+  padding-left: 2px;
+}
+.md-list li + li {
+  margin-top: 5px;
+}
+.md-list li::marker {
+  color: var(--fg-dim);
+}
+ol.md-list li::marker {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A short heading inside a reply or card: same size as the text, heavier, tighter. */
+.md-heading {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+
+.md-code {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 5px;
+  padding: 1px 5px;
+  overflow-wrap: anywhere;
+}
+
+strong {
+  font-weight: 600;
+}

@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 920" width="1500" height="920" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <title>ALDO Fit Gateway architecture: request path and data pipeline</title>
+  <desc>Request path: React app, CloudFront, API Gateway, API Lambda with ALDO Data, Worker Lambda with the purchase workflow, AgentCore with the return workflow, Bedrock and DynamoDB. Batch data pipeline: ALDO CSV files, S3 raw, Glue Data Catalog, Athena, S3 curated, read by ALDO Data.</desc>
+  <defs>
+    <marker id="ah-black" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker>
+    <marker id="ah-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#F29B1D"/></marker>
+    <marker id="ah-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker>
+  </defs>
+
+  <rect width="1500" height="920" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="40" y="46" font-size="22" fill="#111">Models propose. Server code validates. DynamoDB commits the approved transaction.</text>
+  <line x1="40" y1="68" x2="1450" y2="68" stroke="#e3e3e3"/>
+
+  <!-- Column headers -->
+  <g font-family="Menlo, SF Mono, Consolas, monospace" font-size="11" letter-spacing="1.6" fill="#777">
+    <text x="40" y="104">EXPERIENCE</text>
+    <text x="360" y="104">API</text>
+    <text x="730" y="104">AGENTS</text>
+    <text x="1130" y="104">MODELS AND DATA</text>
+  </g>
+
+  <!-- ===== Column 1: experience ===== -->
+  <g stroke="#222" stroke-width="1.5" fill="#fff">
+    <rect x="40" y="130" width="260" height="100" rx="10"/>
+    <rect x="40" y="270" width="260" height="90" rx="10"/>
+    <rect x="40" y="400" width="260" height="80" rx="10"/>
+  </g>
+  <g fill="#111">
+    <text x="60" y="162" font-size="17" font-weight="700">React web app</text>
+    <text x="60" y="186" font-size="13" fill="#666">Phone chat + agent trace</text>
+    <text x="60" y="206" font-size="13" fill="#666">React 19 · Vite</text>
+    <text x="60" y="302" font-size="17" font-weight="700">Amazon CloudFront</text>
+    <text x="60" y="326" font-size="13" fill="#666">One public HTTPS URL</text>
+    <text x="60" y="432" font-size="17" font-weight="700">Amazon S3</text>
+    <text x="60" y="456" font-size="13" fill="#666">Hosts the React build</text>
+  </g>
+  <g stroke="#111" stroke-width="1.5" fill="none">
+    <line x1="170" y1="230" x2="170" y2="268" marker-end="url(#ah-black)"/>
+    <line x1="170" y1="360" x2="170" y2="398" marker-end="url(#ah-black)"/>
+    <line x1="300" y1="315" x2="358" y2="315" marker-end="url(#ah-black)"/>
+  </g>
+
+  <!-- ===== Column 2: API ===== -->
+  <g stroke="#222" stroke-width="1.5" fill="#fff">
+    <rect x="360" y="270" width="280" height="90" rx="10"/>
+    <rect x="360" y="400" width="280" height="182" rx="10"/>
+  </g>
+  <rect x="380" y="490" width="240" height="80" rx="8" fill="#f3f3f3" stroke="#8a8a8a" stroke-width="1.2"/>
+  <g fill="#111">
+    <text x="380" y="302" font-size="17" font-weight="700">Amazon API Gateway</text>
+    <text x="380" y="326" font-size="13" fill="#666">HTTP API · throttled</text>
+    <text x="380" y="344" font-size="12" fill="#888">20 req/s, burst 40</text>
+    <text x="380" y="432" font-size="17" font-weight="700">AWS Lambda · API</text>
+    <text x="380" y="454" font-size="13" fill="#666">Python 3.12 · arm64</text>
+    <text x="380" y="474" font-size="13" fill="#666">Auth · orders · quotes · approve</text>
+    <text x="394" y="514" font-size="14" font-weight="700">ALDO Data · no LLM</text>
+    <text x="394" y="533" font-size="12.5" fill="#555">Fit signal and stock</text>
+    <text x="394" y="552" font-size="12" fill="#555">Source: bundled file or curated S3</text>
+  </g>
+  <g stroke="#111" stroke-width="1.5" fill="none">
+    <line x1="500" y1="360" x2="500" y2="398" marker-end="url(#ah-black)"/>
+  </g>
+
+  <!-- ===== Column 3: agents ===== -->
+  <rect x="730" y="130" width="300" height="150" rx="10" fill="#111" stroke="#111"/>
+  <rect x="730" y="350" width="300" height="180" rx="10" fill="#111" stroke="#111"/>
+  <g fill="#fff">
+    <text x="750" y="162" font-size="17" font-weight="700">AgentCore Runtime</text>
+    <text x="750" y="184" font-size="13" fill="#cfcfcf">Amazon Bedrock AgentCore</text>
+    <text x="750" y="216" font-size="16" font-weight="700">Return workflow</text>
+    <text x="750" y="237" font-size="13" fill="#e6e6e6">ALDO agent · Strands · 10 tools</text>
+    <text x="750" y="259" font-size="12" fill="#a8a8a8">Returns table only · no owner memory</text>
+
+    <text x="750" y="382" font-size="17" font-weight="700">AWS Lambda · Worker</text>
+    <text x="750" y="404" font-size="13" fill="#cfcfcf">Async, 300 s timeout</text>
+    <text x="750" y="436" font-size="16" font-weight="700">Purchase workflow</text>
+    <text x="750" y="457" font-size="13" fill="#e6e6e6">Personal agent · Strands · 6 tools</text>
+    <text x="750" y="479" font-size="12" fill="#a8a8a8">Reads and writes owner memory</text>
+  </g>
+
+  <!-- API Lambda -> Worker (async) -->
+  <line x1="640" y1="432" x2="728" y2="432" stroke="#111" stroke-width="1.5" marker-end="url(#ah-black)"/>
+  <g font-family="Menlo, SF Mono, Consolas, monospace" font-size="11" fill="#666" text-anchor="middle">
+    <text x="684" y="422">async</text>
+    <text x="684" y="452">invoke</text>
+  </g>
+
+  <!-- Worker -> API Lambda (ALDO Data over HTTPS) -->
+  <line x1="728" y1="505" x2="622" y2="505" stroke="#555" stroke-width="1.5" marker-end="url(#ah-grey)"/>
+  <g font-family="Menlo, SF Mono, Consolas, monospace" font-size="10.5" fill="#666" text-anchor="middle">
+    <text x="685" y="495">gateway call</text>
+    <text x="685" y="523">HTTPS</text>
+  </g>
+
+  <!-- Worker -> AgentCore -->
+  <line x1="880" y1="350" x2="880" y2="282" stroke="#111" stroke-width="1.5" marker-end="url(#ah-black)"/>
+  <text x="892" y="320" font-family="Menlo, SF Mono, Consolas, monospace" font-size="11" fill="#666">InvokeAgentRuntime</text>
+
+  <!-- ===== Column 4: models and data ===== -->
+  <rect x="1130" y="130" width="320" height="150" rx="10" fill="#fff" stroke="#F29B1D" stroke-width="2.5"/>
+  <rect x="1130" y="350" width="320" height="180" rx="10" fill="#fff" stroke="#222" stroke-width="1.5"/>
+  <line x1="1150" y1="447" x2="1430" y2="447" stroke="#e3e3e3"/>
+  <g fill="#111">
+    <text x="1150" y="162" font-size="17" font-weight="700">Amazon Bedrock</text>
+    <text x="1150" y="192" font-size="16" font-weight="700">Claude Sonnet 5.5</text>
+    <text x="1150" y="214" font-size="13" fill="#666">Opus 5.5 as fallback</text>
+    <text x="1150" y="246" font-size="13" fill="#666">Both workflows call it</text>
+
+    <text x="1150" y="382" font-size="17" font-weight="700">Amazon DynamoDB</text>
+    <text x="1150" y="414" font-size="15" font-weight="700">Returns table</text>
+    <text x="1150" y="434" font-size="13" fill="#666">orders, stock, quotes, approvals</text>
+    <text x="1150" y="472" font-size="15" font-weight="700">Owner memory table</text>
+    <text x="1150" y="492" font-size="13" fill="#666">sizes, kept colours</text>
+    <text x="1150" y="512" font-size="12" fill="#888">No access for the ALDO agent</text>
+  </g>
+
+  <!-- Model calls (orange) -->
+  <line x1="1030" y1="170" x2="1128" y2="170" stroke="#F29B1D" stroke-width="2" marker-end="url(#ah-orange)"/>
+  <path d="M1030,380 L1080,380 L1080,240 L1128,240" fill="none" stroke="#F29B1D" stroke-width="2" stroke-linejoin="round" marker-end="url(#ah-orange)"/>
+  <!-- Worker -> DynamoDB -->
+  <line x1="1030" y1="470" x2="1128" y2="470" stroke="#111" stroke-width="1.5" marker-end="url(#ah-black)"/>
+
+  <!-- API Lambda -> DynamoDB: reads and writes state -->
+  <path d="M580,582 L580,610 L1240,610 L1240,532" fill="none" stroke="#111" stroke-width="1.5" stroke-linejoin="round" marker-end="url(#ah-black)"/>
+  <text x="840" y="602" font-family="Menlo, SF Mono, Consolas, monospace" font-size="11" fill="#666" text-anchor="middle">reads and writes state</text>
+
+  <!-- ===== Data pipeline band ===== -->
+  <rect x="40" y="664" width="1410" height="190" rx="12" fill="#fafafa" stroke="#b9b9b9" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="60" y="692" font-family="Menlo, SF Mono, Consolas, monospace" font-size="11" letter-spacing="1.6" fill="#555">DATA PIPELINE · BATCH AND OFFLINE</text>
+  <text x="60" y="712" font-size="12.5" fill="#666">Athena never runs while a customer chats. The Lambdas read one cached JSON. Separate CDK stack AldoDataPlatform, removable.</text>
+
+  <g stroke="#222" stroke-width="1.5" fill="#fff">
+    <rect x="60" y="730" width="230" height="106" rx="10"/>
+    <rect x="340" y="730" width="230" height="106" rx="10"/>
+    <rect x="620" y="730" width="230" height="106" rx="10"/>
+    <rect x="900" y="730" width="230" height="106" rx="10"/>
+    <rect x="1180" y="730" width="230" height="106" rx="10"/>
+  </g>
+  <g fill="#111">
+    <text x="78" y="760" font-size="16" font-weight="700">ALDO OMS extract</text>
+    <text x="78" y="782" font-size="12.5" fill="#666">Orders, returns, returnable,</text>
+    <text x="78" y="799" font-size="12.5" fill="#666">restocking, exchanges</text>
+    <text x="78" y="820" font-size="12" fill="#888">Customer ids dropped first</text>
+
+    <text x="358" y="760" font-size="16" font-weight="700">Amazon S3 · raw</text>
+    <text x="358" y="782" font-size="12.5" fill="#666">Raw CSV files, 5 datasets</text>
+    <text x="358" y="799" font-size="12.5" fill="#666">Private bucket</text>
+    <text x="358" y="820" font-size="12" fill="#888">Encrypted · TLS only</text>
+
+    <text x="638" y="760" font-size="16" font-weight="700">AWS Glue</text>
+    <text x="638" y="782" font-size="12.5" fill="#666">Data Catalog</text>
+    <text x="638" y="799" font-size="12.5" fill="#666">Database aldo_oms</text>
+    <text x="638" y="820" font-size="12" fill="#888">External tables over raw/</text>
+
+    <text x="918" y="760" font-size="16" font-weight="700">Amazon Athena</text>
+    <text x="918" y="782" font-size="12.5" fill="#666">Workgroup aldo-demo</text>
+    <text x="918" y="799" font-size="12.5" fill="#666">SQL, Parquet tables (CTAS)</text>
+    <text x="918" y="820" font-size="12" fill="#888">10 GB scan cutoff per query</text>
+
+    <text x="1198" y="760" font-size="16" font-weight="700">Amazon S3 · curated</text>
+    <text x="1198" y="782" font-size="12.5" fill="#666">fit_insights.json per style</text>
+    <text x="1198" y="799" font-size="12.5" fill="#666">Versioned + latest.json pointer</text>
+    <text x="1198" y="820" font-size="12" fill="#888">Aggregates only</text>
+  </g>
+  <g stroke="#111" stroke-width="1.5" fill="none">
+    <line x1="290" y1="783" x2="338" y2="783" marker-end="url(#ah-black)"/>
+    <line x1="570" y1="783" x2="618" y2="783" marker-end="url(#ah-black)"/>
+    <line x1="850" y1="783" x2="898" y2="783" marker-end="url(#ah-black)"/>
+    <line x1="1130" y1="783" x2="1178" y2="783" marker-end="url(#ah-black)"/>
+  </g>
+
+  <!-- Curated snapshot -> ALDO Data (switchable) -->
+  <path d="M1340,730 L1340,646 L420,646 L420,584" fill="none" stroke="#555" stroke-width="1.8" stroke-dasharray="7 5" stroke-linejoin="round" marker-end="url(#ah-grey)"/>
+  <text x="440" y="638" font-family="Menlo, SF Mono, Consolas, monospace" font-size="11" fill="#666">reads curated snapshot · mode in SSM: static, shadow or platform</text>
+
+  <!-- Legend -->
+  <line x1="40" y1="876" x2="1450" y2="876" stroke="#e3e3e3"/>
+  <g font-size="12.5" fill="#555">
+    <rect x="40" y="890" width="9" height="9" fill="#F29B1D"/>
+    <text x="58" y="899">AWS CDK · infrastructure as code, two stacks</text>
+    <rect x="420" y="890" width="9" height="9" fill="#F29B1D"/>
+    <text x="438" y="899">Secrets Manager + SSM · keys, endpoints, data mode</text>
+    <rect x="860" y="890" width="9" height="9" fill="#F29B1D"/>
+    <text x="878" y="899">Built with Kiro · spec-driven</text>
+    <line x1="1120" y1="895" x2="1160" y2="895" stroke="#555" stroke-width="1.8" stroke-dasharray="7 5"/>
+    <text x="1170" y="899">Dashed = switchable path</text>
+  </g>
+</svg>

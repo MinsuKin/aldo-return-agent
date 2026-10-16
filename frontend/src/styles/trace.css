@@ -68,8 +68,19 @@
   animation: shimmer 1.8s linear infinite;
 }
 
-/* (b) Under the header: the actor legend, a one-line description and the public-fields-only note. */
-.trace-legend {
+/* The key: the actor chips, in their own card above the trace panel (same surface, border, radius and
+   shadow as .trace-panel). */
+.trace-key {
+  flex: none;
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* (b) Under the header: a one-line description and the public-fields-only note. */
+.trace-intro {
   flex: none;
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);

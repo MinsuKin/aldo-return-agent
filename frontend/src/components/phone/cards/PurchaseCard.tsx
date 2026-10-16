@@ -85,66 +85,53 @@ export function PurchaseCard({ sizeRequestId, isLatest, busy, reviews, onConfirm
             <p className="muted">Replaced by a newer proposal below.</p>
           ) : decided ? null : (
             <>
-              <dl className="facts" data-testid="purchase-facts">
-                <div>
-                  <dt>Delivery</dt>
-                  <dd>
-                    {view.optionLabel ?? "Option"}
-                    {view.locationName ? ` · ${view.locationName}` : ""}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{view.optionType === "store_pickup" ? "Ready" : "Arrives"}</dt>
-                  <dd>
-                    {view.etaDate ? friendlyDate(view.etaDate) : (view.etaText ?? "Not provided")}{" "}
-                    {view.meetsDeadline === true && (
-                      <Badge tone="success">
-                        <Icon name="check" size={12} /> Meets your deadline
-                      </Badge>
-                    )}
-                    {view.meetsDeadline === false && <Badge tone="neutral">After your deadline</Badge>}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Price</dt>
-                  <dd>{formatCents(view.priceCents, view.currency)}</dd>
-                </div>
-              </dl>
+              <ul className="md-list" data-testid="purchase-facts">
+                <li>
+                  <strong>Method:</strong> {view.optionLabel ?? "Option"}
+                  {view.locationName ? ` · ${view.locationName}` : ""}
+                </li>
+                <li>
+                  <strong>{view.optionType === "store_pickup" ? "Ready" : "Arrives"}:</strong>{" "}
+                  {view.etaDate ? friendlyDate(view.etaDate) : (view.etaText ?? "Not provided")}{" "}
+                  {view.meetsDeadline === true && (
+                    <Badge tone="success">
+                      <Icon name="check" size={12} /> Meets your deadline
+                    </Badge>
+                  )}
+                  {view.meetsDeadline === false && <Badge tone="neutral">After your deadline</Badge>}
+                </li>
+                <li>
+                  <strong>Price:</strong> {formatCents(view.priceCents, view.currency)}
+                </li>
+              </ul>
 
-              {proposed && !decided && (
-                <ul className="evidence-list" aria-label="Why this size">
-                  {view.fitHeadline && (
-                    <li>
-                      <Icon name="signal" size={14} />
-                      <span>
+              {proposed && (
+                <div className="md-section">
+                  <p className="md-heading">Why this size</p>
+                  <ul className="md-list" aria-label="Why this size">
+                    {view.rationalePublic && (
+                      <li data-testid="purchase-rationale">
+                        {view.rationalePublic}
+                        {view.confidence ? <span className="muted"> ({view.confidence} confidence)</span> : null}
+                      </li>
+                    )}
+                    {view.fitHeadline && (
+                      <li>
                         {view.fitHeadline}{" "}
                         {credibleProvenance(view.fitProvenance).map((p) => (
                           <ProvenanceBadge key={p} kind={p} />
                         ))}
-                      </span>
-                    </li>
-                  )}
-                  {reviews && (
-                    <li data-testid="reviews-evidence">
-                      <Icon name="reviews" size={14} />
-                      <span>
+                      </li>
+                    )}
+                    {reviews && (
+                      <li data-testid="reviews-evidence">
                         Read {reviews.count} reviews
                         {reviews.flagged > 0 ? `, ${reviews.flagged} flagged and excluded` : ""}
-                      </span>
-                    </li>
-                  )}
-                  <li>
-                    <Icon name="lock" size={14} />
-                    <span>Your own size history stays with your personal agent.</span>
-                  </li>
-                </ul>
-              )}
-
-              {view.rationalePublic && proposed && (
-                <p className="why" data-testid="purchase-rationale">
-                  <span className="why-label">Why this size</span> {view.rationalePublic}
-                  {view.confidence ? <span className="muted"> ({view.confidence} confidence)</span> : null}
-                </p>
+                      </li>
+                    )}
+                    <li>Your own size history stays with your personal agent.</li>
+                  </ul>
+                </div>
               )}
 
               {proposed && !expired && <Countdown expiresAt={view.expiresAt} active label="Expires" testId="purchase-countdown" />}

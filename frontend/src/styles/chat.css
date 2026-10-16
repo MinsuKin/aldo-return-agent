@@ -152,13 +152,15 @@
 /* ChatGPT style: the owner gets a bubble, the personal agent flows as plain text. */
 .bubble {
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   overflow-wrap: anywhere;
 }
-.bubble p + p,
-.bubble p + ol,
-.bubble ol + p {
-  margin-top: 8px;
+/* Even rhythm between paragraphs, lists and headings. */
+.bubble :is(p, ul, ol) + :is(p, ul, ol) {
+  margin-top: 10px;
+}
+.bubble :is(p, ul, ol) + .md-heading {
+  margin-top: 16px;
 }
 
 /* The personal agent: plain flowing text, no background, no avatar. */
@@ -181,14 +183,6 @@
   padding: 9px 14px;
   border-radius: 18px;
   animation: popIn 0.26s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.rich-list {
-  margin: 4px 0 0;
-  padding-left: 22px;
-}
-.rich-list li + li {
-  margin-top: 1px;
 }
 
 .notice {
