@@ -321,7 +321,7 @@ def test_dc_stockout_still_leads_with_store_pickup(flow: Flow, scripted, gateway
     assert data["availability"]["dc_atp"] == 0
     first = by_id[data["ranking"]["order"][0]]
     assert first["meets_deadline"] is True and first["eta_text"] == "Sat Oct 17" and first["fee_text"] == "CAD 0.00"
-    assert data["ranking"]["reason"].startswith("Store pickup at ALDO Demo Store")
+    assert data["ranking"]["reason"].startswith("Store pickup at ALDO Sainte-Catherine")
 
 
 # ------------------------------------------------------------ return workflow v2: John (S19)

@@ -68,7 +68,7 @@ def run_policy(answer_for: Any) -> Any:
 def montreal_pickup(ask: dict[str, Any]) -> tuple[str, str]:
     for entry in ask["sizes"]:
         if entry["size"] == "8.0":
-            option = next(o for o in entry["options"] if o["type"] == "store_pickup" and "Montreal" in o["location_name"])
+            option = next(o for o in entry["options"] if o["type"] == "store_pickup" and "Sainte-Catherine" in o["location_name"])
             return "8.0", option["option_id"]
     raise AssertionError("size 8.0 is not offered")
 
