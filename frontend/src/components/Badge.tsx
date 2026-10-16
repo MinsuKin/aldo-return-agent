@@ -19,7 +19,6 @@ export function ProvenanceBadge({ kind }: { kind: Provenance }) {
 }
 
 /** Demo tier of a customer (addendum 11.1 D2), for example "Silver member". Hidden for simplicity. */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function TierBadge({ tier, label }: { tier: string; label?: string }) {
+export function TierBadge(_props: { tier: string; label?: string }) {
   return null;
 }
