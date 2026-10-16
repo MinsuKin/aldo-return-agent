@@ -56,7 +56,7 @@ def test_reason_for_the_hero_ranking() -> None:
     ordered = ranking.rank_options(options())
     reason = ranking.ranking_reason(ordered, "2026-10-17")
     assert reason == (
-        "Store pickup at ALDO Demo Store Montreal is free and ready Sat Oct 17, "
+        "Store pickup at ALDO Sainte-Catherine is free and ready Sat Oct 17, "
         "which meets your Sat Oct 17 deadline. Refund options stay available."
     )
     assert len(reason) <= 240
@@ -70,7 +70,7 @@ def test_reason_says_when_the_leading_option_misses_the_deadline() -> None:
 
 def test_reason_without_a_deadline_makes_no_deadline_claim() -> None:
     reason = ranking.ranking_reason(ranking.rank_options(options(deadline=None)), None)
-    assert "deadline" not in reason and reason.startswith("Store pickup at ALDO Demo Store Montreal is free")
+    assert "deadline" not in reason and reason.startswith("Store pickup at ALDO Sainte-Catherine is free")
 
 
 def test_reason_when_only_returns_exist() -> None:
@@ -116,14 +116,14 @@ def test_nearest_store_breaks_ties_and_unknown_distance_goes_last() -> None:
 
 def test_reason_for_a_colour_pickup_names_the_colour_and_how_far() -> None:
     opts = [
-        {"option_id": "OPT-2", "type": "exchange_store_pickup", "location_name": "ALDO Demo Store Montreal",
+        {"option_id": "OPT-2", "type": "exchange_store_pickup", "location_name": "ALDO Sainte-Catherine",
          "eta_date": "2026-10-17", "eta_text": "Sat Oct 17", "fee_cents": 0, "replacement_color": "BROWN",
          "minutes_away": 5, "meets_deadline": None},
         {"option_id": "OPT-4", "type": "return_in_store"},
     ]
     reason = ranking.ranking_reason(ranking.rank_options(opts))
     assert reason == (
-        "Store pickup of the Brown pair at ALDO Demo Store Montreal is free and ready Sat Oct 17, "
+        "Store pickup of the Brown pair at ALDO Sainte-Catherine is free and ready Sat Oct 17, "
         "5 minutes away. Refund options stay available."
     )
     one = [{**opts[0], "minutes_away": 1}]
@@ -133,7 +133,7 @@ def test_reason_for_a_colour_pickup_names_the_colour_and_how_far() -> None:
 def test_reason_for_the_other_chosen_paths() -> None:
     opts = options()
     by_mail = ranking.ranking_reason(ranking.rank_options(opts, "ship"), None, "ship")
-    assert by_mail.startswith("Ship-from-store exchange from ALDO Demo Store Montreal is free and arrives Mon Oct 19")
+    assert by_mail.startswith("Ship-from-store exchange from ALDO Sainte-Catherine is free and arrives Mon Oct 19")
     assert "as you asked for delivery by mail" in by_mail
     refund = ranking.ranking_reason(ranking.rank_options(opts, "return"), None, "return")
     assert refund == "Refund options lead because you asked for a refund."

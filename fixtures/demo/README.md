@@ -170,7 +170,7 @@ Ladies' candidates of that pass (`n_fit >= 100`, ranked by the share of order li
 
 | Customer | Tier | Region | `annual_spend_cents` | `location_label` | `travel_minutes` Montreal / Laval / Toronto |
 | --- | --- | --- | ---: | --- | --- |
-| `DEMO-CUST-JOHN` | silver | QC | 180000 | Downtown Montreal | 5 / 24 / 540 |
+| `DEMO-CUST-JOHN` | silver | QC | 180000 | Bronfman Building, Montreal | 5 / 24 / 540 |
 | `DEMO-CUST-DAVID` | platinum | NB | 1240000 | Rural New Brunswick | 430 / 445 / 780 (all >= 150: only mail options) |
 
 The three base customers get no new fields; the loader writes `tier: "none"` on their `CUST#` items. `fixtures.persona_list()` rows are `customer_id`, `display_name`, `description`, `tier`, `tier_label` (from `policy.json` `tiers`) and `location_label` (empty for the base customers). The base personas come first, then John and David. Tier and benefit rules are demo assumptions, not ALDO policy.

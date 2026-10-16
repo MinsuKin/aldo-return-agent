@@ -149,6 +149,8 @@ export interface QuoteOption {
   meets_deadline: boolean | null;
   /** Travel time to the store in minutes, when known (addendum 11.1 D6). */
   minutes_away?: number | null;
+  /** Street address of the store, when the location record has one. */
+  location_address?: string;
   conditions: string[];
   evidence: Record<string, unknown>;
   source_refs: string[];

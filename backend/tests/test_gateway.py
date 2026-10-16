@@ -900,7 +900,7 @@ def test_group_sizes_shapes_the_response():
         "option_id": "SO-15",
         "type": "store_pickup",
         "location_id": MTL,
-        "location_name": "ALDO Demo Store Montreal",
+        "location_name": "ALDO Sainte-Catherine",
         "eta_date": "2026-10-17",
         "eta_text": "Sat Oct 17",
         "meets_deadline": True,
@@ -984,7 +984,7 @@ def record(**overrides: Any) -> dict[str, Any]:
         "type": "store_pickup",
         "sku": "DEMO-SKU-HERO-BLACK-080",
         "location_id": MTL,
-        "location_name": "ALDO Demo Store Montreal",
+        "location_name": "ALDO Sainte-Catherine",
         "eta_date": "2026-10-17",
         "meets_deadline": True,
         "atp": 1,
@@ -1041,7 +1041,7 @@ def test_the_order_and_line_items_match_the_fixture_shape():
         "fulfillment": {
             "type": "store_pickup",
             "location_id": MTL,
-            "location_name": "ALDO Demo Store Montreal",
+            "location_name": "ALDO Sainte-Catherine",
             "eta_date": "2026-10-17",
         },
         "source": "synthetic",
@@ -1071,10 +1071,10 @@ def test_the_response_has_the_contract_shape_and_no_identifiers():
         "fulfillment": {
             "type": "store_pickup",
             "location_id": MTL,
-            "location_name": "ALDO Demo Store Montreal",
+            "location_name": "ALDO Sainte-Catherine",
             "eta_date": "2026-10-17",
         },
-        "next_step": "Order placed. Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17.",
+        "next_step": "Order placed. Pick up size 8.0 at ALDO Sainte-Catherine from Sat Oct 17.",
         "replayed": False,
     }
     assert "DEMO-CUST" not in json.dumps(body)
@@ -1083,7 +1083,7 @@ def test_the_response_has_the_contract_shape_and_no_identifiers():
 def test_next_step_text_for_pickup_and_shipping():
     pickup = record()["offered"]["SO-3"]
     ship = record()["offered"]["SO-4"]
-    assert gateway.next_step_text(pickup) == "Order placed. Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17."
+    assert gateway.next_step_text(pickup) == "Order placed. Pick up size 8.0 at ALDO Sainte-Catherine from Sat Oct 17."
     assert gateway.next_step_text(ship) == (
         "Order placed. Size 8.0 ships from ALDO Demo Distribution Centre and should arrive by Tue Oct 20."
     )
@@ -1105,7 +1105,7 @@ def test_the_proposal_summary_is_rendered_from_the_recorded_offer():
         "size": "8.0",
         "option_type": "store_pickup",
         "location_id": MTL,
-        "location_name": "ALDO Demo Store Montreal",
+        "location_name": "ALDO Sainte-Catherine",
         "eta_date": "2026-10-17",
         "eta_text": "Sat Oct 17",
         "meets_deadline": True,

@@ -99,7 +99,7 @@ def test_a_real_proposal_is_recorded_without_an_order_and_the_owner_can_confirm_
     assert answer["payload"]["evidence"]["n_fit"] == 582
     recommended = next(e for e in events if e["type"] == "size_recommended")["payload"]
     assert (recommended["chosen_size"], recommended["option_type"], recommended["status"]) == ("8.0", "store_pickup", "proposed")
-    assert recommended["location_name"] == "ALDO Demo Store Montreal" and recommended["meets_deadline"] is True
+    assert recommended["location_name"] == "ALDO Sainte-Catherine" and recommended["meets_deadline"] is True
     request_id = next(e for e in events if e["type"] == "tool_result" and e["payload"]["tool"] == "ask_aldo_size_assist")["payload"]["evidence"]["size_request_id"]
 
     # the real record: a proposal, with the sanitized rationale, and NOTHING else changed
@@ -121,7 +121,7 @@ def test_a_real_proposal_is_recorded_without_an_order_and_the_owner_can_confirm_
 
     # the owner clicks Confirm: the real gateway turns the proposal into an order
     order = gateway.confirm_purchase(AVA, request_id)
-    assert order.order_id.startswith("DEMO-A2A-") and order.fulfillment.location_name == "ALDO Demo Store Montreal"
+    assert order.order_id.startswith("DEMO-A2A-") and order.fulfillment.location_name == "ALDO Sainte-Catherine"
     assert hero_stock() == stock_before - 1
     assert store.get_item(store.sizereq_key(request_id))["status"] == "decided"
     assert trace.list_a2a_events(AVA).events[-1]["type"] == "size_confirmed"
@@ -156,7 +156,7 @@ def test_the_hero_answer_has_the_shape_the_tools_expect(both: MemoryRepo) -> Non
     sizes = {entry["size"]: entry["options"] for entry in data["sizes"]}
     assert {"7.5", "8.0"} <= set(sizes)
     pickups = [o for o in sizes["8.0"] if o["type"] == "store_pickup"]
-    assert [o["location_name"] for o in pickups] == ["ALDO Demo Store Montreal"]
+    assert [o["location_name"] for o in pickups] == ["ALDO Sainte-Catherine"]
     assert all(o["meets_deadline"] is True for o in pickups)
     assert all(o["meets_deadline"] is False for o in sizes["8.0"] if o["type"] != "store_pickup")
     assert all(set(o) == {"option_id", "type", "location_id", "location_name", "eta_date", "eta_text", "meets_deadline", "atp"} for o in sizes["8.0"])
@@ -171,7 +171,7 @@ def test_dc_stockout_leaves_only_the_montreal_store_options(both: MemoryRepo) ->
     data = tools.tool_ask_aldo_size_assist(ctx, "Stessy", deadline_date="2026-10-17")["data"]
     options = {entry["size"]: entry["options"] for entry in data["sizes"]}["8.0"]
     assert {o["type"] for o in options} == {"ship_from_store", "store_pickup"}
-    assert {o["location_name"] for o in options} == {"ALDO Demo Store Montreal"}
+    assert {o["location_name"] for o in options} == {"ALDO Sainte-Catherine"}
 
 
 def test_a_us_m_owner_sends_us_m_and_the_gateway_now_serves_it(both: MemoryRepo) -> None:

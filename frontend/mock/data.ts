@@ -30,7 +30,7 @@ export const PERSONAS: MockPersona[] = [
     description: "Silver member in downtown Montreal: buys the Toney, exchanges the colour in store",
     tier: "silver",
     tier_label: "Silver member",
-    location_label: "Downtown Montreal",
+    location_label: "Bronfman Building, Montreal",
     travel_minutes: { "DEMO-STORE-MTL-01": 5, "DEMO-STORE-LAVAL-01": 24, "DEMO-STORE-TOR-01": 540 },
   },
   {
@@ -220,6 +220,7 @@ export interface MockLocation {
   location_id: string;
   type: "DC" | "STORE";
   name: string;
+  address?: string;
   city: string;
   region: string;
   pickup_ready_days: number | null;
@@ -229,7 +230,7 @@ export interface MockLocation {
 export const LOCATIONS: MockLocation[] = [
   { location_id: "DEMO-DC-QC", type: "DC", name: "ALDO Demo Distribution Centre", city: "Montreal", region: "QC", pickup_ready_days: null, ship_days: 4 },
   { location_id: "DEMO-STORE-LAVAL-01", type: "STORE", name: "ALDO Demo Store Laval", city: "Laval", region: "QC", pickup_ready_days: 1, ship_days: 3 },
-  { location_id: "DEMO-STORE-MTL-01", type: "STORE", name: "ALDO Demo Store Montreal", city: "Montreal", region: "QC", pickup_ready_days: 1, ship_days: 3 },
+  { location_id: "DEMO-STORE-MTL-01", type: "STORE", name: "ALDO Sainte-Catherine", address: "1009 Sainte-Catherine St. West #1007, Montreal, QC H3B 1H1", city: "Montreal", region: "QC", pickup_ready_days: 1, ship_days: 3 },
   { location_id: "DEMO-STORE-TOR-01", type: "STORE", name: "ALDO Demo Store Toronto", city: "Toronto", region: "ON", pickup_ready_days: 1, ship_days: 3 },
 ];
 export const locationById = (id: string): MockLocation => LOCATIONS.find((l) => l.location_id === id) ?? LOCATIONS[0];

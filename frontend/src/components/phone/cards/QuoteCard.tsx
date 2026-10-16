@@ -200,6 +200,11 @@ function OptionBlock({ quote, option: o, primary, disabled, approved, onChoose }
                   <Badge tone="neutral">{o.minutesAway} min away</Badge>
                 </>
               )}
+              {o.locationAddress && (
+                <span className="muted" style={{ display: "block", fontSize: "0.85em" }} data-testid="store-address">
+                  {o.locationAddress}
+                </span>
+              )}
             </dd>
           </div>
         )}

@@ -82,7 +82,7 @@ class ScriptedModel(Model):
 def good_policy(
     chosen_size: str = "8.0",
     option_id: str = "SO-10",
-    reply: str = "Your proposal is ready: size 8.0 Stessy2.0 in black, pickup at ALDO Demo Store Montreal on Sat Oct 17. "
+    reply: str = "Your proposal is ready: size 8.0 Stessy2.0 in black, pickup at ALDO Sainte-Catherine on Sat Oct 17. "
     "ALDO says 80% of 582 fit returns were too small, so I went half a size up from your usual. "
     "Please confirm it in the app.",
     *,

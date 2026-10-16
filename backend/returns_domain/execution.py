@@ -814,7 +814,7 @@ def _distance_text(minutes: object) -> str:
 def _store_notice(profile: Mapping[str, Any], option: Mapping[str, Any], line: Mapping[str, Any]) -> dict[str, Any]:
     """What the (simulated) store desk is told about an in-store exchange or return.
 
-    The summary is written in the store's own voice ("ALDO Demo Store Montreal will have your
+    The summary is written in the store's own voice ("ALDO Sainte-Catherine will have your
     Brown pair ready, John is about 5 minutes away"): the customer talks to ALDO and sees the
     store answer, so no other agent is ever named. Public fields only: the store, the
     customer's first name and member tier label, the minutes until they arrive (None when the

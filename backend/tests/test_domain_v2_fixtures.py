@@ -122,9 +122,9 @@ def test_the_whole_colour_exchange_in_store_with_the_shipped_fixtures(john):
     result = execution.execute(JOHN, quote.quote_id, run_id=run_id)
 
     assert result.option_type == "exchange_store_pickup" and result.store_notice == {
-        "store_id": MTL, "store_name": "ALDO Demo Store Montreal", "display_name": "John", "tier_label": "Silver member",
+        "store_id": MTL, "store_name": "ALDO Sainte-Catherine", "display_name": "John", "tier_label": "Silver member",
         "eta_minutes": 5,
-        "summary": "ALDO Demo Store Montreal will have your Brown pair ready, John is about 5 minutes away"}
+        "summary": "ALDO Sainte-Catherine will have your Brown pair ready, John is about 5 minutes away"}
     txn = store.get_item(store.txn_key(result.transaction_id))
     assert (txn["sku"], txn["replacement_color"], txn["replacement_size"], txn["memory_reason"]) == (BROWN_95, "BROWN", "9.5", "PREFERENCE")
     update = store.get_item(store.outbox_key(result.memory_update_id))["payload"]

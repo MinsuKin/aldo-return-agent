@@ -326,7 +326,7 @@ def test_dc_stockout_still_leads_with_store_pickup(flow: Flow, scripted, gateway
 
 # ------------------------------------------------------------ return workflow v2: John (S19)
 #
-# John (Silver, Downtown Montreal) returns Toney, Black 9.5, delivered five days before DEMO_NOW, because the
+# John (Silver, Bronfman Building, Montreal) returns Toney, Black 9.5, delivered five days before DEMO_NOW, because the
 # colour does not go with his outfit. Each owner message is its own run on the same conversation, as in the app.
 
 JOHN = "DEMO-CUST-JOHN"
@@ -389,7 +389,7 @@ def john_dialogue_until_the_path(flow: Flow, services: Services, scripted) -> tu
     scripted(AdaptiveModel([
         lambda r: tool_turn("find_resolution_options", replacement_color="BROWN",
                             policy_check_id=latest(r, "evaluate_return_policy")["policy_check_id"]),
-        text_turn("The nearest store is ALDO Demo Store Montreal, 5 minutes away. In store or by mail?"),
+        text_turn("The nearest store is ALDO Sainte-Catherine, 5 minutes away. In store or by mail?"),
     ]))
     assert runner.run(john_body(run_3, conv_id, "Brown, please."), services=services)["status"] == "completed"
     return conv_id, [run_1, run_2, run_3]
@@ -436,7 +436,7 @@ def test_john_chooses_in_store_and_gets_one_quote_with_the_nearest_pickup_first(
     assert pickups[0]["location_id"] == "DEMO-STORE-MTL-01" and pickups[0]["minutes_away"] == 5
     assert pickups[0]["replacement_color"] == "BROWN" and pickups[0]["replacement_size"] == "9.5"
     assert pickups[0]["fee_cents"] == 0 and pickups[0]["eta_text"] == "Sat Oct 17"  # what the data says, not "today"
-    assert "Store pickup of the Brown pair at ALDO Demo Store Montreal is free and ready Sat Oct 17, 5 minutes away" in (
+    assert "Store pickup of the Brown pair at ALDO Sainte-Catherine is free and ready Sat Oct 17, 5 minutes away" in (
         find_data["ranking"]["reason"]
     )
     assert all(o["type"].startswith(("return_", "exchange_")) for o in options.values())
@@ -494,7 +494,7 @@ def test_john_confirms_and_the_store_is_notified_in_the_same_transaction(
     model = scripted(AdaptiveModel([
         tool_turn("execute_approved_resolution", quote_id="QUO-MISTYPED", option_id="OPT-99"),
         lambda r: tool_turn("get_resolution_status", transaction_id=latest(r, "execute_approved_resolution")["transaction_id"]),
-        text_turn("Your exchange is confirmed and ALDO Demo Store Montreal has been notified."),
+        text_turn("Your exchange is confirmed and ALDO Sainte-Catherine has been notified."),
     ]))
     before = snapshot(exclude=("AUDIT#",))
     out = runner.run(
@@ -504,7 +504,7 @@ def test_john_confirms_and_the_store_is_notified_in_the_same_transaction(
     )
     assert out["status"] == "completed", out
     executed = latest(model.seen, "execute_approved_resolution")
-    assert executed["store_notice"]["store_name"] == "ALDO Demo Store Montreal"
+    assert executed["store_notice"]["store_name"] == "ALDO Sainte-Catherine"
     assert executed["store_notice"]["eta_minutes"] == 5 and set(executed["store_notice"]) == {
         "store_name", "eta_minutes", "summary"
     }

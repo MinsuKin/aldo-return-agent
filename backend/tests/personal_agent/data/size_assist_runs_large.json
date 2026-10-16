@@ -12,8 +12,8 @@
     ]},
     {"size": "7.5", "options": [
       {"option_id": "SO-2", "type": "ship_from_dc", "location_id": "DEMO-DC-QC", "location_name": "ALDO Demo Distribution Centre", "eta_date": "2026-10-20", "eta_text": "Tue Oct 20", "meets_deadline": false, "atp": 3},
-      {"option_id": "SO-3", "type": "ship_from_store", "location_id": "DEMO-STORE-MTL-01", "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-19", "eta_text": "Mon Oct 19", "meets_deadline": false, "atp": 1},
-      {"option_id": "SO-4", "type": "store_pickup", "location_id": "DEMO-STORE-MTL-01", "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17", "eta_text": "Sat Oct 17", "meets_deadline": true, "atp": 1}
+      {"option_id": "SO-3", "type": "ship_from_store", "location_id": "DEMO-STORE-MTL-01", "location_name": "ALDO Sainte-Catherine", "eta_date": "2026-10-19", "eta_text": "Mon Oct 19", "meets_deadline": false, "atp": 1},
+      {"option_id": "SO-4", "type": "store_pickup", "location_id": "DEMO-STORE-MTL-01", "location_name": "ALDO Sainte-Catherine", "eta_date": "2026-10-17", "eta_text": "Sat Oct 17", "meets_deadline": true, "atp": 1}
     ]},
     {"size": "8.0", "options": [
       {"option_id": "SO-5", "type": "ship_from_dc", "location_id": "DEMO-DC-QC", "location_name": "ALDO Demo Distribution Centre", "eta_date": "2026-10-20", "eta_text": "Tue Oct 20", "meets_deadline": false, "atp": 2}

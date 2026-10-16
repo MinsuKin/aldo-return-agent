@@ -2400,7 +2400,7 @@ def scenario_p5(ctx: Ctx, rec: Recorder) -> None:
     rec.check("john_is_silver_in_downtown_montreal_david_platinum_in_rural_new_brunswick",
               (rows.get(JOHN, {}).get("tier"), rows.get(JOHN, {}).get("tier_label"), rows.get(JOHN, {}).get("location_label"),
                rows.get(DAVID, {}).get("tier"), rows.get(DAVID, {}).get("tier_label"), rows.get(DAVID, {}).get("location_label"))
-              == ("silver", "Silver member", "Downtown Montreal", "platinum", "Platinum member", "Rural New Brunswick"), "persona labels differ")
+              == ("silver", "Silver member", "Bronfman Building, Montreal", "platinum", "Platinum member", "Rural New Brunswick"), "persona labels differ")
     rec.check("regression_personas_are_plain_members",
               all((rows.get(c, {}).get("tier"), rows.get(c, {}).get("tier_label")) == ("none", "Member") for c in (AVA, BEN, CHLOE) if c in rows), "a regression persona has a tier")
 

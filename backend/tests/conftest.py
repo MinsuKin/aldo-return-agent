@@ -155,7 +155,7 @@ def make_agent_order(
         "delivered_at": delivered_at,
         "size_request_id": "SZR-3F9A1C",
         "fulfillment": {"type": "store_pickup", "location_id": "DEMO-STORE-MTL-01",
-                        "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17"},
+                        "location_name": "ALDO Sainte-Catherine", "eta_date": "2026-10-17"},
         "source": "synthetic",
     }
     line = {

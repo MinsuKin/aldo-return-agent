@@ -68,7 +68,7 @@ def test_pickup_exchange_commits_every_item_in_one_transaction(flow):
     assert (txn["order_id"], txn["line_id"], txn["qty"], txn["sku"], txn["location_id"], txn["replacement_size"]) == (
         "DEMO-1001", "DEMO-1001-L1", 1, HERO_075, MTL, "7.5")
     assert (txn["refund_cents"], txn["fee_cents"], txn["eta_date"], txn["eta_text"]) == (0, 0, "2026-10-17", "Sat Oct 17")
-    assert txn["next_step"] == "Pick up size 7.5 at ALDO Demo Store Montreal from Sat Oct 17; bring the original pair, unworn."
+    assert txn["next_step"] == "Pick up size 7.5 at ALDO Sainte-Catherine from Sat Oct 17; bring the original pair, unworn."
     assert txn["option"]["option_id"] == approval.option_id and txn["option"]["payload_hash"] == approval.payload_hash
     assert keys("TXN#") == [(f"TXN#{result.transaction_id}", "META")]
 
@@ -556,7 +556,7 @@ def test_get_status_reads_the_transaction_and_the_current_reservation(flow):
     view = execution.get_status(AVA, result.transaction_id)
     assert (view.transaction_id, view.state, view.option_type, view.order_id, view.line_id, view.qty) == (
         result.transaction_id, "completed", "exchange_store_pickup", "DEMO-1001", "DEMO-1001-L1", 1)
-    assert (view.sku, view.location_id, view.location_name, view.replacement_size) == (HERO_075, MTL, "ALDO Demo Store Montreal", "7.5")
+    assert (view.sku, view.location_id, view.location_name, view.replacement_size) == (HERO_075, MTL, "ALDO Sainte-Catherine", "7.5")
     assert (view.refund_cents, view.fee_cents, view.currency, view.eta_date, view.eta_text, view.simulated) == (
         0, 0, "CAD", "2026-10-17", "Sat Oct 17", True)
     assert view.reservation == {"line_returned_or_reserved_qty": 1, "line_purchased_qty": 1, "location_atp": 0}

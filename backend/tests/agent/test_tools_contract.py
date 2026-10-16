@@ -301,7 +301,7 @@ def test_find_options_returns_a_ranking_that_follows_the_pivot_rule(
     result = tools_by_name["find_resolution_options"](policy_check_id="PCHK-0000000A", deadline_date="2026-10-17")
     ranking = result["data"]["ranking"]
     assert ranking["order"] == ["OPT-3", "OPT-2", "OPT-1", "OPT-4", "OPT-5"]
-    assert "Store pickup at ALDO Demo Store Montreal is free and ready Sat Oct 17" in ranking["reason"]
+    assert "Store pickup at ALDO Sainte-Catherine is free and ready Sat Oct 17" in ranking["reason"]
     assert "meets your Sat Oct 17 deadline" in ranking["reason"]
     assert "Refund options stay available" in ranking["reason"]
     assert ctx.rank_orders["CAND-0000000B"] == ranking["order"]
@@ -468,7 +468,7 @@ def test_status_adds_money_text_and_evidence(domain: FakeDomain, tools_by_name: 
     data = result["data"]
     assert data["state"] == "completed" and data["simulated"] is True
     assert data["refund_text"] == "CAD 0.00" and data["fee_text"] == "CAD 0.00"
-    assert data["next_step"].startswith("Pick up size 8.5 at ALDO Demo Store Montreal")
+    assert data["next_step"].startswith("Pick up size 8.5 at ALDO Sainte-Catherine")
     assert domain.trace.of_type("tool_result")[0]["evidence"] == {"state": "completed", "location_id": "DEMO-STORE-MTL-01"}
 
 

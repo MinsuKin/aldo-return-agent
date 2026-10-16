@@ -278,7 +278,7 @@ def test_in_store_is_offered_only_when_the_domain_says_a_store_is_within_reach(
     assert [o["type"] for o in data["options"]] == ["return_in_store", "return_mail"]
     assert data["options"][0]["minutes_away"] == 5
     assert data["ranking"]["order"] == ["OPT-1", "OPT-2"]  # the store first, the mail option stays visible
-    assert data["ranking"]["reason"].startswith("Returning 3 items in store at ALDO Demo Store Montreal, 5 minutes away")
+    assert data["ranking"]["reason"].startswith("Returning 3 items in store at ALDO Sainte-Catherine, 5 minutes away")
 
 
 def test_all_ten_lines_fit_and_the_result_stays_small(domain: FakeDomain, david: dict[str, Any]) -> None:
@@ -309,7 +309,7 @@ def test_the_quote_carries_the_bundle_fee_total_and_perk_with_the_owners_path_fi
     assert mail["fee_text"] == "CAD 0.00" and mail["refund_total_text"] == "CAD 419.97"
     assert mail["net_refund_text"] == "CAD 419.97" and mail["benefit"]["saved_text"] == "CAD 5.95"
     store_option = next(o for o in bundle["options"] if o["type"] == "return_in_store")
-    assert "benefit" not in store_option and store_option["location_name"] == "ALDO Demo Store Montreal"
+    assert "benefit" not in store_option and store_option["location_name"] == "ALDO Sainte-Catherine"
 
 
 def test_a_forgotten_refund_option_is_added_to_a_bundle_quote_too(domain: FakeDomain, david: dict[str, Any]) -> None:

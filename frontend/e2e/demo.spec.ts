@@ -28,7 +28,7 @@ test.describe("first screen and layout", () => {
     const john = page.getByTestId("persona-DEMO-CUST-JOHN");
     const david = page.getByTestId("persona-DEMO-CUST-DAVID");
     await expect(john).toContainText("Silver member");
-    await expect(john).toContainText("Downtown Montreal");
+    await expect(john).toContainText("Bronfman Building, Montreal");
     await expect(david).toContainText("Platinum member");
     await expect(david).toContainText("Rural New Brunswick");
     for (const id of ["AVA", "BEN", "CHLOE"]) await expect(page.getByTestId(`persona-DEMO-CUST-${id}`)).toHaveCount(0);
@@ -179,8 +179,10 @@ test.describe("John (Silver): the stage demo", () => {
     await expect(primary).toContainText("Exchange in store");
     await expect(primary).toContainText("black 9.5");
     await expect(primary).toContainText("brown 9.5");
-    await expect(primary).toContainText("ALDO Demo Store Montreal");
+    await expect(primary).toContainText("ALDO Sainte-Catherine");
     await expect(primary).toContainText("5 min away");
+    // The real store's street address sits under its name.
+    await expect(primary.getByTestId("store-address")).toContainText("1009 Sainte-Catherine St. West #1007");
     // Ready date: scripted "Today" on the mock; the deployed fixture says Sat Oct 17 (pickup_ready_days 1, builder section 8).
     await expect(primary).toContainText(IS_MOCK ? "Today" : /Sat Oct 17|Tomorrow/);
     await expect(primary).toContainText("Free");
@@ -238,7 +240,7 @@ test.describe("John (Silver): the stage demo", () => {
 
     await onMock(async () => {
       await expect(txn).toContainText("brown 9.5");
-      await expect(page.getByTestId("txn-next-step")).toContainText("Pick up brown 9.5 at ALDO Demo Store Montreal today");
+      await expect(page.getByTestId("txn-next-step")).toContainText("Pick up brown 9.5 at ALDO Sainte-Catherine today");
     });
     await expectNaming(page);
   });
@@ -458,7 +460,7 @@ test.describe("routes of the single-chat contract (addendum 11.5)", () => {
     test.skip(!IS_MOCK, "uses mock-only controls");
     await resetDemo(request, "default");
     const personas = (await (await request.get("/api/demo/personas")).json()) as { personas: Record<string, string>[] };
-    expect(personas.personas.find((p) => p.customer_id === "DEMO-CUST-JOHN")).toMatchObject({ tier: "silver", tier_label: "Silver member", location_label: "Downtown Montreal" });
+    expect(personas.personas.find((p) => p.customer_id === "DEMO-CUST-JOHN")).toMatchObject({ tier: "silver", tier_label: "Silver member", location_label: "Bronfman Building, Montreal" });
     expect(personas.personas.find((p) => p.customer_id === "DEMO-CUST-DAVID")).toMatchObject({ tier: "platinum", tier_label: "Platinum member" });
 
     const session = (await (await request.post("/api/demo/sessions", { data: { customer_id: "DEMO-CUST-JOHN" } })).json()) as { token: string };

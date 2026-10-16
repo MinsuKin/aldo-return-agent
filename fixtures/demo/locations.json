@@ -14,7 +14,8 @@
     {
       "location_id": "DEMO-STORE-MTL-01",
       "type": "STORE",
-      "name": "ALDO Demo Store Montreal",
+      "name": "ALDO Sainte-Catherine",
+      "address": "1009 Sainte-Catherine St. West #1007, Montreal, QC H3B 1H1",
       "city": "Montreal",
       "region": "QC",
       "pickup_ready_days": 1,

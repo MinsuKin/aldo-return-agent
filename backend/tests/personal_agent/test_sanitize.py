@@ -174,8 +174,8 @@ def test_word_limit_prefers_ending_on_a_complete_sentence() -> None:
 
 
 def test_strip_markdown_leaves_plain_sentences() -> None:
-    text = "- **Size:** 8.5.\n- **Pickup:** ALDO Demo Store Montreal.\n## Why\n1. `runs_small` per ALDO."
-    assert strip_markdown(text) == "Size: 8.5.\nPickup: ALDO Demo Store Montreal.\nWhy\nruns_small per ALDO."
+    text = "- **Size:** 8.5.\n- **Pickup:** ALDO Sainte-Catherine.\n## Why\n1. `runs_small` per ALDO."
+    assert strip_markdown(text) == "Size: 8.5.\nPickup: ALDO Sainte-Catherine.\nWhy\nruns_small per ALDO."
     assert strip_markdown("Plain text with 2026-10-17 and runs_small stays.") == "Plain text with 2026-10-17 and runs_small stays."
 
 

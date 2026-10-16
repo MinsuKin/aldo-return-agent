@@ -362,7 +362,7 @@ def test_a_reply_that_claims_the_order_is_placed_is_replaced(harness: Harness, c
     assert out["result"]["metrics"]["reply_guard"] == "replaced"
     text = out["text"]
     assert "proposal ready" in text and "size 8.0" in text and "Stessy2.0" in text and "BLACK" in text
-    assert "ALDO Demo Store Montreal" in text and "Sat Oct 17" in text
+    assert "ALDO Sainte-Catherine" in text and "Sat Oct 17" in text
     assert "confirm it in the app" in text and "nothing is ordered until you do" in text
 
 

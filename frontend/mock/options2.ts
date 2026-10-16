@@ -204,6 +204,7 @@ function draft(type: string, loc: MockLocation, etaDate: string, sku: string, ex
     replacement_size: null,
     location_id: loc.location_id,
     location_name: loc.name,
+    ...(loc.address ? { location_address: loc.address } : {}),
     qty: 1,
     refund_cents: 0,
     fee_cents: 0,

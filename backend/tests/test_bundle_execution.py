@@ -146,11 +146,11 @@ def test_a_silver_bundle_in_store_notifies_the_store_and_uses_no_perk(bundles, c
     result = execution.execute(JOHN, hq.quote_id, run_id=hq.run_id)
     assert result.option_type == "return_in_store" and result.benefit is None
     assert result.store_notice == {
-        "store_id": MTL, "store_name": "ALDO Demo Store Montreal", "display_name": "John", "tier_label": "Silver member",
-        "eta_minutes": 5, "summary": "ALDO Demo Store Montreal is ready for your return of 2 items, John is about 5 minutes away"}
+        "store_id": MTL, "store_name": "ALDO Sainte-Catherine", "display_name": "John", "tier_label": "Silver member",
+        "eta_minutes": 5, "summary": "ALDO Sainte-Catherine is ready for your return of 2 items, John is about 5 minutes away"}
     txn = txn_item(result)
     assert (txn["fee_cents"], txn["net_refund_cents"], txn["location_id"]) == (0, 23998, MTL)
-    assert txn["next_step"] == "Bring the 2 items, unworn, to ALDO Demo Store Montreal. Your refund of CAD 239.98 is processed at drop-off."
+    assert txn["next_step"] == "Bring the 2 items, unworn, to ALDO Sainte-Catherine. Your refund of CAD 239.98 is processed at drop-off."
     assert keys("STORENOTE#") == [(f"STORENOTE#{result.transaction_id}", "META")]
     assert commits[-1][-1] == "store_notice" and "benefit" not in commits[-1]
     assert keys("BENEFIT#") == []

@@ -14,7 +14,7 @@ export interface Persona {
   tier?: string;
   /** Human label of the tier, for example "Silver member". */
   tier_label?: string;
-  /** Where the persona lives, for example "Downtown Montreal". */
+  /** Where the persona lives, for example "Bronfman Building, Montreal". */
   location_label?: string;
 }
 

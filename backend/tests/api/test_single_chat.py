@@ -574,7 +574,7 @@ def test_no_user_facing_text_of_the_single_chat_mentions_a_second_agent(world, a
 def test_the_persona_rows_carry_the_tier_and_the_location_label(world):
     rows = {p["customer_id"]: p for p in world.get("/api/demo/personas").json["personas"]}
     john, david, ava = rows["DEMO-CUST-JOHN"], rows["DEMO-CUST-DAVID"], rows[AVA]
-    assert (john["tier"], john["tier_label"], john["location_label"]) == ("silver", "Silver member", "Downtown Montreal")
+    assert (john["tier"], john["tier_label"], john["location_label"]) == ("silver", "Silver member", "Bronfman Building, Montreal")
     assert (david["tier"], david["tier_label"], david["location_label"]) == ("platinum", "Platinum member", "Rural New Brunswick")
     assert (ava["tier"], ava["tier_label"], ava["location_label"]) == ("none", "Member", "")
     for row in rows.values():

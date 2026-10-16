@@ -84,11 +84,11 @@ SAMPLE_VALUES = {
     "channel_pref": "store_pickup", "style_id": "DEMO-STYLE-HERO", "product_name": "Stessy2.0", "signal": "runs_small",
     "too_small_share": 0.799, "n_fit": 582, "scope": "ALDO_CA", "provenance": "derived", "sizes": ["7.5", "8.0"],
     "option_count": 3, "question": "Which size and option should I reserve?", "expires_at": "2026-10-16T16:15:00+00:00",
-    "option_id": "SO-2", "chosen_size": "8.0", "option_type": "store_pickup", "location_name": "ALDO Demo Store Montreal",
+    "option_id": "SO-2", "chosen_size": "8.0", "option_type": "store_pickup", "location_name": "ALDO Sainte-Catherine",
     "eta_date": "2026-10-17", "rationale_public": "runs small per ALDO signal", "confidence": "high",
     "order_id": "DEMO-A2A-81B20E", "status": "placed_simulated",
-    "fulfillment": {"type": "store_pickup", "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17"},
-    "next_step": "Pick up size 8.0 at ALDO Demo Store Montreal from Sat Oct 17.", "size": "8.0", "price_cents": 12999,
+    "fulfillment": {"type": "store_pickup", "location_name": "ALDO Sainte-Catherine", "eta_date": "2026-10-17"},
+    "next_step": "Pick up size 8.0 at ALDO Sainte-Catherine from Sat Oct 17.", "size": "8.0", "price_cents": 12999,
     "approved_by": "owner_click", "update_id": "MU-5C0A11", "original_size": "8.0", "new_size": "8.5", "reason": "TOO_SMALL",
     "outcome": "exchange_created", "provisional": True, "transaction_id": "DEMO-RMA-3F9A1C", "state": "completed",
     "replayed": False, "location_id": "DEMO-STORE-MTL-01", "fee_cents": 0,
@@ -97,8 +97,8 @@ SAMPLE_VALUES = {
     "option_types": ["exchange_store_pickup", "exchange_ship_from_dc", "return_in_store"], "n_reviews": 16, "n_flagged": 1,
     "flagged_review_ids": ["REV-INJECT-1"], "mode": "returns", "case_id": "CASE-1A2B3C",
     "n_entries": 2, "fields": ["preferred_colors", "typical_size"],
-    "store_name": "ALDO Demo Store Montreal", "eta_minutes": 5,
-    "summary": "ALDO Demo Store Montreal will have your Brown pair ready, John is about 5 minutes away",
+    "store_name": "ALDO Sainte-Catherine", "eta_minutes": 5,
+    "summary": "ALDO Sainte-Catherine will have your Brown pair ready, John is about 5 minutes away",
     "benefit": "free_return_shipping", "tier_label": "Platinum member", "saved_cents": 595, "used": 1, "per_month": 1,
     "period": "2026-10", "delivered_at": "2026-10-16",
     "type": "free_return_shipping", "label": "Platinum free return shipping",
@@ -161,13 +161,13 @@ def test_a_missing_optional_field_is_simply_absent(ddb, event_type):
 def test_size_confirmed_carries_approved_by_owner_click_for_the_eval_and_ui(ddb):
     trace.emit_a2a(
         AVA, "size_confirmed",
-        {"size_request_id": "SZR-3F9A1C", "order_id": "DEMO-A2A-81B20E", "size": "8.0", "location_name": "ALDO Demo Store Montreal",
+        {"size_request_id": "SZR-3F9A1C", "order_id": "DEMO-A2A-81B20E", "size": "8.0", "location_name": "ALDO Sainte-Catherine",
          "eta_date": "2026-10-17", "price_cents": 12999, "approved_by": "owner_click", "customer_id": AVA},
         actor="aldo_gateway",
     )
     payload = trace.list_a2a_events(AVA).events[0]["payload"]
     assert payload == {"size_request_id": "SZR-3F9A1C", "order_id": "DEMO-A2A-81B20E", "size": "8.0",
-                       "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17", "price_cents": 12999,
+                       "location_name": "ALDO Sainte-Catherine", "eta_date": "2026-10-17", "price_cents": 12999,
                        "approved_by": "owner_click"}
     assert isinstance(payload["price_cents"], int)
 
@@ -176,7 +176,7 @@ def test_size_recommended_keeps_the_request_id_the_ui_uses_to_fetch_the_proposal
     trace.emit_a2a(
         AVA, "size_recommended",
         {"size_request_id": "SZR-3F9A1C", "option_id": "SO-2", "chosen_size": "8.0", "option_type": "store_pickup",
-         "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17", "rationale_public": "runs small",
+         "location_name": "ALDO Sainte-Catherine", "eta_date": "2026-10-17", "rationale_public": "runs small",
          "confidence": "high", "private_rationale": "Retailer C was too big"},
         actor="personal_agent",
     )
@@ -204,7 +204,7 @@ def test_a2a_public_allowlist(ddb):
     trace.emit_a2a(
         AVA, "size_recommended",
         {"size_request_id": "SZR-1", "option_id": "SO-2", "chosen_size": "8.0", "option_type": "store_pickup",
-         "location_name": "ALDO Demo Store Montreal", "eta_date": "2026-10-17", "rationale_public": "runs small per ALDO signal",
+         "location_name": "ALDO Sainte-Catherine", "eta_date": "2026-10-17", "rationale_public": "runs small per ALDO signal",
          "confidence": "high",
          "private_rationale": "Retailer C (synthetic) 8.0 was too big", "typical_size": "7.5", "owner_ref": AVA,
          "customer_id": AVA, "token": "secret-token-value", "retailer": "Retailer A (synthetic)", "owner_fit_hint": "x"},
@@ -307,17 +307,17 @@ def test_reset_clears_the_a2a_streams(ddb):
 
 
 def test_store_notified_is_the_store_desks_event_and_has_three_public_fields(ddb):
-    summary = "ALDO Demo Store Montreal will have your Brown pair ready, John is about 5 minutes away"
+    summary = "ALDO Sainte-Catherine will have your Brown pair ready, John is about 5 minutes away"
     trace.emit_a2a(
         AVA, "store_notified",
-        {"store_name": "ALDO Demo Store Montreal", "eta_minutes": 5, "summary": summary,
+        {"store_name": "ALDO Sainte-Catherine", "eta_minutes": 5, "summary": summary,
          "store_id": "DEMO-STORE-MTL-01", "display_name": "John", "tier_label": "Silver member", "customer_id": AVA,
          "transaction_id": "DEMO-RMA-3F9A1C"},
         actor="aldo_store",
     )
     event = trace.list_a2a_events(AVA).events[0]
     assert event["type"] == "store_notified" and event["actor"] == "aldo_store"
-    assert event["payload"] == {"store_name": "ALDO Demo Store Montreal", "eta_minutes": 5, "summary": summary}
+    assert event["payload"] == {"store_name": "ALDO Sainte-Catherine", "eta_minutes": 5, "summary": summary}
     assert "DEMO-CUST" not in json.dumps(event)
 
 

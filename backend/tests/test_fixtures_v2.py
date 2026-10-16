@@ -99,7 +99,7 @@ def test_john_and_david_carry_the_v2_attributes(bundle):
     people = {c["customer_id"]: c for c in bundle.customers}
     john, david = people[JOHN], people[DAVID]
     assert (john["display_name"], john["tier"], john["home_region"]) == ("John", "silver", "QC")
-    assert (john["annual_spend_cents"], john["location_label"]) == (180000, "Downtown Montreal")
+    assert (john["annual_spend_cents"], john["location_label"]) == (180000, "Bronfman Building, Montreal")
     assert john["travel_minutes"] == {MTL: 5, LAVAL: 24, TOR: 540}
     assert (david["display_name"], david["tier"], david["home_region"]) == ("David", "platinum", "NB")
     assert (david["annual_spend_cents"], david["location_label"]) == (1240000, "Rural New Brunswick")
@@ -118,7 +118,7 @@ def test_the_base_customers_get_no_new_required_fields(bundle):
 def test_customer_items_get_the_new_attributes_and_tier_defaults_to_none(bundle):
     items = {(i["pk"], i["sk"]): i for i in fixtures.build_items(bundle, "default")}
     john = items[("CUST#DEMO-CUST-JOHN", "PROFILE")]
-    assert (john["tier"], john["annual_spend_cents"], john["location_label"]) == ("silver", 180000, "Downtown Montreal")
+    assert (john["tier"], john["annual_spend_cents"], john["location_label"]) == ("silver", 180000, "Bronfman Building, Montreal")
     assert john["travel_minutes"] == {MTL: 5, LAVAL: 24, TOR: 540}
     assert items[("CUST#DEMO-CUST-DAVID", "PROFILE")]["tier"] == "platinum"
     for base in ("AVA", "BEN", "CHLOE"):
@@ -130,7 +130,7 @@ def test_persona_rows_carry_tier_label_and_location(aws_env):
     rows = {p["customer_id"]: p for p in fixtures.persona_list()}
     tiers = fixtures.load_policy_json()["tiers"]
     assert (rows[JOHN]["tier"], rows[JOHN]["tier_label"], rows[JOHN]["location_label"]) == (
-        "silver", tiers["silver"]["label"], "Downtown Montreal")
+        "silver", tiers["silver"]["label"], "Bronfman Building, Montreal")
     assert (rows[DAVID]["tier"], rows[DAVID]["tier_label"], rows[DAVID]["location_label"]) == (
         "platinum", tiers["platinum"]["label"], "Rural New Brunswick")
     for base in ("AVA", "BEN", "CHLOE"):
@@ -667,7 +667,7 @@ def test_seed_writes_the_v2_items(ddb):
     assert summary.counts == {"customers": 5, "orders": 11, "order_lines": 20, "products": 56, "locations": 4, "inventory": 170}
     assert summary.written == 266
     john = store.get_item(store.customer_key(JOHN))
-    assert (john["tier"], john["annual_spend_cents"], john["location_label"]) == ("silver", 180000, "Downtown Montreal")
+    assert (john["tier"], john["annual_spend_cents"], john["location_label"]) == ("silver", 180000, "Bronfman Building, Montreal")
     assert john["travel_minutes"] == {MTL: 5, LAVAL: 24, TOR: 540}
     assert all(isinstance(v, int) for v in john["travel_minutes"].values())  # never a Decimal
     assert store.get_item(store.customer_key("DEMO-CUST-AVA"))["tier"] == "none"
