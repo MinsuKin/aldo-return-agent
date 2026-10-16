@@ -24,6 +24,19 @@
   color: var(--fg);
   font-weight: 700;
 }
+/* Photo variant: the customer's portrait fills the circle. */
+.persona-avatar-photo {
+  overflow: hidden;
+  background: var(--surface-4);
+  box-shadow: 0 0 0 1px var(--border-soft);
+}
+.persona-avatar-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
 
 .picker {
   padding: 8px 22px 44px;

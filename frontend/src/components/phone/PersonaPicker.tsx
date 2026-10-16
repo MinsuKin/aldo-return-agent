@@ -36,7 +36,7 @@ export function PersonaPicker({ admin, notice, onReset }: Props) {
   const card = (p: PersonaView) => (
     <li key={p.customerId}>
       <button type="button" className="persona-card" disabled={signIn.isPending} onClick={() => signIn.mutate(p)} data-testid={`persona-${p.customerId}`}>
-        <PersonaAvatar name={p.displayName} />
+        <PersonaAvatar name={p.displayName} customerId={p.customerId} />
         <span className="persona-text">
           <span className="persona-name">{p.displayName}</span>
           {p.locationLabel && <span className="persona-where">{p.locationLabel}</span>}
