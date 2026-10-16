@@ -1,13 +1,13 @@
 /* The personal agent stage: an iPhone-style chat on the left, the live A2A trace on the right.
    Design system (dark workspace, after the team designer's demo-dashboard): near-black surfaces on an elevation
-   ramp, hairline borders, ALDO yellow for the one primary action, saturated actor hues, Geist + Geist Mono
+   ramp, hairline borders, white for the one primary action, saturated actor hues, Geist + Geist Mono
    (self-hosted, no external requests), inline SVG icons. Plain CSS.
 
    CONTRAST RULES (checked with axe in the Playwright pass, at least 4.5:1 for text):
    - --fg and --fg-muted pass on every surface below.
    - --fg-dim passes on --bg, --panel, --card, --surface-2 and --surface-3 only. On --surface-4 / --surface-5 use --fg-muted.
    - Actor hues (--violet --orange --blue --green --amber --cyan --red) pass on --panel, --card and on their own *-soft tint.
-   - Text on --brand is --brand-ink. Never white on yellow.
+   - Text on --primary (white) is --primary-ink (near-black).
    Files (imported in this order by main.tsx): base, shell, components, phone, picker, chat, cards, sheets, trace, cases. */
 
 :root {
@@ -38,12 +38,12 @@
   --fg-on-color: #ffffff;
   --link: #8ab4ff;
 
-  /* ---- ALDO yellow: the one primary action per screen ---- */
-  --brand: #ffcc00;
-  --brand-hover: #ffd633;
-  --brand-ink: #1a1500;
-  --brand-soft: rgba(255, 204, 0, 0.14);
-  --brand-ring: rgba(255, 204, 0, 0.45);
+  /* ---- Primary: white. The one primary action per screen, the focus ring, the caret and the selection ---- */
+  --primary: #ffffff;
+  --primary-hover: #e4e4e7;
+  --primary-ink: #0b0b0c;
+  --primary-soft: rgba(255, 255, 255, 0.1);
+  --primary-ring: rgba(255, 255, 255, 0.28);
 
   /* ---- Actor and status hues ---- */
   --violet: #a78bfa; /* Personal agent */
@@ -81,7 +81,7 @@
   --ink: var(--fg);
   --ink-2: var(--surface-4);
   --mist: var(--surface-2);
-  --focus: var(--brand);
+  --focus: var(--primary);
 }
 
 *,
@@ -136,7 +136,7 @@ input {
 }
 
 ::selection {
-  background: var(--brand-ring);
+  background: var(--primary-ring);
   color: var(--fg);
 }
 
@@ -197,8 +197,8 @@ input {
   left: 8px;
   top: -48px;
   z-index: 100;
-  background: var(--brand);
-  color: var(--brand-ink);
+  background: var(--primary);
+  color: var(--primary-ink);
   font-weight: 600;
   padding: 8px 12px;
   border-radius: var(--radius);
@@ -207,9 +207,9 @@ input {
   top: 8px;
 }
 
-/* One visible focus ring everywhere (yellow on dark: 10:1 or better). No border-radius here: it would change shapes. */
+/* One visible focus ring everywhere (white on dark: 15:1 or better). No border-radius here: it would change shapes. */
 :focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 main:focus {

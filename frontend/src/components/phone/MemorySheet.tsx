@@ -2,10 +2,7 @@ import type { RefObject } from "react";
 import { colorWord } from "../../lib/format";
 import { cleanLabel, outcomeLabel, type MemoryView } from "../../lib/normalize";
 import type { WritebackState } from "../../hooks/useWriteback";
-import { Badge } from "../Badge";
-import { Icon } from "../Icon";
 import { PhoneSheet } from "./PhoneSheet";
-import { Swatch } from "./cards/shared";
 
 interface Props {
   memory: MemoryView | undefined;
@@ -18,11 +15,19 @@ interface Props {
   onClose: () => void;
 }
 
-/** "What your personal agent remembers": the owner's size memory, plus what ALDO taught it after exchanges. */
+const cap = (s: string): string => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+/** A cell value: its parts in one line, separated by a middle dot. */
+const cell = (...parts: Array<string | false | undefined>): string => parts.filter(Boolean).join(" · ");
+
+/**
+ * "What your personal agent remembers": the owner's size memory, plus what ALDO taught it after exchanges.
+ * Everything saved is shown in the same label / value table cells as the cards, in one text style.
+ */
 export function MemorySheet({ memory, loading, error, writeback, onCheckAgain, returnFocusRef, onClose }: Props) {
   const fits = memory?.updates.filter((u) => u.fitFeedback === "size_ok") ?? [];
   const swaps = memory?.updates.filter((u) => u.fitFeedback !== "size_ok") ?? [];
   const learned = (memory?.updates.length ?? 0) > 0;
+  const status = (provisional: boolean | undefined): string => (provisional ? "provisional" : "confirmed");
 
   return (
     <PhoneSheet
@@ -42,10 +47,15 @@ export function MemorySheet({ memory, loading, error, writeback, onCheckAgain, r
       {memory && (
         <>
           {memory.typicalSize && (
-            <p className="memory-typical" data-testid="memory-typical">
-              Typical size <strong>{memory.typicalSize}</strong>
-              {memory.sizeSystem ? ` (${memory.sizeSystem.replace("_", " ")})` : ""}
-            </p>
+            <ul className="cell-table" data-testid="memory-typical">
+              <li>
+                <span className="cell-label">Typical size</span>
+                <span className="cell-value">
+                  {memory.typicalSize}
+                  {memory.sizeSystem ? ` (${memory.sizeSystem.replace("_", " ")})` : ""}
+                </span>
+              </li>
+            </ul>
           )}
 
           <section aria-labelledby="mem-elsewhere">
@@ -53,17 +63,16 @@ export function MemorySheet({ memory, loading, error, writeback, onCheckAgain, r
             {memory.entries.length === 0 ? (
               <p className="muted">Nothing saved yet.</p>
             ) : (
-              <ul className="memory-list" data-testid="memory-entries">
+              <ul className="cell-table" data-testid="memory-entries">
                 {memory.entries.map((m) => (
                   <li key={m.id}>
-                    <span className="strong">{cleanLabel(m.retailer)}</span>: {m.item}
-                    {m.color ? (
-                      <>
-                        {", "}
-                        <Swatch color={m.color} /> {colorWord(m.color)}
-                      </>
-                    ) : null}
-                    , size {m.size}, <span className={`outcome outcome-${m.outcome}`}>{outcomeLabel(m.outcome)}</span>
+                    <span className="cell-label">{cleanLabel(m.retailer)}</span>
+                    <span className="cell-value">
+                      {cell(
+                        `${cap(m.item)}${m.color ? `, ${colorWord(m.color)}` : ""}, size ${m.size}`,
+                        outcomeLabel(m.outcome),
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -92,30 +101,33 @@ export function MemorySheet({ memory, loading, error, writeback, onCheckAgain, r
             )}
 
             {fits.length > 0 && (
-              <ul className="memory-list" aria-label="Sizes that fit" data-testid="memory-fits">
+              <ul className="cell-table" aria-label="Sizes that fit" data-testid="memory-fits">
                 {fits.map((u) => (
                   <li key={u.id} data-testid="memory-fit">
-                    <Icon name="check" size={14} /> <strong>Size {u.toSize ?? u.fromSize ?? "?"} fits</strong>{" "}
-                    <span className="muted">
-                      ({u.product}
-                      {u.color ? `, ${colorWord(u.color)}` : ""}; kept when exchanging colour)
-                    </span>{" "}
-                    <Badge tone={u.provisional ? "amber" : "success"}>{u.provisional ? "provisional" : "confirmed"}</Badge>
+                    <span className="cell-label">Size {u.toSize ?? u.fromSize ?? "?"} fits</span>
+                    <span className="cell-value">
+                      {cell(
+                        `${u.product}${u.color ? `, ${colorWord(u.color)}` : ""}`,
+                        "kept when exchanging colour",
+                        status(u.provisional),
+                      )}
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
 
             {swaps.length > 0 && (
-              <ul className="memory-list" aria-label="Updates from ALDO" data-testid="memory-updates">
+              <ul className="cell-table" aria-label="Updates from ALDO" data-testid="memory-updates">
                 {swaps.map((u) => (
                   <li key={u.id} data-testid="memory-update">
-                    <span className="strong">
+                    <span className="cell-label">
                       {u.product}
                       {u.color ? ` (${colorWord(u.color)})` : ""}
                     </span>
-                    : size {u.fromSize ?? "?"} to <strong>{u.toSize ?? "?"}</strong>{" "}
-                    <Badge tone={u.provisional ? "amber" : "success"}>{u.provisional ? "provisional" : "confirmed"}</Badge>
+                    <span className="cell-value">
+                      {cell(`Size ${u.fromSize ?? "?"} to ${u.toSize ?? "?"}`, status(u.provisional))}
+                    </span>
                   </li>
                 ))}
               </ul>

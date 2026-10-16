@@ -27,14 +27,14 @@
   opacity: 0.5;
 }
 
-/* The one primary action per screen: ALDO yellow, dark ink. Never white on yellow. */
+/* The one primary action per screen: white, near-black ink. */
 .btn-primary {
-  background: var(--brand);
+  background: var(--primary);
   border-color: transparent;
-  color: var(--brand-ink);
+  color: var(--primary-ink);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--brand-hover);
+  background: var(--primary-hover);
 }
 .btn-block {
   width: 100%;

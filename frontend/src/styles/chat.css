@@ -298,7 +298,7 @@
   width: 15px;
   height: 15px;
   margin: 0;
-  accent-color: var(--brand);
+  accent-color: var(--primary);
   cursor: pointer;
 }
 .reasons-unworn input:disabled {
@@ -371,7 +371,7 @@
   border: 1px solid var(--border-hover);
   background: var(--surface-2);
   color: var(--fg);
-  caret-color: var(--brand);
+  caret-color: var(--primary);
   outline: none;
 }
 /* Placeholder on surface-2 must clear 4.5:1 — --fg-muted does; --fg-dim would not here. */
@@ -380,7 +380,7 @@
 }
 .composer input:focus-visible {
   border-color: var(--border-hover);
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 

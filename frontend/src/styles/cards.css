@@ -3,7 +3,7 @@
    order, transaction, case. One shared shell (CardFrame -> .msg-card): a near-black card on an
    outline, a header row (title + mono id / status chip), a body, footer actions. Facts render as
    the team designer's two-column table (label column on --panel-2, hairline rows, 8px radius).
-   Tokens only; the one primary action per card is ALDO yellow (.btn-primary from components.css).
+   Tokens only; the one primary action per card is white (.btn-primary from components.css).
    No horizontal overflow at the phone width: long ids and values wrap. */
 
 .msg-card {
@@ -59,7 +59,7 @@
   outline: none;
 }
 .msg-card-head h3:focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
 /* The reference id on the right of the header: mono, dim, wraps rather than overflowing. */
@@ -149,29 +149,44 @@
    label cell on --panel-2 with a right hairline, value cell medium weight, rows separated by
    hairlines, outer 8px radius clipped by overflow:hidden. Built on the <dl className="facts">
    each card renders (dt = label, dd = value); the border between rows is drawn on the row <div>. */
-.facts {
+.facts,
+.cell-table {
   display: grid;
   gap: 0;
   border: 1px solid var(--border-soft);
   border-radius: 8px;
   overflow: hidden;
 }
-.facts > div {
+/* .cell-table is the same table built from a list (<ul><li><span label><span value>), used where the rows
+   are a list of saved items, for example the memory sheet. */
+.cell-table {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.cell-table + .cell-table {
+  margin-top: 6px;
+}
+.facts > div,
+.cell-table > li {
   display: grid;
   grid-template-columns: minmax(92px, 34%) 1fr;
   border-top: 1px solid var(--border-soft);
 }
-.facts > div:first-child {
+.facts > div:first-child,
+.cell-table > li:first-child {
   border-top: 0;
 }
-.facts dt {
+.facts dt,
+.cell-table .cell-label {
   color: var(--fg-muted);
   font-size: 13px;
   padding: 8px 12px;
   background: var(--panel-2);
   border-right: 1px solid var(--border-soft);
 }
-.facts dd {
+.facts dd,
+.cell-table .cell-value {
   font-weight: 500;
   font-size: 13px;
   color: var(--fg);
@@ -179,7 +194,6 @@
   overflow-wrap: anywhere;
   min-width: 0;
 }
-
 /* ---- Document-style card body (purchase proposal): bold-label bullets under a short heading ---- */
 .msg-card .md-list,
 .msg-card .md-heading {
@@ -240,7 +254,7 @@
   min-width: 0;
 }
 /* The primary (recommended) option: a lighter neutral border lifts it above the others. The fill stays the
-   same neutral as the card, so the popup matches the rest of the app (yellow is kept for the action button). */
+   same neutral as the card, so the popup matches the rest of the app (the primary colour is white). */
 .opt-primary {
   border-color: color-mix(in srgb, var(--fg) 24%, var(--border));
 }

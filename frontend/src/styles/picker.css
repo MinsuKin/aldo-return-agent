@@ -145,7 +145,7 @@
   color: var(--fg);
 }
 .admin-body input:focus {
-  border-color: var(--brand);
+  border-color: var(--primary);
   outline: none;
 }
 .admin-buttons {
@@ -169,6 +169,6 @@
   color: var(--fg-muted);
 }
 .admin-buttons .btn.is-current {
-  border-color: var(--brand);
-  color: var(--brand);
+  border-color: var(--primary);
+  color: var(--primary);
 }

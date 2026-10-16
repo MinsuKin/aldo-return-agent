@@ -135,47 +135,6 @@
   }
 }
 
-/* ---- Memory sheet: list rows with provisional / confirmed badges -------------------------- */
-.memory-typical {
-  font-size: 15px;
-  color: var(--fg);
-}
-.memory-list {
-  list-style: none;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-  font-size: 14px;
-  color: var(--fg);
-}
-.memory-list li {
-  padding: 8px 11px;
-  border-radius: var(--radius);
-  background: var(--surface-2);
-  border: 1px solid var(--border-soft);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 6px;
-}
-.memory-list li .icon {
-  color: var(--green);
-}
-.memory-list + .memory-list {
-  margin-top: 6px;
-}
-/* Outcome words: kept = green, size swap = amber, on a surface-2 row use --fg-muted base. */
-.outcome {
-  font-weight: 600;
-}
-.outcome-kept {
-  color: var(--green);
-}
-.outcome-returned_too_big,
-.outcome-returned_too_small {
-  color: var(--amber);
-}
-
 /* ---- Push banner: iOS-like dark glass notification (slides down inside the phone) --------- */
 /* Imported after chat.css, so these win by source order and replace the old light-theme push. */
 .push-region {
