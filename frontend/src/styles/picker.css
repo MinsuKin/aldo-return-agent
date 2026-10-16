@@ -24,6 +24,25 @@
   color: var(--fg);
   font-weight: 700;
 }
+/* The v3 pilot cohort (Bangos, Dusky): the same initial in an outlined circle, so it stays distinct from John and
+   David (Dusky and David share the D). The initial keeps --fg on the card, well above 4.5:1. */
+.persona-avatar-v3 {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--fg-dim);
+}
+/* Photo variant: the customer's portrait fills the circle. */
+.persona-avatar-photo {
+  overflow: hidden;
+  background: var(--surface-4);
+  box-shadow: 0 0 0 1px var(--border-soft);
+}
+.persona-avatar-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+}
 
 .picker {
   padding: 8px 22px 44px;
@@ -91,6 +110,13 @@
   color: var(--fg-muted);
   font-size: 13.5px;
 }
+/* The v3 cohort's one-line story under the place: quieter and smaller, wrapping at the phone width. */
+.persona-story {
+  margin-top: 2px;
+  color: var(--fg-muted);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
 .persona-cards-compact .persona-card {
   min-height: 56px;
   padding: 8px 12px;
@@ -110,17 +136,17 @@
   color: var(--fg-muted);
 }
 
-/* ?admin=1 panel: a quiet amber-tinted dashed card, consistent with .btn-demo. */
+/* ?admin=1 panel: a quiet neutral dashed card, consistent with .btn-demo. */
 .admin-controls {
-  border: 1px dashed var(--amber);
+  border: 1px dashed var(--border-hover);
   border-radius: var(--radius-lg);
-  background: var(--amber-soft);
+  background: var(--surface-2);
   padding: 8px 12px;
 }
 .admin-controls summary {
   cursor: pointer;
   font-weight: 600;
-  color: var(--amber);
+  color: var(--fg-muted);
 }
 .admin-body {
   display: flex;
